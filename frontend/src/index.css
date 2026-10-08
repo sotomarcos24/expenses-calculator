@@ -1,0 +1,29 @@
+@import 'tailwindcss';
+
+/* PersonalDolar palette (tech-spec §8.1). Components use these tokens, never raw hex values. */
+@theme {
+  --color-background: #ffffff;
+  --color-surface: #f5f8ff;
+  --color-border: #dce5f5;
+
+  --color-primary: #1d4ed8;
+  --color-primary-hover: #1e40af;
+  --color-primary-foreground: #ffffff;
+  --color-accent: #dbeafe;
+
+  --color-foreground: #0f172a;
+  --color-muted: #64748b;
+
+  --color-gain: #16a34a;
+  --color-loss: #dc2626;
+
+  --color-scenario-pessimistic: #93c5fd;
+  --color-scenario-base: #2563eb;
+  --color-scenario-optimistic: #1e3a8a;
+
+  --font-sans: 'Inter', system-ui, 'Segoe UI', Roboto, sans-serif;
+}
+
+body {
+  @apply bg-background font-sans text-foreground antialiased;
+}
