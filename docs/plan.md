@@ -1,6 +1,6 @@
-# Product Spec — Personal Finance Tracker
+# Product Spec — PersonalDolar
 
-> Working title: **TBD** (choose a name before Module 2)
+> Personal finance tracker. Technical design in [`tech-spec.md`](tech-spec.md); delivery plan and status in [`milestones.md`](milestones.md).
 
 ## 1. Problem
 
@@ -13,6 +13,7 @@ A web app where an individual user records their income, expenses and investment
 - Single-user: each person manages only their own data. No sharing, no collaboration.
 - Fully manual: no bank connections, no market-data APIs, no paid external services.
 - Language: **English**. Currency: **USD ($)**.
+- Visual identity: white and blue palette (details in tech-spec §8.1).
 
 ## 3. Target user
 
@@ -29,6 +30,7 @@ Acceptance criteria:
 - Passwords are stored hashed, never in plain text.
 - A user can only see, create, edit or delete their own data.
 - Unauthenticated requests to user data are rejected.
+- No password recovery in the MVP (it would require sending emails).
 
 ### 4.2 Categories and subcategories
 
@@ -124,10 +126,32 @@ Acceptance criteria:
 - Multi-currency.
 - Shared or family accounts.
 - Financial advice or recommendations.
+- Password recovery / reset by email.
 
-## 7. Open points for the technical spec (Module 2)
+## 7. Decisions (Module 2)
 
-- App name.
-- Stack (course default: React frontend + FastAPI backend + SQLite → Postgres).
-- Auth approach (e.g. JWT vs. session cookies).
-- Where the simulator runs (backend endpoint vs. frontend) — backend recommended so the logic is tested and documented in the OpenAPI contract.
+The open points of this spec are resolved; details in [`tech-spec.md`](tech-spec.md).
+
+| Topic | Decision |
+| --- | --- |
+| App name | **PersonalDolar** |
+| Stack | React + Vite + TypeScript frontend, FastAPI backend, SQLite in development → Postgres in production |
+| Auth | Email + password (Argon2), JWT in an httpOnly cookie; no password recovery |
+| Simulator | Runs in the backend as a pure, unit-tested module exposed in the OpenAPI contract |
+| Look and feel | White and blue palette |
+
+## 8. Delivery plan
+
+The MVP is built in milestones, each with its own acceptance criteria — see [`milestones.md`](milestones.md).
+
+| # | Milestone | Status |
+| --- | --- | --- |
+| 1 | Scaffolding | ✅ Done |
+| 2 | Authentication | ⏳ Next |
+| 3 | Categories | ⬜ Pending |
+| 4 | Transactions | ⬜ Pending |
+| 5 | Investments | ⬜ Pending |
+| 6 | Dashboard | ⬜ Pending |
+| 7 | Simulator | ⬜ Pending |
+| 8 | Polish and deployment | ⬜ Pending |
+| 9 | Nice-to-haves (§5) | ⬜ Optional |

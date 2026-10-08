@@ -39,13 +39,15 @@
 
 **Goal:** an empty but complete project skeleton where every later milestone only adds features.
 
-**Delivered**
+#### Delivered
+
 - `backend/`: FastAPI app factory, settings from `.env`, SQLAlchemy engine/session (`DbSession`), base model with timestamps and constraint naming convention, Alembic wired to the app settings (batch mode for SQLite), `GET /api/health`, OpenAPI at `/api/openapi.json` and docs at `/api/docs`.
 - `frontend/`: React 19 + Vite + TypeScript strict, Tailwind 4 with the white/blue theme tokens (§8.1), React Router with all MVP routes as placeholders, layout with sidebar/top nav, `apiFetch` wrapper and `ApiError`, currency/percent formatters, Vite proxy `/api → :8000`.
 - Tooling: ruff, mypy, pytest, oxlint, Prettier, Vitest + Testing Library.
 - CI on GitHub Actions for backend and frontend, README with setup instructions.
 
-**Acceptance criteria**
+#### Acceptance criteria
+
 - [x] `GET /api/health` returns `{"status":"ok","database":"ok"}`, also through the Vite proxy.
 - [x] All routes render inside the layout; the active section is highlighted.
 - [x] All checks pass locally.
@@ -56,21 +58,24 @@
 
 **Goal:** a user can create an account and only reach the app when logged in (§4.1, tech-spec §5).
 
-**Backend**
+#### Backend
+
 - `User` model + migration (`email` unique and lowercase, `password_hash`).
 - `security.py`: Argon2 hashing, JWT creation/validation, `CurrentUser` dependency (reads the `access_token` cookie).
 - Router `/api/auth`: `register`, `login`, `logout`, `me`.
 - Cookie: `HttpOnly`, `SameSite=Lax`, `Path=/api`, `Secure` controlled by `COOKIE_SECURE`.
 - Mutating endpoints only accept `Content-Type: application/json`.
 
-**Frontend**
+#### Frontend
+
 - Add `openapi-typescript` and the `gen:api` script (check TypeScript 6 support; otherwise generate with a pinned version through `npx`).
 - Login and register forms (React Hook Form + Zod) with inline validation errors.
 - `useMe` hook + `RequireAuth` guard around the app layout; logged-in users visiting `/login` are sent to `/`.
 - Global 401 handling: clear the cached user and redirect to `/login`.
 - Log out button in the layout, showing the user's email.
 
-**Acceptance criteria**
+#### Acceptance criteria
+
 - [ ] Registering with a valid email and a password of 8+ characters creates the account and logs the user in.
 - [ ] A duplicate email returns 409 with a clear message.
 - [ ] Wrong credentials return 401 with the generic "Invalid email or password".
@@ -87,17 +92,20 @@
 
 **Goal:** two-level categories, a default set for every new user, and a management screen (§4.2, tech-spec §4 `categories`).
 
-**Backend**
+#### Backend
+
 - `Category` model + migration (`kind`, `parent_id`, unique per user/kind/parent/name).
 - `services/categories.py`: default seed (expense and income lists from §4.2), called inside the register transaction.
 - Router `/api/categories`: tree `GET` (optional `?kind=`), `POST`, `PATCH` (rename), `DELETE`.
 - Rules: max two levels; a subcategory has the same `kind` as its parent; delete returns **409** if the category or any of its subcategories has transactions (the check is wired now and gets real data in M4).
 
-**Frontend**
+#### Frontend
+
 - Categories page with two columns/tabs (Expenses / Income), expandable tree.
 - Inline add, rename and delete; confirmation before delete; 409 shown as a readable message.
 
-**Acceptance criteria**
+#### Acceptance criteria
+
 - [ ] A new user sees exactly the default categories and subcategories from §4.2.
 - [ ] Categories and subcategories can be added, renamed and deleted.
 - [ ] Duplicate names at the same level are rejected (409).
@@ -112,19 +120,22 @@
 
 **Goal:** record and list income and expenses, including gross/net salary (§4.3, §4.4).
 
-**Backend**
+#### Backend
+
 - `Transaction` model + migration (`amount`, `gross_amount`, `date`, category/subcategory, note).
 - Router `/api/transactions` with filters `from`, `to`, `type`, `category_id`, `subcategory_id`, pagination, ordered by date desc.
 - Validation: `amount > 0`; `category.kind == type`; subcategory belongs to the category; `gross_amount` only for income and `≥ amount`; category IDs must belong to the user.
 - Response includes the computed `deduction_rate` when `gross_amount` is present.
 - Enables the category delete 409 from M3.
 
-**Frontend**
+#### Frontend
+
 - Transactions page: table (date, type, category › subcategory, note, amount coloured as income/expense), filters (period, type, category), pagination.
 - Create/edit dialog: subcategory list depends on the chosen category; "Gross amount" field shown only for income; the deduction rate is shown live.
 - Delete with confirmation.
 
-**Acceptance criteria**
+#### Acceptance criteria
+
 - [ ] Income and expenses can be created, edited, deleted and listed.
 - [ ] Filters by period and category work and can be combined.
 - [ ] Zero or negative amounts are rejected.
@@ -141,17 +152,20 @@
 
 **Goal:** manual portfolio tracking with gain/loss (§4.5).
 
-**Backend**
+#### Backend
+
 - `Investment` model + migration.
 - Router `/api/investments`: list (with per-investment `gain`, `gain_pct` and a `totals` block), `POST`, `GET/PATCH/DELETE /{id}`.
 - Updating `current_value` sets `value_updated_at` (today by default).
 
-**Frontend**
+#### Frontend
+
 - Investments page: table with name, type, platform, invested, current value, gain/loss in $ and % (green/red), last update.
 - Portfolio totals card.
 - Create/edit dialog and a quick "Update value" action.
 
-**Acceptance criteria**
+#### Acceptance criteria
+
 - [ ] Investments can be created, edited, deleted and listed.
 - [ ] Invested 1,000 and current value 1,150 shows +$150.00 / +15.0%.
 - [ ] Portfolio totals add up all investments correctly.
@@ -166,18 +180,21 @@
 
 **Goal:** a one-screen overview of the selected period (§4.7, tech-spec §6 Dashboard).
 
-**Backend**
+#### Backend
+
 - `services/dashboard.py`: income/expense totals, savings, savings rate, expenses by category with subcategories (including `"(none)"`), investments summary by type.
 - `GET /api/dashboard?from=&to=`.
 
-**Frontend**
+#### Frontend
+
 - Period selector: current month (default), current year, custom range.
 - Four KPI cards: income, expenses, savings, savings rate.
 - Expense pie chart (Recharts, blue shades); clicking a slice shows that category's subcategories, with a way back.
 - Investments block: invested, current value, gain/loss, pie by type.
 - Simulator shortcut button. Empty states when there is no data.
 
-**Acceptance criteria**
+#### Acceptance criteria
+
 - [ ] Totals match the transactions recorded in the period (boundaries inclusive).
 - [ ] Savings rate = savings / income; "—" when there is no income.
 - [ ] Drill-down shows subcategory totals that add up to the category total.
@@ -192,20 +209,23 @@
 
 **Goal:** deterministic projections in three modes, with three scenarios and inflation (§4.6, tech-spec §7).
 
-**Order of work: pure module and its tests first, then endpoints, then UI.**
+> Order of work: pure module and its tests first, then endpoints, then UI.
 
-**Backend**
+#### Backend
+
 - `app/simulator/`: pure `Decimal` functions for accumulation (Mode A), required contribution (Mode B) and withdrawal (Mode C), following the conventions in tech-spec §7.2.
 - `GET /api/simulator/defaults` (current portfolio value, average monthly expenses over the last 12 full months, inflation 2%, scenarios 3/5/7%).
 - `POST /api/simulator/accumulation | goal | withdrawal`, with the validation ranges from tech-spec §7.6.
 
-**Frontend**
+#### Frontend
+
 - Simulator page with tabs A / B / C, form pre-filled from `/defaults`, every field editable.
 - Line chart with the three scenarios (pessimistic/base/optimistic colours from §8.1) and a nominal ↔ today's-dollars toggle.
 - Results table/cards per scenario: Mode A final value + years of expenses covered; Mode B required contribution; Mode C monthly income, % of expenses covered, and "lasts until N" / "runs out at age N".
 - Permanent disclaimer: "Projections are estimates, not financial advice."
 
-**Acceptance criteria**
+#### Acceptance criteria
+
 - [ ] Every mode returns results for the three scenarios.
 - [ ] Results are identical for identical inputs (deterministic).
 - [ ] Nominal and inflation-adjusted values are both available.
@@ -222,7 +242,8 @@
 
 **Goal:** the MVP is usable, robust and online.
 
-**Scope**
+#### Scope
+
 - UX pass: loading and error states everywhere, empty states, toasts on save/delete, mobile layout reviewed on every page.
 - Accessibility pass: labels on all inputs, keyboard navigation, colour contrast of the blue palette (WCAG AA).
 - Production serving: FastAPI serves `frontend/dist` plus `/api`; multi-stage Dockerfile.
@@ -230,7 +251,8 @@
 - Deploy to a free tier (Render or Fly.io) with managed Postgres; `COOKIE_SECURE=true`, strong `JWT_SECRET`, migrations on deploy.
 - README: production configuration and deploy steps.
 
-**Acceptance criteria**
+#### Acceptance criteria
+
 - [ ] The app is reachable at a public HTTPS URL.
 - [ ] Full flow works in production: sign up → categories → transactions → investments → dashboard → simulator.
 - [ ] Tests pass against both SQLite and Postgres.
