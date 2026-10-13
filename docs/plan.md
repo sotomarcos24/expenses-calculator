@@ -147,7 +147,7 @@ The MVP is built in milestones, each with its own acceptance criteria — see [`
 | # | Milestone | Status |
 | --- | --- | --- |
 | 1 | Scaffolding | ✅ Done |
-| 2 | Authentication | ⏳ Next |
+| 2 | Authentication | 🚧 In progress |
 | 3 | Categories | ⬜ Pending |
 | 4 | Transactions | ⬜ Pending |
 | 5 | Investments | ⬜ Pending |

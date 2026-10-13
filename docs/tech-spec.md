@@ -34,13 +34,14 @@
 - Tailwind CSS 4 (theme tokens in `src/index.css`); shadcn/ui components added as needed
 - Recharts (pie and line charts)
 - React Hook Form + Zod (forms and validation)
-- `openapi-typescript` (generates API types from the backend's OpenAPI). Added in milestone 2: its current release does not yet support TypeScript 6
+- `openapi-typescript` (generates API types from the backend's OpenAPI). Its current release still declares a TypeScript 5 peer dependency, so it is **not** added to `package.json`: `npm run gen:api` runs a pinned version through `npx`
 - Tooling: oxlint, Prettier, Vitest + React Testing Library
 
 ## 3. Repository layout
 
 ```text
 personaldolar/  (repo: expenses-calculator)
+├── openapi.json             # committed OpenAPI spec exported from the backend; CI checks it is up to date
 ├── docs/
 │   ├── plan.md              # product spec
 │   └── tech-spec.md         # this document
@@ -126,12 +127,12 @@ Gain/loss (`current_value − amount_invested`) and gain % (`gain / amount_inves
 
 ## 5. Authentication and authorization
 
-- **Register:** `POST /api/auth/register` validates the email and a password of at least 8 characters, hashes it with Argon2, creates the user, seeds the default categories (in the same DB transaction) and logs the user in.
-- **Login:** verifies the hash and issues a JWT (`sub` = user id, `exp` = 7 days) signed with HS256 using `JWT_SECRET`.
-- **Cookie:** `access_token`, `HttpOnly`, `SameSite=Lax`, `Secure` in production, `Path=/api`. The token is never readable from JavaScript, so it is not exposed to XSS.
+- **Register:** `POST /api/auth/register` validates the email (stored lowercase, so `A@B.com` = `a@b.com`) and a password of 8 to 128 characters (422 outside that range; the upper bound protects Argon2), hashes it with Argon2, creates the user and logs the user in. Seeding the default categories in the same DB transaction is added in milestone 3.
+- **Login:** verifies the hash and issues a JWT (`sub` = user id, `exp` = `ACCESS_TOKEN_DAYS`, default 7 days) signed with HS256 using `JWT_SECRET`.
+- **Cookie:** `access_token`, `HttpOnly`, `SameSite=Lax`, `Secure` in production (`COOKIE_SECURE`), `Path=/api`, `Max-Age` = `ACCESS_TOKEN_DAYS`. The token is never readable from JavaScript, so it is not exposed to XSS.
 - **Logout:** clears the cookie.
 - **Same origin:** in development Vite proxies `/api` to FastAPI. In production the backend serves the built frontend, or both sit behind the same domain. This avoids CORS and third-party cookie issues.
-- **CSRF:** `SameSite=Lax` plus requiring `Content-Type: application/json` on every mutating endpoint.
+- **CSRF:** `SameSite=Lax` plus requiring `Content-Type: application/json` on every `POST`/`PUT`/`PATCH`/`DELETE` request, including body-less ones such as logout; anything else returns **415**. The frontend `apiFetch` always sends the header on these methods.
 - **Authorization:** a `current_user` dependency guards every router except auth. Every query filters by `user_id`. Fetching another user's resource returns **404** (not 403, so the API does not reveal that the resource exists). Foreign keys sent in a body (e.g. `category_id`) are checked to belong to the current user.
 - Login errors return a generic message ("Invalid email or password").
 
@@ -143,10 +144,12 @@ Prefix `/api`. JSON in and out. Money fields are serialized as **strings** (`"12
 
 | Method | Path | Description |
 | --- | --- | --- |
-| POST | `/auth/register` | create account + set cookie |
-| POST | `/auth/login` | set cookie |
-| POST | `/auth/logout` | clear cookie |
-| GET | `/auth/me` | current user (`401` if not logged in) |
+| POST | `/auth/register` | `{email, password}` → **201** + `UserRead`, sets the cookie; **409** if the email exists |
+| POST | `/auth/login` | `{email, password}` → **200** + `UserRead`, sets the cookie; **401** "Invalid email or password" |
+| POST | `/auth/logout` | **204**, clears the cookie |
+| GET | `/auth/me` | **200** + `UserRead` (`401` if not logged in) |
+
+`UserRead` is `{id, email, created_at}`. The password hash and the token never appear in a response body.
 
 ### Categories
 
@@ -264,7 +267,7 @@ Rates must be between −0.5 and 0.5 and horizons between 1 and 60 years. Withdr
 | `/investments` | table with gain/loss in $ and %, portfolio totals, quick "update value" action |
 | `/simulator` | tabs A / B / C; form pre-filled from `/simulator/defaults`; line chart with 3 lines (nominal/real toggle); results table; **visible disclaimer** ("Projections are estimates, not financial advice") |
 
-- Authenticated routes are wrapped in a guard that calls `/auth/me`. A `401` from any request redirects to `/login`.
+- Authenticated routes are wrapped in a guard that calls `/auth/me`. A `401` from any request clears the cached user and redirects to `/login`. A logged-in user visiting `/login` or `/register` is redirected to `/`.
 - Currency is formatted with `Intl.NumberFormat('en-US', {style: 'currency', currency: 'USD'})`. Money stays a string until it is displayed.
 - Responsive layout (mobile first) with a sidebar on desktop.
 
@@ -287,16 +290,16 @@ Rates must be between −0.5 and 0.5 and horizons between 1 and 60 years. Withdr
 | API | pytest + httpx `TestClient`, temporary SQLite | happy paths, 422 validation, 401 without a cookie, **404 when accessing another user's data**, 409 when deleting a category in use |
 | Frontend | Vitest + RTL | formatting helpers, form validation, drill-down component |
 
-Target: 100% coverage of `simulator/` and ≥ 80% of the backend. CI (GitHub Actions, `.github/workflows/ci.yml`) runs `ruff`, `mypy`, `pytest`, `oxlint`, `prettier`, `tsc`, `vitest` and the production build on every push and PR.
+Target: 100% coverage of `simulator/` and ≥ 80% of the backend. CI (GitHub Actions, `.github/workflows/ci.yml`) runs `ruff`, `mypy`, `pytest`, `oxlint`, `prettier`, `tsc`, `vitest` and the production build on every push and PR. From milestone 2 it also fails if the committed `openapi.json` or the generated frontend API types differ from what the current backend produces.
 
 ## 10. Configuration and local development
 
-Backend environment variables: `DATABASE_URL` (default `sqlite:///./dev.db`), `JWT_SECRET`, `COOKIE_SECURE` (default `false` locally), `ACCESS_TOKEN_DAYS` (default 7).
+Backend environment variables: `DATABASE_URL` (default `sqlite:///./dev.db`), `JWT_SECRET` (the development default is at least 32 bytes, as PyJWT recommends for HS256; rejecting the default in production is part of milestone 8), `COOKIE_SECURE` (default `false` locally), `ACCESS_TOKEN_DAYS` (default 7).
 
 ```text
 backend:   uv sync && uv run alembic upgrade head && uv run fastapi dev app/main.py   # :8000
 frontend:  npm install && npm run dev                                                # :5173, proxy /api → :8000
-types:     npm run gen:api   # openapi-typescript http://localhost:8000/api/openapi.json (from milestone 2)
+types:     npm run gen:api   # openapi-typescript (pinned, via npx) from the committed openapi.json (from milestone 2)
 ```
 
 ## 11. Deployment (after the MVP works locally)

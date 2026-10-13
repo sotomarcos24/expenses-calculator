@@ -24,7 +24,7 @@
 | # | Milestone | Main outcome | Depends on | Status |
 | --- | --- | --- | --- | --- |
 | 1 | Scaffolding | Repo, tooling, CI, app shell | — | ✅ Done |
-| 2 | Authentication | Sign up, log in, log out, protected routes | 1 | ⏳ Next |
+| 2 | Authentication | Sign up, log in, log out, protected routes | 1 | 🚧 In progress |
 | 3 | Categories | Default categories + management UI | 2 | ⬜ Pending |
 | 4 | Transactions | Income/expense CRUD, filters, gross/net salary | 3 | ⬜ Pending |
 | 5 | Investments | Portfolio CRUD and gain/loss | 2 | ⬜ Pending |
