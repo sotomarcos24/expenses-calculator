@@ -38,9 +38,10 @@ The last line is the full check set: run it before saying a frontend task is don
 
 ## Current state
 
-- Pages are placeholders (`<Placeholder milestone={N} />`); replace them when the corresponding milestone is built.
+- Pages are placeholders (`<Placeholder milestone={N} />`); replace them when the corresponding milestone is built. Login and register are real forms (M2).
+- Forms use `react-hook-form` + `zod` (v4) via `@hookform/resolvers/zod`; schemas live in `src/lib/` (e.g. `authSchemas.ts`). Shared form UI: `TextField` (label + inline error with `aria-describedby` / `aria-invalid`), `Button`, `FormError` (`role="alert"`) in `src/components/`.
 - Libraries named in the tech spec but **not installed yet** — add them when a milestone needs them (they are already approved):
-  - `recharts` (charts, M6–M7), `react-hook-form` + `zod` + `@hookform/resolvers` (forms, from M2).
+  - `recharts` (charts, M6–M7).
   - shadcn/ui is not initialised. Either run its CLI (non-interactive flags) or write small components in `src/components/`; whichever is chosen, they must use the theme tokens.
 
 ## Known caveats
