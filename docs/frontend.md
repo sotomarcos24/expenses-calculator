@@ -15,10 +15,13 @@ Run from `frontend/`:
 ```bash
 npm install
 npm run dev                           # :5173, proxies /api → :8000
+npm run gen:api                       # regenerate src/api/schema.d.ts from the backend OpenAPI document
 npm run lint && npm run format:check && npm run typecheck && npm test && npm run build
 ```
 
 The last line is the full check set: run it before saying a frontend task is done.
+
+`npm run gen:api` reads `http://localhost:8000/api/openapi.json`, so it **requires the backend dev server on :8000**. Regenerate after any backend schema change and commit the resulting `src/api/schema.d.ts` (it is formatted with Prettier by the script). Use the aliases in `src/api/types.ts` (e.g. `UserRead`, `LoginRequest`) instead of hand-written API types.
 
 ## Conventions
 
@@ -37,9 +40,9 @@ The last line is the full check set: run it before saying a frontend task is don
 
 - Pages are placeholders (`<Placeholder milestone={N} />`); replace them when the corresponding milestone is built.
 - Libraries named in the tech spec but **not installed yet** — add them when a milestone needs them (they are already approved):
-  - `recharts` (charts, M6–M7), `react-hook-form` + `zod` + `@hookform/resolvers` (forms, from M2), `openapi-typescript` (see caveats).
+  - `recharts` (charts, M6–M7), `react-hook-form` + `zod` + `@hookform/resolvers` (forms, from M2).
   - shadcn/ui is not initialised. Either run its CLI (non-interactive flags) or write small components in `src/components/`; whichever is chosen, they must use the theme tokens.
 
 ## Known caveats
 
-- `openapi-typescript` does not yet support TypeScript 6 (it is planned for milestone 2); check compatibility before adding it.
+- `openapi-typescript` (7.13.0) declares `typescript: ^5.x` as a peer dependency, while the frontend uses TypeScript 6. Decision: it is **not** a devDependency; `gen:api` runs the pinned exact version through `npx --yes openapi-typescript@7.13.0`. Do not install it, do not use `--force` / `--legacy-peer-deps` and do not downgrade TypeScript. Bump the pinned version deliberately.
