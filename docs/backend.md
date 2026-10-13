@@ -48,7 +48,10 @@ The last line is the full check set: run it before saying a backend task is done
 
 ## Current state
 
-- There are **no models or migrations yet**: the first migration (users) is created in milestone 2. `alembic/versions/` only contains a `.gitkeep`.
+- Models: `User` (`app/models/user.py`, table `users`: `email` unique and stored lowercase, `password_hash`). Migration `alembic/versions/555b346a3f7c_create_users.py` creates it.
+- `app/security.py` provides the auth building blocks: `hash_password` / `verify_password` (Argon2, `verify_password` never raises), `create_access_token` / `decode_access_token` (JWT HS256 signed with `JWT_SECRET`, `decode_access_token` returns the user id or `None`), and `normalize_email`.
+- The default `JWT_SECRET` (in `app/config.py` and `.env.example`) is a dev-only value of 52 bytes; PyJWT warns for HMAC keys under 32 bytes.
+- No auth endpoints yet (next M2 issue).
 
 ## Known caveats
 
