@@ -1,28 +1,26 @@
-import { render, screen } from '@testing-library/react'
-import { createMemoryRouter, RouterProvider } from 'react-router'
-import { describe, expect, it } from 'vitest'
-import { routes } from '../routes.tsx'
-
-function renderAt(path: string) {
-  const router = createMemoryRouter(routes, { initialEntries: [path] })
-  render(<RouterProvider router={router} />)
-}
+import { screen } from '@testing-library/react'
+import { beforeEach, describe, expect, it } from 'vitest'
+import { mockMe, renderApp } from '../test/renderApp.tsx'
 
 describe('AppLayout', () => {
-  it('renders the brand and all main sections', () => {
-    renderAt('/')
+  beforeEach(() => {
+    mockMe(200)
+  })
 
+  it('renders the brand and all main sections', async () => {
+    renderApp('/')
+
+    const nav = await screen.findByRole('navigation', { name: 'Main' })
     expect(screen.getByText('Dolar')).toBeInTheDocument()
-    const nav = screen.getByRole('navigation', { name: 'Main' })
     for (const label of ['Dashboard', 'Transactions', 'Categories', 'Investments', 'Simulator']) {
       expect(nav).toHaveTextContent(label)
     }
   })
 
-  it('marks the current section as active', () => {
-    renderAt('/investments')
+  it('marks the current section as active', async () => {
+    renderApp('/investments')
 
-    expect(screen.getByRole('link', { name: 'Investments' })).toHaveAttribute(
+    expect(await screen.findByRole('link', { name: 'Investments' })).toHaveAttribute(
       'aria-current',
       'page',
     )
