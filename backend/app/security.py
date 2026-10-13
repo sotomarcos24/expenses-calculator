@@ -1,17 +1,22 @@
-"""Password hashing (Argon2) and access-token (JWT, HS256) helpers.
-
-Pure functions: no FastAPI request handling here.
+"""Password hashing (Argon2), access-token (JWT, HS256) helpers and the ``CurrentUser``
+dependency that authenticates a request from the ``access_token`` cookie.
 """
 
 from datetime import UTC, datetime, timedelta
+from typing import Annotated
 
 import jwt
 from argon2 import PasswordHasher
 from argon2.exceptions import InvalidHashError, VerificationError, VerifyMismatchError
+from fastapi import Cookie, Depends, HTTPException, status
 
 from app.config import get_settings
+from app.db import DbSession
+from app.models import User
 
 JWT_ALGORITHM = "HS256"
+ACCESS_TOKEN_COOKIE = "access_token"
+COOKIE_PATH = "/api"
 
 _password_hasher = PasswordHasher()
 
@@ -70,3 +75,22 @@ def decode_access_token(token: str) -> int | None:
     if not isinstance(sub, str) or not (sub.isascii() and sub.isdigit()):
         return None
     return int(sub)
+
+
+def get_current_user(
+    db: DbSession,
+    access_token: Annotated[str | None, Cookie(alias=ACCESS_TOKEN_COOKIE)] = None,
+) -> User:
+    """Return the user authenticated by the ``access_token`` cookie, or raise 401.
+
+    A missing cookie, an invalid/expired/forged token, or a token whose user no longer
+    exists all give ``401 {"detail": "Not authenticated"}``.
+    """
+    user_id = decode_access_token(access_token) if access_token else None
+    user = db.get(User, user_id) if user_id is not None else None
+    if user is None:
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Not authenticated")
+    return user
+
+
+CurrentUser = Annotated[User, Depends(get_current_user)]
