@@ -15,13 +15,13 @@ Run from `frontend/`:
 ```bash
 npm install
 npm run dev                           # :5173, proxies /api → :8000
-npm run gen:api                       # regenerate src/api/schema.d.ts from the backend OpenAPI document
+npm run gen:api                       # regenerate src/api/schema.d.ts from ../openapi.json
 npm run lint && npm run format:check && npm run typecheck && npm test && npm run build
 ```
 
 The last line is the full check set: run it before saying a frontend task is done.
 
-`npm run gen:api` reads `http://localhost:8000/api/openapi.json`, so it **requires the backend dev server on :8000**. Regenerate after any backend schema change and commit the resulting `src/api/schema.d.ts` (it is formatted with Prettier by the script). Use the aliases in `src/api/types.ts` (e.g. `UserRead`, `LoginRequest`) instead of hand-written API types.
+`npm run gen:api` reads the committed `../openapi.json` (the backend server is **not** needed) and writes `src/api/schema.d.ts`, formatted with Prettier. After any backend route or schema change, run `uv run python -m scripts.export_openapi` in `backend/`, then `npm run gen:api` here, and commit both files. CI runs `gen:api` and fails if `src/api/schema.d.ts` differs from the committed file (and the backend job fails if `openapi.json` is stale); to fix a failure, run those two commands and commit the result. Use the aliases in `src/api/types.ts` (e.g. `UserRead`, `LoginRequest`) instead of hand-written API types.
 
 ## Conventions
 

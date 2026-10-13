@@ -69,6 +69,7 @@
 #### Frontend
 
 - Add `openapi-typescript` and the `gen:api` script (check TypeScript 6 support; otherwise generate with a pinned version through `npx`).
+- Commit `openapi.json` at the repo root (exported by `backend/scripts/export_openapi.py`); `gen:api` generates the types from it, and CI fails if `openapi.json` or `src/api/schema.d.ts` is stale.
 - Login and register forms (React Hook Form + Zod) with inline validation errors.
 - `useMe` hook + `RequireAuth` guard around the app layout; logged-in users visiting `/login` are sent to `/`.
 - Global 401 handling: clear the cached user and redirect to `/login`.

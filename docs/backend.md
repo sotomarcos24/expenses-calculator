@@ -20,10 +20,13 @@ uv sync                               # install deps
 uv run fastapi dev app/main.py        # dev server on :8000 (API docs: /api/docs)
 uv run alembic upgrade head           # apply migrations
 uv run alembic revision --autogenerate -m "<message>"   # new migration
-uv run ruff format . && uv run ruff check . && uv run mypy app tests && uv run pytest
+uv run python -m scripts.export_openapi   # write ../openapi.json (add --check to only verify)
+uv run ruff format . && uv run ruff check . && uv run mypy app tests scripts && uv run pytest
 ```
 
 The last line is the full check set: run it before saying a backend task is done.
+
+`openapi.json` at the repo root is the committed OpenAPI document. `scripts/export_openapi.py` builds it from `create_app()` without a server or database, and the output does not depend on env vars or `.env` (the title is pinned to the default `APP_NAME`). Run the export after any change to routes or schemas, then `npm run gen:api` in `frontend/`, and commit both files. CI regenerates `openapi.json` and fails if it differs from the committed file; the fix is the same two commands.
 
 ## Conventions
 
