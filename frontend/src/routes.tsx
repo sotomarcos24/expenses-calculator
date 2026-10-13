@@ -1,5 +1,7 @@
 import type { RouteObject } from 'react-router'
 import { AppLayout } from './components/AppLayout.tsx'
+import { RedirectIfAuthenticated } from './components/RedirectIfAuthenticated.tsx'
+import { RequireAuth } from './components/RequireAuth.tsx'
 import { CategoriesPage } from './pages/CategoriesPage.tsx'
 import { DashboardPage } from './pages/DashboardPage.tsx'
 import { InvestmentsPage } from './pages/InvestmentsPage.tsx'
@@ -10,11 +12,28 @@ import { SimulatorPage } from './pages/SimulatorPage.tsx'
 import { TransactionsPage } from './pages/TransactionsPage.tsx'
 
 export const routes: RouteObject[] = [
-  { path: '/login', element: <LoginPage /> },
-  { path: '/register', element: <RegisterPage /> },
   {
-    // The auth guard is added here in milestone 2.
-    element: <AppLayout />,
+    path: '/login',
+    element: (
+      <RedirectIfAuthenticated>
+        <LoginPage />
+      </RedirectIfAuthenticated>
+    ),
+  },
+  {
+    path: '/register',
+    element: (
+      <RedirectIfAuthenticated>
+        <RegisterPage />
+      </RedirectIfAuthenticated>
+    ),
+  },
+  {
+    element: (
+      <RequireAuth>
+        <AppLayout />
+      </RequireAuth>
+    ),
     children: [
       { index: true, element: <DashboardPage /> },
       { path: 'transactions', element: <TransactionsPage /> },

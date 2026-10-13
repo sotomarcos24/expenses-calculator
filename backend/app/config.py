@@ -8,7 +8,8 @@ class Settings(BaseSettings):
 
     app_name: str = "PersonalDolar"
     database_url: str = "sqlite:///./dev.db"
-    jwt_secret: str = "change-me-in-production"
+    # Dev-only default (>= 32 bytes so PyJWT does not warn). Set JWT_SECRET in production.
+    jwt_secret: str = "dev-only-insecure-jwt-secret-change-me-in-production"
     access_token_days: int = 7
     cookie_secure: bool = False
 

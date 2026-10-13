@@ -15,10 +15,13 @@ Run from `frontend/`:
 ```bash
 npm install
 npm run dev                           # :5173, proxies /api → :8000
+npm run gen:api                       # regenerate src/api/schema.d.ts from ../openapi.json
 npm run lint && npm run format:check && npm run typecheck && npm test && npm run build
 ```
 
 The last line is the full check set: run it before saying a frontend task is done.
+
+`npm run gen:api` reads the committed `../openapi.json` (the backend server is **not** needed) and writes `src/api/schema.d.ts`, formatted with Prettier. After any backend route or schema change, run `uv run python -m scripts.export_openapi` in `backend/`, then `npm run gen:api` here, and commit both files. CI runs `gen:api` and fails if `src/api/schema.d.ts` differs from the committed file (and the backend job fails if `openapi.json` is stale); to fix a failure, run those two commands and commit the result. Use the aliases in `src/api/types.ts` (e.g. `UserRead`, `LoginRequest`) instead of hand-written API types.
 
 ## Conventions
 
@@ -35,11 +38,12 @@ The last line is the full check set: run it before saying a frontend task is don
 
 ## Current state
 
-- Pages are placeholders (`<Placeholder milestone={N} />`); replace them when the corresponding milestone is built.
+- Pages are placeholders (`<Placeholder milestone={N} />`); replace them when the corresponding milestone is built. Login and register are real forms (M2).
+- Forms use `react-hook-form` + `zod` (v4) via `@hookform/resolvers/zod`; schemas live in `src/lib/` (e.g. `authSchemas.ts`). Shared form UI: `TextField` (label + inline error with `aria-describedby` / `aria-invalid`), `Button`, `FormError` (`role="alert"`) in `src/components/`.
 - Libraries named in the tech spec but **not installed yet** — add them when a milestone needs them (they are already approved):
-  - `recharts` (charts, M6–M7), `react-hook-form` + `zod` + `@hookform/resolvers` (forms, from M2), `openapi-typescript` (see caveats).
+  - `recharts` (charts, M6–M7).
   - shadcn/ui is not initialised. Either run its CLI (non-interactive flags) or write small components in `src/components/`; whichever is chosen, they must use the theme tokens.
 
 ## Known caveats
 
-- `openapi-typescript` does not yet support TypeScript 6 (it is planned for milestone 2); check compatibility before adding it.
+- `openapi-typescript` (7.13.0) declares `typescript: ^5.x` as a peer dependency, while the frontend uses TypeScript 6. Decision: it is **not** a devDependency; `gen:api` runs the pinned exact version through `npx --yes openapi-typescript@7.13.0`. Do not install it, do not use `--force` / `--legacy-peer-deps` and do not downgrade TypeScript. Bump the pinned version deliberately.

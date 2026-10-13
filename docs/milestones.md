@@ -24,7 +24,7 @@
 | # | Milestone | Main outcome | Depends on | Status |
 | --- | --- | --- | --- | --- |
 | 1 | Scaffolding | Repo, tooling, CI, app shell | — | ✅ Done |
-| 2 | Authentication | Sign up, log in, log out, protected routes | 1 | 🚧 In progress |
+| 2 | Authentication | Sign up, log in, log out, protected routes | 1 | ✅ Done |
 | 3 | Categories | Default categories + management UI | 2 | ⬜ Pending |
 | 4 | Transactions | Income/expense CRUD, filters, gross/net salary | 3 | ⬜ Pending |
 | 5 | Investments | Portfolio CRUD and gain/loss | 2 | ⬜ Pending |
@@ -54,7 +54,7 @@
 
 ---
 
-## M2 — Authentication
+## M2 — Authentication ✅
 
 **Goal:** a user can create an account and only reach the app when logged in (§4.1, tech-spec §5).
 
@@ -69,6 +69,7 @@
 #### Frontend
 
 - Add `openapi-typescript` and the `gen:api` script (check TypeScript 6 support; otherwise generate with a pinned version through `npx`).
+- Commit `openapi.json` at the repo root (exported by `backend/scripts/export_openapi.py`); `gen:api` generates the types from it, and CI fails if `openapi.json` or `src/api/schema.d.ts` is stale.
 - Login and register forms (React Hook Form + Zod) with inline validation errors.
 - `useMe` hook + `RequireAuth` guard around the app layout; logged-in users visiting `/login` are sent to `/`.
 - Global 401 handling: clear the cached user and redirect to `/login`.
@@ -76,13 +77,13 @@
 
 #### Acceptance criteria
 
-- [ ] Registering with a valid email and a password of 8+ characters creates the account and logs the user in.
-- [ ] A duplicate email returns 409 with a clear message.
-- [ ] Wrong credentials return 401 with the generic "Invalid email or password".
-- [ ] The password is stored hashed; the hash never appears in any response.
-- [ ] Without the cookie, `GET /api/auth/me` returns 401 and the frontend redirects to `/login`.
-- [ ] Logging out clears the cookie, after which protected routes are not accessible.
-- [ ] The token is not readable from JavaScript (`document.cookie` does not show it).
+- [x] Registering with a valid email and a password of 8+ characters creates the account and logs the user in.
+- [x] A duplicate email returns 409 with a clear message.
+- [x] Wrong credentials return 401 with the generic "Invalid email or password".
+- [x] The password is stored hashed; the hash never appears in any response.
+- [x] Without the cookie, `GET /api/auth/me` returns 401 and the frontend redirects to `/login`.
+- [x] Logging out clears the cookie, after which protected routes are not accessible.
+- [x] The token is not readable from JavaScript (`document.cookie` does not show it).
 
 **Tests:** hashing round-trip; register → me → logout → me (401); duplicate email; wrong password; expired/forged token → 401; email normalisation (`A@B.com` = `a@b.com`); guard redirect in the frontend.
 
