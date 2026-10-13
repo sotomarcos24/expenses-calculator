@@ -299,7 +299,8 @@ Backend environment variables: `DATABASE_URL` (default `sqlite:///./dev.db`), `J
 ```text
 backend:   uv sync && uv run alembic upgrade head && uv run fastapi dev app/main.py   # :8000
 frontend:  npm install && npm run dev                                                # :5173, proxy /api → :8000
-types:     npm run gen:api   # openapi-typescript (pinned, via npx) from the committed openapi.json (from milestone 2)
+openapi:   uv run python -m scripts.export_openapi   # from backend/: writes ../openapi.json (--check only verifies)
+types:     npm run gen:api   # from frontend/: openapi-typescript (pinned, via npx) from the committed openapi.json
 ```
 
 ## 11. Deployment (after the MVP works locally)

@@ -31,8 +31,17 @@ npm run dev
 
 ```bash
 # Backend
-cd backend && uv run ruff format --check . && uv run ruff check . && uv run mypy app tests && uv run pytest
+cd backend && uv run ruff format --check . && uv run ruff check . && uv run mypy app tests scripts && uv run pytest
 
 # Frontend
-cd frontend && npm run lint && npm run format:check && npm run typecheck && npm test
+cd frontend && npm run lint && npm run format:check && npm run typecheck && npm test && npm run build
+```
+
+## API contract
+
+`openapi.json` at the repo root is exported from the backend and the frontend API types (`frontend/src/api/schema.d.ts`) are generated from it. After changing a backend route or schema, regenerate both and commit them — CI fails if either is stale:
+
+```bash
+(cd backend && uv run python -m scripts.export_openapi)
+(cd frontend && npm run gen:api)
 ```
