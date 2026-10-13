@@ -13,6 +13,9 @@ PersonalDolar is a single-user personal finance web app: manual income/expense t
 | [`docs/plan.md`](docs/plan.md) | Product spec: features, user stories, acceptance criteria, non-goals |
 | [`docs/tech-spec.md`](docs/tech-spec.md) | Technical design: stack, data model, auth, API, simulator formulas, frontend, testing |
 | [`docs/milestones.md`](docs/milestones.md) | Delivery plan, per-milestone scope, acceptance criteria and **current status** |
+| [`docs/process.md`](docs/process.md) | **How work is done**: orchestrator + PM / Engineer / QA subagents, issue lifecycle, rules |
+| [`docs/task-template.md`](docs/task-template.md) | Template every groomed issue follows |
+| [`docs/team/`](docs/team/) | Role definitions of the subagents (PM, Software Engineer, QA Engineer) |
 
 - Check `docs/milestones.md` to know which milestone is in progress; only work on that milestone unless told otherwise.
 - If the implementation must deviate from the specs, update the spec in the same change and mention it to the user.
@@ -24,6 +27,17 @@ PersonalDolar is a single-user personal finance web app: manual income/expense t
 2. Run `git status` and `git log --oneline -10` to see uncommitted or unpushed work, and check you are on the right branch.
 3. Run the checks of both projects (see Commands) to confirm the baseline is green before changing anything.
 4. If something in the docs contradicts the code, trust the code, tell the user, and fix the docs.
+5. Check the backlog: `gh issue list --label m<N>` for the milestone in progress.
+
+## How work is done — orchestrator loop
+
+Every task follows [`docs/process.md`](docs/process.md). In short:
+
+- The **main session is the orchestrator**. It launches the subagents in `.claude/agents/` — `project-manager`, `software-engineer`, `qa-engineer` — and does **not** groom, implement or test itself.
+- The backlog is the open GitHub issues of the current milestone (label `m<N>`). For each issue: **PM grooms → Engineer implements → QA verifies** → on FAIL back to the engineer with the QA comment, on PASS the orchestrator closes the issue. Repeat until the backlog is empty, then do the milestone wrap-up.
+- Never skip grooming. The engineer never closes issues. QA never changes code. Only the orchestrator closes an issue, and only after `## QA: PASS`.
+- After 3 consecutive QA FAILs on one issue, stop and ask the user.
+- Roles talk to each other through issue comments. Subagents start without context: always pass them the issue number, the branch and relevant user instructions.
 
 ## Ending a session (handoff)
 
@@ -70,7 +84,8 @@ Always run the full check set of the side you changed before saying a task is do
 ## Workflow
 
 - One milestone = one branch named `m<N>-<slug>` (e.g. `m2-auth`), merged into `main` via PR with green CI.
-- Commit or push only when the user asks.
+- Inside the orchestrator loop the software engineer commits on the milestone branch (never on `main`). Push and open PRs only when the user asks.
+- Issues are managed with the `gh` CLI (must be installed and authenticated).
 - A milestone is finished only when its acceptance criteria and the **Definition of done** in `docs/milestones.md` are met; then update its status there and in the table in `docs/plan.md` §8.
 - For the simulator: write the pure module and its tests **first**, then endpoints, then UI.
 
