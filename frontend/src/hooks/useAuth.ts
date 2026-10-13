@@ -65,7 +65,9 @@ export function useLogout() {
   const navigate = useNavigate()
   return useMutation({
     mutationFn: () => apiFetch<void>('/auth/logout', { method: 'POST' }),
-    onSuccess: async () => {
+    // The user wants to leave: log out client side even if the request fails (500, 401,
+    // network error). No error is shown.
+    onSettled: async () => {
       queryClient.setQueryData(ME_QUERY_KEY, null)
       // Another user may log in next: drop every other cached query.
       queryClient.removeQueries({ predicate: (query) => query.queryKey[0] !== ME_QUERY_KEY[0] })
