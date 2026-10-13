@@ -88,7 +88,7 @@ Go back to step 1 until the milestone has no open issues.
 When the milestone backlog is empty, the orchestrator:
 
 1. Runs the full check set of both projects and confirms the milestone **Definition of done** in `milestones.md`.
-2. Ticks the acceptance criteria, updates the status in `milestones.md` and in `plan.md` §8, and the *Current state of the code* section of `AGENTS.md`.
+2. Ticks the acceptance criteria, updates the status in `milestones.md` and in `plan.md` §8, and the *Current state* sections of `AGENTS.md`, `backend.md` and `frontend.md`.
 3. Reports to the user and asks whether to push the branch and open the PR. Pushing and opening PRs only happen when the user says so.
 
 ## Rules
