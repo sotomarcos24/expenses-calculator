@@ -113,6 +113,10 @@ All tables have `id` (integer PK), `created_at` and `updated_at`. Every user-own
 | subcategory_id | FK → categories, nullable | must be a child of `category_id` |
 | note | varchar(500), nullable | |
 
+- `type` is stored like `categories.kind`: a string (non-native enum, `income` / `expense`) with the CHECK `ck_transactions_type`. It reuses the `CategoryKind` enum, so the service can compare `category.kind == type` directly.
+- CHECK constraints: `ck_transactions_amount_positive` (`amount > 0`), `ck_transactions_gross_amount_gte_amount` (`gross_amount IS NULL OR gross_amount >= amount`) and `ck_transactions_gross_amount_income_only` (`gross_amount IS NULL OR type = 'income'`). The other rules in the table (category top-level and of the same `kind`, subcategory a child of it, ownership) are checked in the service layer.
+- Indexes: `ix_transactions_user_id_date` on (`user_id`, `date`), which also covers the "`user_id` indexed" rule because `user_id` is the leading column; `ix_transactions_category_id` and `ix_transactions_subcategory_id`, for the "category in use" check and the FK checks when a category is deleted.
+- The `category_id` / `subcategory_id` FKs are `NO ACTION` (no `ON DELETE`), not `RESTRICT` and not `CASCADE`. A category (or subcategory) used by a transaction cannot be deleted: the service answers **409** first (`category_ids_in_use()`), and the FK is the safety net. Deleting a user cascades to both `categories` and `transactions` in one statement; with `NO ACTION` the FK check runs at the end of the statement, after both cascades, so it succeeds on SQLite and Postgres (with `RESTRICT`, Postgres checks immediately and the result could depend on cascade order). There is no ORM back-reference from `Category` to its transactions, so the ORM never nulls `category_id` on delete.
 - **Salary (§4.4):** a salary is an income transaction with `gross_amount` set. Effective deduction rate = `(gross − net) / gross`, computed and returned by the API (not stored). Totals and simulations always use `amount` (net).
 
 ### `investments`
