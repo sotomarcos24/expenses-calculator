@@ -113,6 +113,10 @@ All tables have `id` (integer PK), `created_at` and `updated_at`. Every user-own
 | subcategory_id | FK → categories, nullable | must be a child of `category_id` |
 | note | varchar(500), nullable | |
 
+- `type` is stored like `categories.kind`: a string (non-native enum, `income` / `expense`) with the CHECK `ck_transactions_type`. It reuses the `CategoryKind` enum, so the service can compare `category.kind == type` directly.
+- CHECK constraints: `ck_transactions_amount_positive` (`amount > 0`), `ck_transactions_gross_amount_gte_amount` (`gross_amount IS NULL OR gross_amount >= amount`) and `ck_transactions_gross_amount_income_only` (`gross_amount IS NULL OR type = 'income'`). The other rules in the table (category top-level and of the same `kind`, subcategory a child of it, ownership) are checked in the service layer.
+- Indexes: `ix_transactions_user_id_date` on (`user_id`, `date`), which also covers the "`user_id` indexed" rule because `user_id` is the leading column; `ix_transactions_category_id` and `ix_transactions_subcategory_id`, for the "category in use" check and the FK checks when a category is deleted.
+- The `category_id` / `subcategory_id` FKs are `NO ACTION` (no `ON DELETE`), not `RESTRICT` and not `CASCADE`. A category (or subcategory) used by a transaction cannot be deleted: the service answers **409** first (`category_ids_in_use()`), and the FK is the safety net. Deleting a user cascades to both `categories` and `transactions` in one statement; with `NO ACTION` the FK check runs at the end of the statement, after both cascades, so it succeeds on SQLite and Postgres (with `RESTRICT`, Postgres checks immediately and the result could depend on cascade order). There is no ORM back-reference from `Category` to its transactions, so the ORM never nulls `category_id` on delete.
 - **Salary (§4.4):** a salary is an income transaction with `gross_amount` set. Effective deduction rate = `(gross − net) / gross`, computed and returned by the API (not stored). Totals and simulations always use `amount` (net).
 
 ### `investments`
@@ -166,15 +170,52 @@ Prefix `/api`. JSON in and out. Money fields are serialized as **strings** (`"12
 
 `CategoryRead` is `{id, name, kind, parent_id}` (`parent_id` is `null` for a top-level category); `CategoryTreeNode` adds `subcategories: list[CategoryRead]`. Request bodies reject unknown fields (422). `name` is stripped at both ends and must then be 1–100 characters (422 otherwise). A category id that does not exist or belongs to another user is **404** `"Category not found"`.
 
-Duplicates are **409** `"A category with this name already exists at this level"`, compared case-insensitively (SQL `lower()`) on the trimmed name: among the user's top-level categories of the same `kind`, or among the subcategories of the same parent. Renaming a category to its own name or changing only its case is allowed. A unique-constraint race on commit is also returned as 409. The "has transactions" check is `category_ids_in_use()` in `app/services/categories.py`, which always returns `False` until transactions exist (M4).
+Duplicates are **409** `"A category with this name already exists at this level"`, compared case-insensitively (SQL `lower()`) on the trimmed name: among the user's top-level categories of the same `kind`, or among the subcategories of the same parent. Renaming a category to its own name or changing only its case is allowed. A unique-constraint race on commit is also returned as 409. The "has transactions" check is `category_ids_in_use()` in `app/services/categories.py`: a category is in use when any of the user's transactions references it or one of its subcategories, as `category_id` or `subcategory_id` (a single `EXISTS` query). Deleting a top-level category checks it and all its subcategories; deleting a subcategory checks only that subcategory. If a transaction is created between the check and the delete, the FK violation on commit is rolled back and reported as the same 409.
 
 ### Transactions
 
 | Method | Path | Description |
 | --- | --- | --- |
-| GET | `/transactions?from=&to=&type=&category_id=&subcategory_id=&page=&page_size=` | ordered by date desc; returns `{items, total}` |
-| POST | `/transactions` | create |
-| GET / PATCH / DELETE | `/transactions/{id}` | read / update / delete |
+| GET | `/transactions?from=&to=&type=&category_id=&subcategory_id=&page=&page_size=` | **200** + `TransactionPage {items, total}`; **422** on bad query parameters |
+| POST | `/transactions` | `TransactionCreate` → **201** + `TransactionRead`; **404**, **422** |
+| GET | `/transactions/{id}` | **200** + `TransactionRead`; **404** |
+| PATCH | `/transactions/{id}` | `TransactionUpdate` (partial) → **200** + `TransactionRead`; **404**, **422** |
+| DELETE | `/transactions/{id}` | **204**, no body; **404** |
+
+All five need the cookie (**401** `"Not authenticated"`); `POST`/`PATCH`/`DELETE` with a non-JSON `Content-Type` are **415** (§5). A transaction id that does not exist or belongs to another user is **404** `"Transaction not found"`; a non-integer id is 422.
+
+**Schemas.**
+
+- `TransactionCreate {type, date, amount, gross_amount?, category_id, subcategory_id?, note?}`: `type` is `income` / `expense`, `date` an ISO date (`YYYY-MM-DD`, future dates allowed); `gross_amount`, `subcategory_id` and `note` default to `null`.
+- `TransactionUpdate`: the same fields, all optional. Omitted fields are unchanged, an explicit `null` clears `gross_amount`, `subcategory_id` or `note`, and an explicit `null` for `type`, `date`, `amount` or `category_id` is 422. `{}` is 200 and changes nothing.
+- `TransactionRead {id, type, date, amount, gross_amount, deduction_rate, category_id, category_name, subcategory_id, subcategory_name, note, created_at, updated_at}`. The names save the list UI extra requests; `subcategory_*` are `null` without a subcategory.
+- `TransactionPage {items: list[TransactionRead], total}`: `total` counts the rows matching the filters before pagination.
+- Request bodies reject unknown fields (422).
+
+**Money.** Requests send decimal strings. `amount` and `gross_amount` must be `> 0`, have at most 2 decimal places (`"10.5"` and `"10"` are fine, `"10.123"` is 422) and fit `NUMERIC(12,2)` (max `9999999999.99`); `NaN`, `Infinity` and non-numeric strings are 422. Responses always return them as strings with exactly 2 decimals (`"10.50"`). `deduction_rate` is `(gross_amount − amount) / gross_amount` computed with `Decimal`, quantized to **4 decimals half up** and returned as a string (`"0.2000"`, i.e. 20 %; `"0.0000"` when gross equals net); it is `null` without `gross_amount` and is not stored (`compute_deduction_rate()` in `app/services/transactions.py`).
+
+**Note.** Trimmed at both ends (inner whitespace kept); empty or whitespace-only is stored as `null`; more than 500 characters after trimming is 422.
+
+**Validation order** (create, and PATCH on the merged result of the stored row plus the patch):
+
+1. Schema errors → 422 (FastAPI's list-shaped `detail`).
+2. `category_id` or `subcategory_id` that does not exist or belongs to another user → **404** `"Category not found"`.
+3. Domain rules → **422** with a string `detail`:
+   - `"The category must be a top-level category"`;
+   - `"The category kind must match the transaction type"`;
+   - `"The subcategory must be a subcategory of the category"` (also when it equals the category);
+   - `"Only income transactions can have a gross amount"`;
+   - `"The gross amount must be greater than or equal to the amount"`.
+
+The subcategory is optional even when the category has subcategories. A rejected PATCH leaves the row unchanged, e.g. `{"type": "expense"}` on a salary with a gross amount is 422 while `{"type": "expense", "gross_amount": null, "category_id": <expense category>}` is 200, and changing `category_id` while the stored subcategory belongs to another category is 422 unless the body also sets `subcategory_id`.
+
+**List query parameters.** All optional and combined with AND, always restricted to the current user:
+
+- `from`, `to`: ISO dates, inclusive; `from` later than `to` is **422** `"'from' must be on or before 'to'"`; `from == to` is one day.
+- `type`: `income` / `expense` (anything else 422).
+- `category_id`: matches the transaction's top-level category, so it includes rows on its subcategories; `subcategory_id`: matches the subcategory. An id that does not exist, belongs to another user, or (for `category_id`) is a subcategory matches nothing: **200** `{"items": [], "total": 0}`, never 404.
+- `page`: 1-based, default 1, `≥ 1`. `page_size`: default **50**, `1–100`. A page past the end is 200 with empty `items` and the real `total`.
+- Order: `date` desc, then `id` desc. Category names are loaded with `selectinload` (no N+1).
 
 ### Investments
 

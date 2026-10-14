@@ -26,7 +26,7 @@
 | 1 | Scaffolding | Repo, tooling, CI, app shell | — | ✅ Done |
 | 2 | Authentication | Sign up, log in, log out, protected routes | 1 | ✅ Done |
 | 3 | Categories | Default categories + management UI | 2 | ✅ Done |
-| 4 | Transactions | Income/expense CRUD, filters, gross/net salary | 3 | ⬜ Pending |
+| 4 | Transactions | Income/expense CRUD, filters, gross/net salary | 3 | ✅ Done |
 | 5 | Investments | Portfolio CRUD and gain/loss | 2 | ⬜ Pending |
 | 6 | Dashboard | Period summary and charts | 4, 5 | ⬜ Pending |
 | 7 | Simulator | Modes A/B/C with three scenarios | 4, 5 | ⬜ Pending |
@@ -89,7 +89,7 @@
 
 ---
 
-## M3 — Categories
+## M3 — Categories ✅
 
 **Goal:** two-level categories, a default set for every new user, and a management screen (§4.2, tech-spec §4 `categories`).
 
@@ -117,7 +117,7 @@
 
 ---
 
-## M4 — Transactions
+## M4 — Transactions ✅
 
 **Goal:** record and list income and expenses, including gross/net salary (§4.3, §4.4).
 
@@ -137,13 +137,13 @@
 
 #### Acceptance criteria
 
-- [ ] Income and expenses can be created, edited, deleted and listed.
-- [ ] Filters by period and category work and can be combined.
-- [ ] Zero or negative amounts are rejected.
-- [ ] A salary with gross 3,000 and net 2,400 shows a 20.0% deduction rate.
-- [ ] Net > gross is rejected.
-- [ ] A category with transactions cannot be deleted (409).
-- [ ] Users cannot read or modify each other's transactions, nor use each other's categories.
+- [x] Income and expenses can be created, edited, deleted and listed.
+- [x] Filters by period and category work and can be combined.
+- [x] Zero or negative amounts are rejected.
+- [x] A salary with gross 3,000 and net 2,400 shows a 20.0% deduction rate.
+- [x] Net > gross is rejected.
+- [x] A category with transactions cannot be deleted (409).
+- [x] Users cannot read or modify each other's transactions, nor use each other's categories.
 
 **Tests:** validations above; filter combinations; pagination; `Decimal` precision (e.g. `0.10 + 0.20 = 0.30`); ownership.
 

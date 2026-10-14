@@ -77,7 +77,7 @@ docs/       specs, milestones, process, team roles
 
 ## Current state
 
-- Milestones 1 (scaffolding), 2 (authentication) and 3 (categories) are done. Next: **M4 — Transactions** (branch `m4-transactions`). Issue #16 (real "category in use" check for the delete 409) is already filed for M4; the PM breaks the rest of the M4 section into issues at intake.
+- Milestones 1 (scaffolding), 2 (authentication), 3 (categories) and 4 (transactions) are done. Next: **M5 — Investments** (branch `m5-investments`, from an up-to-date `main`). It has no issues yet: the PM breaks the M5 section of `docs/milestones.md` into issues at intake (create the `m5` label first).
 - Open backlog issues not tied to a milestone (#9 return to the requested page after login, #10 login rate limiting) need the user's decision before any work.
 - The API contract is the committed `openapi.json` at the repo root; after any backend route or schema change, re-export it and regenerate the frontend types (see `docs/backend.md` → *Commands*). CI fails if either is stale.
 - Git: `main` tracks `origin` (`github.com/sotomarcos24/expenses-calculator`).
