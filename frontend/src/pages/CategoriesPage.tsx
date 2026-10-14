@@ -10,10 +10,13 @@ import {
   useDeleteCategory,
   useRenameCategory,
 } from '../hooks/useCategories.ts'
+import { MD_MEDIA_QUERY, useMediaQuery } from '../hooks/useMediaQuery.ts'
 import { categoryErrorMessage } from '../lib/categoryErrors.ts'
 import type { CategoryEditor } from '../lib/categoryEditor.ts'
 
 type Section = 'expenses' | 'income'
+
+const SECTION_OF_KIND: Record<CategoryKind, Section> = { expense: 'expenses', income: 'income' }
 
 const SECTIONS: {
   key: Section
@@ -106,6 +109,17 @@ function CategoriesContent() {
   const [active, setActive] = useState<Section>('expenses')
   const tabRefs = useRef<Partial<Record<Section, HTMLButtonElement | null>>>({})
   const { editor, pending, setEditor, save, confirmDelete } = useCategoryEditor()
+  // Desktop (md+) shows both sections side by side; below it they are tabs (one at a time).
+  const isDesktop = useMediaQuery(MD_MEDIA_QUERY)
+  const [wasDesktop, setWasDesktop] = useState(isDesktop)
+
+  // Shrinking to mobile with an editor open in the hidden section: show that section instead.
+  if (wasDesktop !== isDesktop) {
+    setWasDesktop(isDesktop)
+    if (!isDesktop && editor && SECTION_OF_KIND[editor.kind] !== active) {
+      setActive(SECTION_OF_KIND[editor.kind])
+    }
+  }
 
   if (isPending) {
     return (
@@ -134,6 +148,15 @@ function CategoriesContent() {
 
   const trees: Record<Section, CategoryTreeNode[]> = { expenses, income }
 
+  // Switching to another tab discards the open editor, which would otherwise stay open, hidden.
+  const activate = (next: Section) => {
+    if (next === active) {
+      return
+    }
+    setActive(next)
+    setEditor(null)
+  }
+
   // Tabs pattern (WAI-ARIA): Left/Right move between tabs.
   const onTabKeyDown = (event: KeyboardEvent<HTMLButtonElement>) => {
     if (event.key !== 'ArrowLeft' && event.key !== 'ArrowRight') {
@@ -141,57 +164,59 @@ function CategoriesContent() {
     }
     event.preventDefault()
     const next: Section = active === 'expenses' ? 'income' : 'expenses'
-    setActive(next)
+    activate(next)
     tabRefs.current[next]?.focus()
   }
 
   return (
     <>
-      {/* Mobile only: one section at a time. Desktop (md+) shows both columns. */}
-      <div
-        role="tablist"
-        aria-label="Category type"
-        className="mb-4 flex gap-1 rounded-lg border border-border bg-surface p-1 md:hidden"
-      >
-        {SECTIONS.map((section) => {
-          const selected = active === section.key
-          return (
-            <button
-              key={section.key}
-              ref={(element) => {
-                tabRefs.current[section.key] = element
-              }}
-              type="button"
-              role="tab"
-              id={`categories-tab-${section.key}`}
-              aria-selected={selected}
-              aria-controls={`categories-panel-${section.key}`}
-              tabIndex={selected ? 0 : -1}
-              onClick={() => setActive(section.key)}
-              onKeyDown={onTabKeyDown}
-              className={`flex-1 rounded-md px-3 py-2 text-sm font-medium transition-colors ${
-                selected
-                  ? 'bg-primary text-primary-foreground'
-                  : 'text-muted hover:bg-accent hover:text-primary'
-              }`}
-            >
-              {section.title}
-            </button>
-          )
-        })}
-      </div>
+      {/* Mobile only: one section at a time. Desktop (md+) shows both columns, with no tabs. */}
+      {!isDesktop && (
+        <div
+          role="tablist"
+          aria-label="Category type"
+          className="mb-4 flex gap-1 rounded-lg border border-border bg-surface p-1 md:hidden"
+        >
+          {SECTIONS.map((section) => {
+            const selected = active === section.key
+            return (
+              <button
+                key={section.key}
+                ref={(element) => {
+                  tabRefs.current[section.key] = element
+                }}
+                type="button"
+                role="tab"
+                id={`categories-tab-${section.key}`}
+                aria-selected={selected}
+                aria-controls={`categories-panel-${section.key}`}
+                tabIndex={selected ? 0 : -1}
+                onClick={() => activate(section.key)}
+                onKeyDown={onTabKeyDown}
+                className={`flex-1 rounded-md px-3 py-2 text-sm font-medium transition-colors ${
+                  selected
+                    ? 'bg-primary text-primary-foreground'
+                    : 'text-muted hover:bg-accent hover:text-primary'
+                }`}
+              >
+                {section.title}
+              </button>
+            )
+          })}
+        </div>
+      )}
       <div className="grid gap-6 md:grid-cols-2">
         {SECTIONS.map((section) => {
           const selected = active === section.key
           return (
             <section
               key={section.key}
-              role="tabpanel"
+              role={isDesktop ? undefined : 'tabpanel'}
               id={`categories-panel-${section.key}`}
               aria-labelledby={`categories-heading-${section.key}`}
-              data-state={selected ? 'active' : 'inactive'}
+              data-state={isDesktop ? undefined : selected ? 'active' : 'inactive'}
               className={`min-w-0 rounded-xl border border-border bg-surface p-4 ${
-                selected ? '' : 'hidden md:block'
+                isDesktop || selected ? '' : 'hidden md:block'
               }`}
             >
               <h2

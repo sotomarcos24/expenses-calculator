@@ -1,6 +1,7 @@
 import { fireEvent, screen, waitFor, within } from '@testing-library/react'
 import { describe, expect, it } from 'vitest'
 import type { CategoryKind, CategoryTreeNode } from '../api/types.ts'
+import { DESKTOP_WIDTH, installMatchMedia, MOBILE_WIDTH, resizeTo } from '../test/matchMedia.ts'
 import { jsonResponse, mockMe, renderApp } from '../test/renderApp.tsx'
 
 type Handler = Parameters<typeof mockMe>[1]
@@ -752,5 +753,254 @@ describe('CategoriesPage — managing categories', () => {
 
     expect(await screen.findByText('No income categories yet.')).toBeInTheDocument()
     expect(within(section('Income')).getByRole('button', { name: 'Add category' })).toBeEnabled()
+  })
+})
+
+function tab(name: 'Expenses' | 'Income') {
+  return screen.getByRole('tab', { name })
+}
+
+function panelOf(name: 'Expenses' | 'Income') {
+  return document.getElementById(tab(name).getAttribute('aria-controls')!)!
+}
+
+/** The Expenses / Income sections at desktop width (plain labelled `<section>`s: `region`). */
+function region(name: 'Expenses' | 'Income') {
+  return screen.getByRole('region', { name })
+}
+
+function expectNoTabs() {
+  expect(screen.queryAllByRole('tablist', { hidden: true })).toHaveLength(0)
+  expect(screen.queryAllByRole('tab', { hidden: true })).toHaveLength(0)
+  expect(screen.queryAllByRole('tabpanel', { hidden: true })).toHaveLength(0)
+}
+
+function expectMobileTabs(selected: 'Expenses' | 'Income') {
+  const other = selected === 'Expenses' ? 'Income' : 'Expenses'
+  expect(screen.getByRole('tablist', { name: 'Category type' })).toBeInTheDocument()
+  expect(tab(selected)).toHaveAttribute('aria-selected', 'true')
+  expect(tab(other)).toHaveAttribute('aria-selected', 'false')
+  expect(panelOf(selected)).toHaveAttribute('role', 'tabpanel')
+  expect(panelOf(selected)).toHaveAttribute('data-state', 'active')
+  expect(panelOf(selected)).not.toHaveClass('hidden')
+  expect(panelOf(other)).toHaveAttribute('data-state', 'inactive')
+  expect(panelOf(other)).toHaveClass('hidden')
+}
+
+describe('CategoriesPage — breakpoints', () => {
+  it('shows both sections as labelled regions with no tab roles at 1280px', async () => {
+    installMatchMedia(DESKTOP_WIDTH)
+    await renderManaged()
+
+    expectNoTabs()
+    const expenses = region('Expenses')
+    const income = region('Income')
+    for (const element of [expenses, income]) {
+      expect(element.tagName).toBe('SECTION')
+      expect(element).not.toHaveAttribute('role')
+      expect(element).not.toHaveAttribute('data-state')
+      expect(element).not.toHaveClass('hidden')
+    }
+    expect(expenses.parentElement).toBe(income.parentElement)
+    expect(expenses.parentElement).toHaveClass('md:grid-cols-2')
+    expect(screen.getAllByRole('region').map((element) => element.id)).toEqual([
+      'categories-panel-expenses',
+      'categories-panel-income',
+    ])
+  })
+
+  it('keeps the tabs pattern at 375px', async () => {
+    await renderManaged()
+
+    expectMobileTabs('Expenses')
+    expect(tab('Expenses')).toHaveAttribute('aria-controls', 'categories-panel-expenses')
+    expect(tab('Income')).toHaveAttribute('aria-controls', 'categories-panel-income')
+    expect(tab('Expenses')).toHaveAttribute('tabindex', '0')
+    expect(tab('Income')).toHaveAttribute('tabindex', '-1')
+    expect(panelOf('Expenses')).toHaveAccessibleName('Expenses')
+    expect(panelOf('Income')).toHaveAccessibleName('Income')
+
+    fireEvent.click(tab('Income'))
+    expectMobileTabs('Income')
+    expect(tab('Income')).toHaveAttribute('tabindex', '0')
+
+    fireEvent.keyDown(tab('Income'), { key: 'ArrowLeft' })
+    expectMobileTabs('Expenses')
+    expect(tab('Expenses')).toHaveFocus()
+
+    fireEvent.keyDown(tab('Expenses'), { key: 'ArrowRight' })
+    expectMobileTabs('Income')
+    expect(tab('Income')).toHaveFocus()
+  })
+
+  it('switches between tabs and columns when resizing across md, without a reload', async () => {
+    const { fetchMock } = await renderManaged()
+    expectMobileTabs('Expenses')
+
+    resizeTo(DESKTOP_WIDTH)
+    expectNoTabs()
+    expect(region('Expenses')).not.toHaveClass('hidden')
+    expect(region('Income')).not.toHaveClass('hidden')
+
+    resizeTo(MOBILE_WIDTH)
+    expectMobileTabs('Expenses')
+
+    fireEvent.click(tab('Income'))
+    resizeTo(DESKTOP_WIDTH)
+    expectNoTabs()
+    resizeTo(MOBILE_WIDTH)
+    expectMobileTabs('Income')
+
+    expect(getCategoriesCount(fetchMock)).toBe(1)
+  })
+
+  for (const how of ['click', 'ArrowRight'] as const) {
+    const switchToIncome = () => {
+      if (how === 'click') {
+        // A real click focuses the button; fireEvent does not.
+        tab('Income').focus()
+        fireEvent.click(tab('Income'))
+      } else {
+        fireEvent.keyDown(tab('Expenses'), { key: 'ArrowRight' })
+      }
+    }
+
+    it(`discards an open rename input when switching tabs (${how})`, async () => {
+      const { requests } = await renderManaged()
+
+      fireEvent.click(screen.getByRole('button', { name: 'Rename Food' }))
+      fireEvent.change(screen.getByRole('textbox', { name: 'Name' }), {
+        target: { value: 'Meals' },
+      })
+      switchToIncome()
+      expectMobileTabs('Income')
+      expect(tab('Income')).toHaveFocus()
+      expect(screen.queryByRole('textbox')).not.toBeInTheDocument()
+
+      fireEvent.click(tab('Expenses'))
+      expect(screen.queryByRole('textbox')).not.toBeInTheDocument()
+      expect(within(panelOf('Expenses')).getByRole('button', { name: 'Food' })).toBeInTheDocument()
+      expect(screen.queryByText('Meals')).not.toBeInTheDocument()
+      expect(requests).toHaveLength(0)
+    })
+
+    it(`discards an open "Add category" input when switching tabs (${how})`, async () => {
+      const { requests } = await renderManaged()
+
+      fireEvent.click(within(panelOf('Expenses')).getByRole('button', { name: 'Add category' }))
+      fireEvent.change(screen.getByRole('textbox', { name: 'Category name' }), {
+        target: { value: 'Health' },
+      })
+      switchToIncome()
+      expect(screen.queryByRole('textbox')).not.toBeInTheDocument()
+
+      fireEvent.click(tab('Expenses'))
+      expect(screen.queryByRole('textbox')).not.toBeInTheDocument()
+      expect(
+        within(panelOf('Expenses')).getByRole('button', { name: 'Add category' }),
+      ).toBeInTheDocument()
+      expect(requests).toHaveLength(0)
+    })
+
+    it(`discards an open delete confirmation when switching tabs (${how})`, async () => {
+      const { requests } = await renderManaged()
+
+      fireEvent.click(screen.getByRole('button', { name: 'Delete Food' }))
+      expect(screen.getByText(/Delete "Food"/)).toBeInTheDocument()
+      switchToIncome()
+      expect(screen.queryByText(/Delete "Food"/)).not.toBeInTheDocument()
+
+      fireEvent.click(tab('Expenses'))
+      expect(screen.queryByText(/Delete "Food"/)).not.toBeInTheDocument()
+      expect(topLevelNames('Expense categories')).toContain('Food')
+      expect(requests).toHaveLength(0)
+    })
+  }
+
+  it('keeps the editor open when the already selected tab is clicked', async () => {
+    await renderManaged()
+
+    fireEvent.click(screen.getByRole('button', { name: 'Rename Food' }))
+    fireEvent.change(screen.getByRole('textbox', { name: 'Name' }), { target: { value: 'Meals' } })
+    fireEvent.click(tab('Expenses'))
+
+    expectMobileTabs('Expenses')
+    expect(screen.getByRole('textbox', { name: 'Name' })).toHaveValue('Meals')
+
+    fireEvent.keyDown(tab('Expenses'), { key: 'Enter' })
+    expect(screen.getByRole('textbox', { name: 'Name' })).toHaveValue('Meals')
+  })
+
+  it('clears a failed delete error when switching tabs and back', async () => {
+    await renderManaged(DEFAULT_TREE, ({ method }) =>
+      method === 'DELETE' ? jsonResponse({ detail: IN_USE }, 409) : undefined,
+    )
+
+    fireEvent.click(screen.getByRole('button', { name: 'Delete Food' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Delete' }))
+    expect(await screen.findByRole('alert')).toHaveTextContent(IN_USE)
+
+    fireEvent.click(tab('Income'))
+    fireEvent.click(tab('Expenses'))
+    expect(screen.queryByRole('alert')).not.toBeInTheDocument()
+    expect(screen.queryByText(IN_USE)).not.toBeInTheDocument()
+  })
+
+  it('drops the error of a request that was in flight when the tab changed', async () => {
+    let release: (response: Response) => void = () => {}
+    await renderManaged(DEFAULT_TREE, ({ method }) =>
+      method === 'PATCH'
+        ? new Promise<Response>((resolve) => {
+            release = resolve
+          })
+        : undefined,
+    )
+
+    fireEvent.click(screen.getByRole('button', { name: 'Rename Food' }))
+    typeAndSubmit('Name', 'Meals')
+    fireEvent.click(tab('Income'))
+    release(jsonResponse({ detail: DUPLICATE }, 409))
+
+    fireEvent.click(tab('Expenses'))
+    await waitFor(() => expect(screen.getByRole('button', { name: 'Delete Food' })).toBeEnabled())
+    expect(screen.queryByText(DUPLICATE)).not.toBeInTheDocument()
+    expect(screen.queryByRole('textbox')).not.toBeInTheDocument()
+  })
+
+  it("selects the editor's tab when resizing from 1280px to 375px", async () => {
+    installMatchMedia(DESKTOP_WIDTH)
+    await renderManaged()
+
+    fireEvent.click(screen.getByRole('button', { name: 'Rename Salary' }))
+    fireEvent.change(screen.getByRole('textbox', { name: 'Name' }), { target: { value: 'Wages' } })
+    resizeTo(MOBILE_WIDTH)
+
+    expectMobileTabs('Income')
+    const input = within(panelOf('Income')).getByRole('textbox', { name: 'Name' })
+    expect(input).toHaveValue('Wages')
+  })
+
+  it('keeps the active tab when the editor is already in it on resize to mobile', async () => {
+    installMatchMedia(DESKTOP_WIDTH)
+    await renderManaged()
+
+    fireEvent.click(screen.getByRole('button', { name: 'Rename Food' }))
+    fireEvent.change(screen.getByRole('textbox', { name: 'Name' }), { target: { value: 'Meals' } })
+    resizeTo(MOBILE_WIDTH)
+
+    expectMobileTabs('Expenses')
+    expect(within(panelOf('Expenses')).getByRole('textbox', { name: 'Name' })).toHaveValue('Meals')
+  })
+
+  it('keeps the editor and its text when resizing from 375px to 1280px', async () => {
+    await renderManaged()
+
+    fireEvent.click(tab('Income'))
+    fireEvent.click(screen.getByRole('button', { name: 'Rename Salary' }))
+    fireEvent.change(screen.getByRole('textbox', { name: 'Name' }), { target: { value: 'Wages' } })
+    resizeTo(DESKTOP_WIDTH)
+
+    expectNoTabs()
+    expect(within(region('Income')).getByRole('textbox', { name: 'Name' })).toHaveValue('Wages')
   })
 })
