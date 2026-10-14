@@ -1,6 +1,11 @@
-import { keepPreviousData, useQuery } from '@tanstack/react-query'
-import { apiFetch } from '../api/client.ts'
-import type { TransactionPage } from '../api/types.ts'
+import { keepPreviousData, useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
+import { ApiError, apiFetch } from '../api/client.ts'
+import type {
+  TransactionCreate,
+  TransactionPage,
+  TransactionRead,
+  TransactionUpdate,
+} from '../api/types.ts'
 import type { TransactionListParams } from '../lib/transactionFilters.ts'
 
 /**
@@ -47,5 +52,39 @@ export function useTransactionsTotal(enabled: boolean) {
     queryFn: () => apiFetch<TransactionPage>(transactionsPath({ page_size: 1 })),
     enabled,
     select: (page) => page.total,
+  })
+}
+
+/**
+ * Callbacks shared by the transaction mutations: refetch every transactions query (each page and
+ * filter) after a success, and after a 404 too (the row or a category is gone, so the list must
+ * resync). The promises are awaited by TanStack Query, so `mutateAsync` settles after the refetch.
+ * No optimistic updates.
+ */
+function useResyncTransactions() {
+  const queryClient = useQueryClient()
+  const resync = () => queryClient.invalidateQueries({ queryKey: TRANSACTIONS_QUERY_KEY })
+  return {
+    onSuccess: resync,
+    onError: (error: unknown) =>
+      error instanceof ApiError && error.status === 404 ? resync() : undefined,
+  }
+}
+
+/** `POST /api/transactions`: creates an income or an expense. */
+export function useCreateTransaction() {
+  return useMutation({
+    mutationFn: (body: TransactionCreate) =>
+      apiFetch<TransactionRead>('/transactions', { method: 'POST', body }),
+    ...useResyncTransactions(),
+  })
+}
+
+/** `PATCH /api/transactions/{id}`: updates the sent fields (`null` clears a nullable one). */
+export function useUpdateTransaction() {
+  return useMutation({
+    mutationFn: ({ id, ...body }: TransactionUpdate & { id: number }) =>
+      apiFetch<TransactionRead>(`/transactions/${id}`, { method: 'PATCH', body }),
+    ...useResyncTransactions(),
   })
 }

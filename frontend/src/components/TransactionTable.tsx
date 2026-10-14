@@ -1,5 +1,6 @@
 import type { TransactionRead } from '../api/types.ts'
 import { formatCurrency, formatDate, formatPercent, formatSignedAmount } from '../lib/format.ts'
+import { Button } from './Button.tsx'
 
 const HEADER_CLASS = 'px-3 py-2 text-left font-medium text-muted'
 const CELL_CLASS = 'px-3 py-2 align-top'
@@ -10,8 +11,14 @@ function categoryLabel(transaction: TransactionRead) {
     : `${transaction.category_name} › ${transaction.subcategory_name}`
 }
 
-/** Read-only transactions table, in the order returned by the API (never re-sorted). */
-export function TransactionTable({ transactions }: { transactions: TransactionRead[] }) {
+type TransactionTableProps = {
+  transactions: TransactionRead[]
+  /** Opens the edit dialog of a row. */
+  onEdit: (transaction: TransactionRead) => void
+}
+
+/** Transactions table, in the order returned by the API (never re-sorted), with row actions. */
+export function TransactionTable({ transactions, onEdit }: TransactionTableProps) {
   return (
     <div className="overflow-x-auto rounded-xl border border-border">
       <table aria-label="Transactions" className="min-w-full text-sm">
@@ -31,6 +38,9 @@ export function TransactionTable({ transactions }: { transactions: TransactionRe
             </th>
             <th scope="col" className={`${HEADER_CLASS} text-right`}>
               Amount
+            </th>
+            <th scope="col" className={`${HEADER_CLASS} text-right`}>
+              Actions
             </th>
           </tr>
         </thead>
@@ -61,6 +71,16 @@ export function TransactionTable({ transactions }: { transactions: TransactionRe
                     {formatPercent(transaction.deduction_rate)} deductions
                   </span>
                 )}
+              </td>
+              <td className={`${CELL_CLASS} text-right whitespace-nowrap`}>
+                <Button
+                  variant="secondary"
+                  size="sm"
+                  aria-label={`Edit ${categoryLabel(transaction)}, ${formatDate(transaction.date)}, ${formatSignedAmount(transaction.type, transaction.amount)}`}
+                  onClick={() => onEdit(transaction)}
+                >
+                  Edit
+                </Button>
               </td>
             </tr>
           ))}

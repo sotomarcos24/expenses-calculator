@@ -1,9 +1,11 @@
-import { useState } from 'react'
+import { useRef, useState } from 'react'
+import type { TransactionRead } from '../api/types.ts'
 import { Button } from '../components/Button.tsx'
 import { FormError } from '../components/FormError.tsx'
 import { PageHeader } from '../components/PageHeader.tsx'
 import { Pagination } from '../components/Pagination.tsx'
 import { TransactionFilters } from '../components/TransactionFilters.tsx'
+import { TransactionFormDialog } from '../components/TransactionFormDialog.tsx'
 import { TransactionTable } from '../components/TransactionTable.tsx'
 import { useCategories } from '../hooks/useCategories.ts'
 import {
@@ -27,7 +29,23 @@ function StatusText({ children }: { children: string }) {
   )
 }
 
-function TransactionsContent() {
+type TransactionsContentProps = {
+  onAdd: () => void
+  onEdit: (transaction: TransactionRead) => void
+}
+
+function NoTransactionsYet({ onAdd }: { onAdd: () => void }) {
+  return (
+    <div className="flex flex-col items-start gap-3">
+      <StatusText>No transactions yet.</StatusText>
+      <Button size="sm" onClick={onAdd}>
+        Add transaction
+      </Button>
+    </div>
+  )
+}
+
+function TransactionsContent({ onAdd, onEdit }: TransactionsContentProps) {
   const [filters, setFilters] = useState<TransactionFilterState>(DEFAULT_FILTERS)
   const [page, setPage] = useState(1)
   const { data: categories = [], isSuccess: categoriesLoaded } = useCategories()
@@ -83,13 +101,13 @@ function TransactionsContent() {
         return <StatusText>Loading transactions…</StatusText>
       }
       if (!filtered) {
-        return <StatusText>No transactions yet.</StatusText>
+        return <NoTransactionsYet onAdd={onAdd} />
       }
       if (overall.isPending) {
         return <StatusText>Loading transactions…</StatusText>
       }
       if (overall.data === 0) {
-        return <StatusText>No transactions yet.</StatusText>
+        return <NoTransactionsYet onAdd={onAdd} />
       }
       return (
         <div className="flex flex-col items-start gap-3">
@@ -105,7 +123,7 @@ function TransactionsContent() {
         <p className="mb-2 text-sm text-muted">
           {data.total === 1 ? '1 transaction' : `${data.total} transactions`}
         </p>
-        <TransactionTable transactions={data.items} />
+        <TransactionTable transactions={data.items} onEdit={onEdit} />
         {data.total > TRANSACTIONS_PAGE_SIZE && (
           <Pagination page={page} pages={pages} disabled={isFetching} onPageChange={setPage} />
         )}
@@ -125,11 +143,53 @@ function TransactionsContent() {
   )
 }
 
+/** Which form dialog is open: none, a new transaction, or the edit of a row. */
+type DialogState =
+  { mode: 'closed' } | { mode: 'create' } | { mode: 'edit'; transaction: TransactionRead }
+
 export function TransactionsPage() {
+  const [dialog, setDialog] = useState<DialogState>({ mode: 'closed' })
+  const [saved, setSaved] = useState(false)
+  const addButtonRef = useRef<HTMLButtonElement>(null)
+
+  const open = (next: DialogState) => {
+    setSaved(false)
+    setDialog(next)
+  }
+  const close = () => setDialog({ mode: 'closed' })
+  const onAdd = () => open({ mode: 'create' })
+
   return (
     <>
-      <PageHeader title="Transactions" description="Record your income and expenses." />
-      <TransactionsContent />
+      <PageHeader
+        title="Transactions"
+        description="Record your income and expenses."
+        actions={
+          <Button ref={addButtonRef} onClick={onAdd}>
+            Add transaction
+          </Button>
+        }
+      />
+      {/* Always rendered so the confirmation is announced; it matters when the saved transaction
+          falls outside the current filters and does not show in the list. */}
+      <p role="status" className={saved ? 'mb-4 text-sm text-foreground' : 'sr-only'}>
+        {saved ? 'Transaction saved.' : ''}
+      </p>
+      <TransactionsContent
+        onAdd={onAdd}
+        onEdit={(transaction) => open({ mode: 'edit', transaction })}
+      />
+      {dialog.mode !== 'closed' && (
+        <TransactionFormDialog
+          transaction={dialog.mode === 'edit' ? dialog.transaction : null}
+          onClose={close}
+          onSaved={() => {
+            close()
+            setSaved(true)
+          }}
+          fallbackFocusRef={addButtonRef}
+        />
+      )}
     </>
   )
 }
