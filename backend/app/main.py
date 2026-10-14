@@ -2,7 +2,7 @@ from fastapi import FastAPI
 
 from app.config import get_settings
 from app.middleware import RequireJsonContentTypeMiddleware
-from app.routers import auth, health
+from app.routers import auth, categories, health
 
 
 def create_app() -> FastAPI:
@@ -16,6 +16,7 @@ def create_app() -> FastAPI:
     app.add_middleware(RequireJsonContentTypeMiddleware)
     app.include_router(health.router, prefix="/api")
     app.include_router(auth.router, prefix="/api")
+    app.include_router(categories.router, prefix="/api")
     return app
 
 

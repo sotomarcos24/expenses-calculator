@@ -77,7 +77,8 @@ docs/       specs, milestones, process, team roles
 
 ## Current state
 
-- Milestones 1 (scaffolding) and 2 (authentication) are done; the next milestone is shown in `docs/milestones.md`.
+- Milestones 1 (scaffolding), 2 (authentication) and 3 (categories) are done. Next: **M4 — Transactions** (branch `m4-transactions`). Issue #16 (real "category in use" check for the delete 409) is already filed for M4; the PM breaks the rest of the M4 section into issues at intake.
+- Open backlog issues not tied to a milestone (#9 return to the requested page after login, #10 login rate limiting) need the user's decision before any work.
 - The API contract is the committed `openapi.json` at the repo root; after any backend route or schema change, re-export it and regenerate the frontend types (see `docs/backend.md` → *Commands*). CI fails if either is stale.
 - Git: `main` tracks `origin` (`github.com/sotomarcos24/expenses-calculator`).
 
@@ -93,4 +94,5 @@ docs/       specs, milestones, process, team roles
 ## Environment
 
 - Development happens on Linux (WSL2). Docker is **not** installed locally; the Dockerfile planned for milestone 8 can only be verified in CI or on the hosting provider.
-- To check the app end to end, start the backend and the frontend dev servers and use `http://localhost:5173`; `/api/health` must answer through the proxy.
+- To check the app end to end, start the backend and the frontend dev servers and use `http://localhost:5173`; `/api/health` must answer through the proxy. Use a throwaway SQLite DB and register a **new** user (see `docs/backend.md` → *Known caveats*).
+- There is no browser in WSL. For scripted browser checks QA installs Playwright + headless Chromium in the session scratchpad (Chromium is cached in `~/.cache/ms-playwright`); it is **not** a project dependency, never add it to `package.json` without asking. Stop any servers you start.

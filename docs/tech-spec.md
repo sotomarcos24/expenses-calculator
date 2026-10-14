@@ -92,9 +92,13 @@ All tables have `id` (integer PK), `created_at` and `updated_at`. Every user-own
 | kind | enum(`income`, `expense`) | |
 | parent_id | FK → categories, nullable | `NULL` = top-level category; set = subcategory |
 
+- `kind` is stored as a string (non-native enum, `income` / `expense`) with a CHECK constraint, so Postgres needs no `CREATE TYPE`.
 - Unique on (`user_id`, `kind`, `parent_id`, `name`).
+- Partial unique index `uq_categories_top_level_name` on (`user_id`, `kind`, `lower(name)`) `WHERE parent_id IS NULL`: the constraint above cannot stop duplicate top-level names because `NULL`s are distinct.
+- Names are unique per level **case-insensitively** (`Food` = `food`): among a user's top-level categories of the same `kind`, and among the subcategories of one parent. The top level is enforced by the DB (index above) and the service; subcategories are enforced by the service (the DB constraint above is case-sensitive).
+- Deleting a category deletes its subcategories (`ON DELETE CASCADE` on `parent_id`); deleting a user deletes their categories.
 - Only two levels: a subcategory's parent must be top-level and of the same `kind` (validated in the service layer).
-- Default set from plan.md §4.2 is created when the user registers. Income categories have no subcategories by default.
+- Default set from plan.md §4.2 is created when the user registers, inserted in that order (parents before children), so ordering by `id` gives the §4.2 order. Income categories have no subcategories by default.
 
 ### `transactions`
 
@@ -127,7 +131,7 @@ Gain/loss (`current_value − amount_invested`) and gain % (`gain / amount_inves
 
 ## 5. Authentication and authorization
 
-- **Register:** `POST /api/auth/register` validates the email (stored lowercase, so `A@B.com` = `a@b.com`) and a password of 8 to 128 characters (422 outside that range; the upper bound protects Argon2), hashes it with Argon2, creates the user and logs the user in. Seeding the default categories in the same DB transaction is added in milestone 3.
+- **Register:** `POST /api/auth/register` validates the email (stored lowercase, so `A@B.com` = `a@b.com`) and a password of 8 to 128 characters (422 outside that range; the upper bound protects Argon2), hashes it with Argon2, creates the user, seeds the default categories (plan.md §4.2) in the same DB transaction, and logs the user in. If seeding fails, nothing is committed.
 - **Login:** verifies the hash and issues a JWT (`sub` = user id, `exp` = `ACCESS_TOKEN_DAYS`, default 7 days) signed with HS256 using `JWT_SECRET`.
 - **Cookie:** `access_token`, `HttpOnly`, `SameSite=Lax`, `Secure` in production (`COOKIE_SECURE`), `Path=/api`, `Max-Age` = `ACCESS_TOKEN_DAYS`. The token is never readable from JavaScript, so it is not exposed to XSS.
 - **Logout:** clears the cookie.
@@ -155,10 +159,14 @@ Prefix `/api`. JSON in and out. Money fields are serialized as **strings** (`"12
 
 | Method | Path | Description |
 | --- | --- | --- |
-| GET | `/categories?kind=` | tree: categories with nested subcategories |
-| POST | `/categories` | `{name, kind, parent_id?}` |
-| PATCH | `/categories/{id}` | rename |
-| DELETE | `/categories/{id}` | **409** if it (or one of its subcategories) has transactions |
+| GET | `/categories?kind=` | **200** + `list[CategoryTreeNode]`: the user's top-level categories ordered by id, each with its `subcategories` ordered by id. Without `kind` both kinds are returned; `kind` other than `income` / `expense` is **422** |
+| POST | `/categories` | `CategoryCreate {name, kind, parent_id?}` → **201** + `CategoryRead`. **404** if `parent_id` does not exist or belongs to another user; **422** if the parent is a subcategory (max two levels) or has a different `kind`; **409** on a duplicate name |
+| PATCH | `/categories/{id}` | `CategoryUpdate {name}` (rename only; any other field is **422**) → **200** + `CategoryRead`; **404**, **409** on a duplicate name |
+| DELETE | `/categories/{id}` | **204**, deletes the category and its subcategories; **404**; **409** `"This category or one of its subcategories has transactions"` and nothing is deleted |
+
+`CategoryRead` is `{id, name, kind, parent_id}` (`parent_id` is `null` for a top-level category); `CategoryTreeNode` adds `subcategories: list[CategoryRead]`. Request bodies reject unknown fields (422). `name` is stripped at both ends and must then be 1–100 characters (422 otherwise). A category id that does not exist or belongs to another user is **404** `"Category not found"`.
+
+Duplicates are **409** `"A category with this name already exists at this level"`, compared case-insensitively (SQL `lower()`) on the trimmed name: among the user's top-level categories of the same `kind`, or among the subcategories of the same parent. Renaming a category to its own name or changing only its case is allowed. A unique-constraint race on commit is also returned as 409. The "has transactions" check is `category_ids_in_use()` in `app/services/categories.py`, which always returns `False` until transactions exist (M4).
 
 ### Transactions
 
@@ -263,7 +271,7 @@ Rates must be between −0.5 and 0.5 and horizons between 1 and 60 years. Withdr
 | `/login`, `/register` | public |
 | `/` | Dashboard: period selector, 4 KPI cards, expense pie with click-to-drill-down, investments block with a pie by type, button to the simulator |
 | `/transactions` | table with filters (period, type, category), create/edit dialog; the gross field appears for income |
-| `/categories` | income and expense trees; add, rename, delete (shows the 409 message) |
+| `/categories` | income and expense trees (side by side from `md`, tabs on mobile; collapsed by default, in API order); inline add, rename, delete with an inline confirmation (shows the 409 message) |
 | `/investments` | table with gain/loss in $ and %, portfolio totals, quick "update value" action |
 | `/simulator` | tabs A / B / C; form pre-filled from `/simulator/defaults`; line chart with 3 lines (nominal/real toggle); results table; **visible disclaimer** ("Projections are estimates, not financial advice") |
 

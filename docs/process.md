@@ -69,7 +69,7 @@ The orchestrator launches `software-engineer` with the issue number (and, on a r
 
 ### 4. Verify (QA)
 
-The orchestrator launches `qa-engineer` with the issue number. QA reads the acceptance criteria, checks them against the running code, runs the tests, and posts a `## QA: PASS` or `## QA: FAIL` comment. QA does not edit files.
+The orchestrator launches `qa-engineer` with the issue number. QA reads the acceptance criteria, checks them against the running code (for UI issues: dev servers on a throwaway DB, a newly registered user, desktop and 375px widths), runs the tests, and posts a `## QA: PASS` or `## QA: FAIL` comment. QA does not edit files.
 
 ### 5. On FAIL
 
@@ -111,6 +111,9 @@ When the milestone backlog is empty, the orchestrator:
 | `groomed` | PM has groomed it; ready for the engineer |
 | `follow-up` | Filed by the PM when moving something out of scope |
 | `backlog` | Not tied to a milestone; needs the user's decision |
+| `accessibility`, `bug`, … | Optional GitHub type labels, added on top of the ones above when they help |
+
+The `m<N>` label of a new milestone is created at intake (`gh label create m<N> --description "Milestone N — <name>" --color 1d76db`).
 
 ## Prerequisites
 

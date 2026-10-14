@@ -75,7 +75,7 @@ export function LoginPage() {
           error={errors.password?.message}
           {...register('password')}
         />
-        <Button type="submit" disabled={pending}>
+        <Button type="submit" fullWidth disabled={pending}>
           {pending ? 'Logging in…' : 'Log in'}
         </Button>
       </form>

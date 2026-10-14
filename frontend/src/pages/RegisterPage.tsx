@@ -80,7 +80,7 @@ export function RegisterPage() {
           error={errors.password?.message}
           {...register('password')}
         />
-        <Button type="submit" disabled={pending}>
+        <Button type="submit" fullWidth disabled={pending}>
           {pending ? 'Creating account…' : 'Create account'}
         </Button>
       </form>

@@ -25,7 +25,7 @@
 | --- | --- | --- | --- | --- |
 | 1 | Scaffolding | Repo, tooling, CI, app shell | — | ✅ Done |
 | 2 | Authentication | Sign up, log in, log out, protected routes | 1 | ✅ Done |
-| 3 | Categories | Default categories + management UI | 2 | ⬜ Pending |
+| 3 | Categories | Default categories + management UI | 2 | ✅ Done |
 | 4 | Transactions | Income/expense CRUD, filters, gross/net salary | 3 | ⬜ Pending |
 | 5 | Investments | Portfolio CRUD and gain/loss | 2 | ⬜ Pending |
 | 6 | Dashboard | Period summary and charts | 4, 5 | ⬜ Pending |
@@ -107,11 +107,11 @@
 
 #### Acceptance criteria
 
-- [ ] A new user sees exactly the default categories and subcategories from §4.2.
-- [ ] Categories and subcategories can be added, renamed and deleted.
-- [ ] Duplicate names at the same level are rejected (409).
-- [ ] A third level cannot be created (422).
-- [ ] User A cannot see, rename or delete user B's categories (404).
+- [x] A new user sees exactly the default categories and subcategories from §4.2.
+- [x] Categories and subcategories can be added, renamed and deleted.
+- [x] Duplicate names at the same level are rejected (409).
+- [x] A third level cannot be created (422).
+- [x] User A cannot see, rename or delete user B's categories (404).
 
 **Tests:** seed contents; level and kind validation; duplicates; ownership; delete cascade of subcategories when unused.
 
@@ -127,12 +127,12 @@
 - Router `/api/transactions` with filters `from`, `to`, `type`, `category_id`, `subcategory_id`, pagination, ordered by date desc.
 - Validation: `amount > 0`; `category.kind == type`; subcategory belongs to the category; `gross_amount` only for income and `≥ amount`; category IDs must belong to the user.
 - Response includes the computed `deduction_rate` when `gross_amount` is present.
-- Enables the category delete 409 from M3.
+- Enables the category delete 409 from M3: replace the stub `category_ids_in_use()` in `app/services/categories.py` (always `False` today) with a real query. Already filed as issue **#16** (label `m4`); the frontend already shows the API's 409 message, so no UI work is needed for it.
 
 #### Frontend
 
 - Transactions page: table (date, type, category › subcategory, note, amount coloured as income/expense), filters (period, type, category), pagination.
-- Create/edit dialog: subcategory list depends on the chosen category; "Gross amount" field shown only for income; the deduction rate is shown live.
+- Create/edit dialog: subcategory list depends on the chosen category (reuse `useCategories()` from `src/hooks/useCategories.ts`, which already returns both trees in API order); "Gross amount" field shown only for income; the deduction rate is shown live.
 - Delete with confirmation.
 
 #### Acceptance criteria
