@@ -39,6 +39,7 @@ The last line is the full check set: run it before saying a frontend task is don
 ## Current state
 
 - Pages are placeholders (`<Placeholder milestone={N} />`); replace them when the corresponding milestone is built. Login and register are real forms (M2).
+- Categories page (M3) is real but read-only so far: Expenses / Income trees (`src/components/CategoryTree.tsx`), side by side from `md` up and as tabs below it, collapsed by default, in API order (never re-sorted). Add / rename / delete comes in #15. Data comes from `useCategories()` in `src/hooks/useCategories.ts` (one `GET /api/categories`, split by `kind` on the client); invalidate `CATEGORIES_QUERY_KEY` after any category change.
 - Forms use `react-hook-form` + `zod` (v4) via `@hookform/resolvers/zod`; schemas live in `src/lib/` (e.g. `authSchemas.ts`). Shared form UI: `TextField` (label + inline error with `aria-describedby` / `aria-invalid`), `Button`, `FormError` (`role="alert"`) in `src/components/`.
 - Libraries named in the tech spec but **not installed yet** — add them when a milestone needs them (they are already approved):
   - `recharts` (charts, M6–M7).
