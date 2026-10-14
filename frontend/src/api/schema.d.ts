@@ -162,6 +162,43 @@ export interface paths {
     patch: operations['update_transaction_api_transactions__transaction_id__patch']
     trace?: never
   }
+  '/api/investments': {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    /** List Investments */
+    get: operations['list_investments_api_investments_get']
+    put?: never
+    /** Create Investment */
+    post: operations['create_investment_api_investments_post']
+    delete?: never
+    options?: never
+    head?: never
+    patch?: never
+    trace?: never
+  }
+  '/api/investments/{investment_id}': {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    /** Get Investment */
+    get: operations['get_investment_api_investments__investment_id__get']
+    put?: never
+    post?: never
+    /** Delete Investment */
+    delete: operations['delete_investment_api_investments__investment_id__delete']
+    options?: never
+    head?: never
+    /** Update Investment */
+    patch: operations['update_investment_api_investments__investment_id__patch']
+    trace?: never
+  }
 }
 export type webhooks = Record<string, never>
 export interface components {
@@ -221,6 +258,95 @@ export interface components {
       /** Database */
       database: string
     }
+    /**
+     * InvestmentCreate
+     * @description ``value_updated_at`` may be omitted (the service sets today) but not sent as ``null``.
+     */
+    InvestmentCreate: {
+      /** Name */
+      name: string
+      type: components['schemas']['InvestmentType']
+      /** Platform */
+      platform?: string | null
+      /** Amount Invested */
+      amount_invested: number | string
+      /** Current Value */
+      current_value: number | string
+      /**
+       * Value Updated At
+       * Format: date
+       */
+      value_updated_at?: string
+    }
+    /** InvestmentList */
+    InvestmentList: {
+      /** Items */
+      items: components['schemas']['InvestmentRead'][]
+      totals: components['schemas']['PortfolioTotals']
+    }
+    /** InvestmentRead */
+    InvestmentRead: {
+      /** Id */
+      id: number
+      /** Name */
+      name: string
+      type: components['schemas']['InvestmentType']
+      /** Platform */
+      platform: string | null
+      /** Amount Invested */
+      amount_invested: string
+      /** Current Value */
+      current_value: string
+      /**
+       * Value Updated At
+       * Format: date
+       */
+      value_updated_at: string
+      /** Gain */
+      gain: string
+      /** Gain Pct */
+      gain_pct: string | null
+      /**
+       * Created At
+       * Format: date-time
+       */
+      created_at: string
+      /**
+       * Updated At
+       * Format: date-time
+       */
+      updated_at: string
+    }
+    /**
+     * InvestmentType
+     * @enum {string}
+     */
+    InvestmentType: 'stock' | 'fund' | 'etf' | 'crypto' | 'deposit' | 'real_estate' | 'other'
+    /**
+     * InvestmentUpdate
+     * @description Partial update: omitted fields are unchanged, an explicit ``null`` clears ``platform``.
+     *
+     *     The other fields are not nullable, so an explicit ``null`` is a 422. Their ``None`` default
+     *     only means "not sent" (it is hidden from the JSON schema), and the service reads the sent
+     *     fields with ``model_dump(exclude_unset=True)``.
+     */
+    InvestmentUpdate: {
+      /** Name */
+      name?: string
+      /** Type */
+      type?: components['schemas']['InvestmentType']
+      /** Platform */
+      platform?: string | null
+      /** Amount Invested */
+      amount_invested?: number | string
+      /** Current Value */
+      current_value?: number | string
+      /**
+       * Value Updated At
+       * Format: date
+       */
+      value_updated_at?: string
+    }
     /** LoginRequest */
     LoginRequest: {
       /**
@@ -230,6 +356,17 @@ export interface components {
       email: string
       /** Password */
       password: string
+    }
+    /** PortfolioTotals */
+    PortfolioTotals: {
+      /** Total Invested */
+      total_invested: string
+      /** Current Value */
+      current_value: string
+      /** Gain */
+      gain: string
+      /** Gain Pct */
+      gain_pct: string | null
     }
     /** RegisterRequest */
     RegisterRequest: {
@@ -798,6 +935,173 @@ export interface operations {
         }
         content: {
           'application/json': components['schemas']['TransactionRead']
+        }
+      }
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['HTTPValidationError']
+        }
+      }
+    }
+  }
+  list_investments_api_investments_get: {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: {
+        access_token?: string | null
+      }
+    }
+    requestBody?: never
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['InvestmentList']
+        }
+      }
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['HTTPValidationError']
+        }
+      }
+    }
+  }
+  create_investment_api_investments_post: {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: {
+        access_token?: string | null
+      }
+    }
+    requestBody: {
+      content: {
+        'application/json': components['schemas']['InvestmentCreate']
+      }
+    }
+    responses: {
+      /** @description Successful Response */
+      201: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['InvestmentRead']
+        }
+      }
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['HTTPValidationError']
+        }
+      }
+    }
+  }
+  get_investment_api_investments__investment_id__get: {
+    parameters: {
+      query?: never
+      header?: never
+      path: {
+        investment_id: number
+      }
+      cookie?: {
+        access_token?: string | null
+      }
+    }
+    requestBody?: never
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['InvestmentRead']
+        }
+      }
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['HTTPValidationError']
+        }
+      }
+    }
+  }
+  delete_investment_api_investments__investment_id__delete: {
+    parameters: {
+      query?: never
+      header?: never
+      path: {
+        investment_id: number
+      }
+      cookie?: {
+        access_token?: string | null
+      }
+    }
+    requestBody?: never
+    responses: {
+      /** @description Successful Response */
+      204: {
+        headers: {
+          [name: string]: unknown
+        }
+        content?: never
+      }
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['HTTPValidationError']
+        }
+      }
+    }
+  }
+  update_investment_api_investments__investment_id__patch: {
+    parameters: {
+      query?: never
+      header?: never
+      path: {
+        investment_id: number
+      }
+      cookie?: {
+        access_token?: string | null
+      }
+    }
+    requestBody: {
+      content: {
+        'application/json': components['schemas']['InvestmentUpdate']
+      }
+    }
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['InvestmentRead']
         }
       }
       /** @description Validation Error */

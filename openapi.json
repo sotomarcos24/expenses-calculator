@@ -797,6 +797,285 @@
           }
         }
       }
+    },
+    "/api/investments": {
+      "get": {
+        "tags": [
+          "investments"
+        ],
+        "summary": "List Investments",
+        "operationId": "list_investments_api_investments_get",
+        "parameters": [
+          {
+            "name": "access_token",
+            "in": "cookie",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Access Token"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/InvestmentList"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "investments"
+        ],
+        "summary": "Create Investment",
+        "operationId": "create_investment_api_investments_post",
+        "parameters": [
+          {
+            "name": "access_token",
+            "in": "cookie",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Access Token"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/InvestmentCreate"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/InvestmentRead"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/investments/{investment_id}": {
+      "get": {
+        "tags": [
+          "investments"
+        ],
+        "summary": "Get Investment",
+        "operationId": "get_investment_api_investments__investment_id__get",
+        "parameters": [
+          {
+            "name": "investment_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "Investment Id"
+            }
+          },
+          {
+            "name": "access_token",
+            "in": "cookie",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Access Token"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/InvestmentRead"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "patch": {
+        "tags": [
+          "investments"
+        ],
+        "summary": "Update Investment",
+        "operationId": "update_investment_api_investments__investment_id__patch",
+        "parameters": [
+          {
+            "name": "investment_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "Investment Id"
+            }
+          },
+          {
+            "name": "access_token",
+            "in": "cookie",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Access Token"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/InvestmentUpdate"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/InvestmentRead"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "investments"
+        ],
+        "summary": "Delete Investment",
+        "operationId": "delete_investment_api_investments__investment_id__delete",
+        "parameters": [
+          {
+            "name": "investment_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "Investment Id"
+            }
+          },
+          {
+            "name": "access_token",
+            "in": "cookie",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Access Token"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
     }
   },
   "components": {
@@ -964,6 +1243,239 @@
         ],
         "title": "HealthOut"
       },
+      "InvestmentCreate": {
+        "properties": {
+          "name": {
+            "type": "string",
+            "maxLength": 100,
+            "minLength": 1,
+            "title": "Name"
+          },
+          "type": {
+            "$ref": "#/components/schemas/InvestmentType"
+          },
+          "platform": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Platform"
+          },
+          "amount_invested": {
+            "anyOf": [
+              {
+                "type": "number",
+                "minimum": 0.0
+              },
+              {
+                "type": "string"
+              }
+            ],
+            "title": "Amount Invested"
+          },
+          "current_value": {
+            "anyOf": [
+              {
+                "type": "number",
+                "minimum": 0.0
+              },
+              {
+                "type": "string"
+              }
+            ],
+            "title": "Current Value"
+          },
+          "value_updated_at": {
+            "type": "string",
+            "format": "date",
+            "title": "Value Updated At"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "name",
+          "type",
+          "amount_invested",
+          "current_value"
+        ],
+        "title": "InvestmentCreate",
+        "description": "``value_updated_at`` may be omitted (the service sets today) but not sent as ``null``."
+      },
+      "InvestmentList": {
+        "properties": {
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/InvestmentRead"
+            },
+            "type": "array",
+            "title": "Items"
+          },
+          "totals": {
+            "$ref": "#/components/schemas/PortfolioTotals"
+          }
+        },
+        "type": "object",
+        "required": [
+          "items",
+          "totals"
+        ],
+        "title": "InvestmentList"
+      },
+      "InvestmentRead": {
+        "properties": {
+          "id": {
+            "type": "integer",
+            "title": "Id"
+          },
+          "name": {
+            "type": "string",
+            "title": "Name"
+          },
+          "type": {
+            "$ref": "#/components/schemas/InvestmentType"
+          },
+          "platform": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Platform"
+          },
+          "amount_invested": {
+            "type": "string",
+            "title": "Amount Invested"
+          },
+          "current_value": {
+            "type": "string",
+            "title": "Current Value"
+          },
+          "value_updated_at": {
+            "type": "string",
+            "format": "date",
+            "title": "Value Updated At"
+          },
+          "gain": {
+            "type": "string",
+            "title": "Gain"
+          },
+          "gain_pct": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Gain Pct"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Created At"
+          },
+          "updated_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Updated At"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "name",
+          "type",
+          "platform",
+          "amount_invested",
+          "current_value",
+          "value_updated_at",
+          "gain",
+          "gain_pct",
+          "created_at",
+          "updated_at"
+        ],
+        "title": "InvestmentRead"
+      },
+      "InvestmentType": {
+        "type": "string",
+        "enum": [
+          "stock",
+          "fund",
+          "etf",
+          "crypto",
+          "deposit",
+          "real_estate",
+          "other"
+        ],
+        "title": "InvestmentType"
+      },
+      "InvestmentUpdate": {
+        "properties": {
+          "name": {
+            "type": "string",
+            "maxLength": 100,
+            "minLength": 1,
+            "title": "Name"
+          },
+          "type": {
+            "$ref": "#/components/schemas/InvestmentType",
+            "title": "Type"
+          },
+          "platform": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Platform"
+          },
+          "amount_invested": {
+            "anyOf": [
+              {
+                "type": "number",
+                "minimum": 0.0
+              },
+              {
+                "type": "string"
+              }
+            ],
+            "title": "Amount Invested"
+          },
+          "current_value": {
+            "anyOf": [
+              {
+                "type": "number",
+                "minimum": 0.0
+              },
+              {
+                "type": "string"
+              }
+            ],
+            "title": "Current Value"
+          },
+          "value_updated_at": {
+            "type": "string",
+            "format": "date",
+            "title": "Value Updated At"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "title": "InvestmentUpdate",
+        "description": "Partial update: omitted fields are unchanged, an explicit ``null`` clears ``platform``.\n\nThe other fields are not nullable, so an explicit ``null`` is a 422. Their ``None`` default\nonly means \"not sent\" (it is hidden from the JSON schema), and the service reads the sent\nfields with ``model_dump(exclude_unset=True)``."
+      },
       "LoginRequest": {
         "properties": {
           "email": {
@@ -985,6 +1497,41 @@
           "password"
         ],
         "title": "LoginRequest"
+      },
+      "PortfolioTotals": {
+        "properties": {
+          "total_invested": {
+            "type": "string",
+            "title": "Total Invested"
+          },
+          "current_value": {
+            "type": "string",
+            "title": "Current Value"
+          },
+          "gain": {
+            "type": "string",
+            "title": "Gain"
+          },
+          "gain_pct": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Gain Pct"
+          }
+        },
+        "type": "object",
+        "required": [
+          "total_invested",
+          "current_value",
+          "gain",
+          "gain_pct"
+        ],
+        "title": "PortfolioTotals"
       },
       "RegisterRequest": {
         "properties": {
