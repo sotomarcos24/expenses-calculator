@@ -34,3 +34,14 @@ export function formatDate(isoDate: string): string {
 export function formatSignedAmount(type: CategoryKind, amount: string): string {
   return `${type === 'income' ? '+' : '−'}${formatCurrency(amount)}`
 }
+
+/** Category of a transaction for display: "Food" or, with a subcategory, "Food › Groceries". */
+export function formatCategoryLabel({
+  category_name,
+  subcategory_name,
+}: {
+  category_name: string
+  subcategory_name: string | null
+}): string {
+  return subcategory_name === null ? category_name : `${category_name} › ${subcategory_name}`
+}

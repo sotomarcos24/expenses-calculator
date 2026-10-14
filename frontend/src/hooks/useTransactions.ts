@@ -88,3 +88,14 @@ export function useUpdateTransaction() {
     ...useResyncTransactions(),
   })
 }
+
+/**
+ * `DELETE /api/transactions/{id}` (204, no body). A 404 means the row is already gone: the list is
+ * refetched too.
+ */
+export function useDeleteTransaction() {
+  return useMutation({
+    mutationFn: (id: number) => apiFetch<void>(`/transactions/${id}`, { method: 'DELETE' }),
+    ...useResyncTransactions(),
+  })
+}

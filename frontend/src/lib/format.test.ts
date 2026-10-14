@@ -1,5 +1,11 @@
 import { describe, expect, it } from 'vitest'
-import { formatCurrency, formatDate, formatPercent, formatSignedAmount } from './format.ts'
+import {
+  formatCategoryLabel,
+  formatCurrency,
+  formatDate,
+  formatPercent,
+  formatSignedAmount,
+} from './format.ts'
 
 describe('formatCurrency', () => {
   it('formats decimal strings as USD', () => {
@@ -43,5 +49,14 @@ describe('formatSignedAmount', () => {
 
   it('formats the largest amounts', () => {
     expect(formatSignedAmount('expense', '9999999999.99')).toBe('−$9,999,999,999.99')
+  })
+})
+
+describe('formatCategoryLabel', () => {
+  it('shows the category alone or with its subcategory', () => {
+    expect(formatCategoryLabel({ category_name: 'Salary', subcategory_name: null })).toBe('Salary')
+    expect(formatCategoryLabel({ category_name: 'Food', subcategory_name: 'Groceries' })).toBe(
+      'Food › Groceries',
+    )
   })
 })

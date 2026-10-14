@@ -165,7 +165,7 @@ describe('TransactionsPage', () => {
       'Salary',
       '',
       '+$2,400.00Gross $3,000.00 · 20.0% deductions',
-      'Edit',
+      'EditDelete',
     ])
     const income = within(salary).getByText('+$2,400.00')
     expect(income).toHaveClass('text-gain')
@@ -177,7 +177,7 @@ describe('TransactionsPage', () => {
       'Food',
       '',
       '−$5.00',
-      'Edit',
+      'EditDelete',
     ])
 
     expect(cells(groceries).map((cell) => cell.textContent)).toEqual([
@@ -186,7 +186,7 @@ describe('TransactionsPage', () => {
       'Food › Groceries',
       'weekly shop',
       '−$12.30',
-      'Edit',
+      'EditDelete',
     ])
     const expense = within(groceries).getByText('−$12.30')
     expect(expense).toHaveClass('text-foreground')
