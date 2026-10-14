@@ -52,6 +52,7 @@ The subagents are declared in `.claude/agents/`; their behaviour comes from the 
 The user's request becomes issues before any work starts.
 
 - **"Start / continue milestone N"**: if the milestone has no open issues yet, the PM breaks the milestone section of `milestones.md` into issues (one per coherent, testable slice — e.g. backend endpoint + its tests, a page + its tests) and labels them `m<N>`.
+  The `/plan-milestone [N]` command runs only this step for the next pending milestone (or milestone N) and stops.
 - **A single task or bug**: the PM files it as one issue with the label of the current milestone (or `backlog` if it belongs to none — ask the user before working on it).
 - If the request is a non-goal (`plan.md` §6), the orchestrator tells the user instead of filing it.
 
@@ -79,6 +80,8 @@ Back to step 3, passing the QA comment to the engineer as input. After **3 conse
 
 The orchestrator — and only the orchestrator — closes the issue (`gh issue close <n> --comment "Closed after QA PASS"`).
 
+The `/next-issue [n]` command runs steps 1–5 for one issue (the next one of the current milestone, or issue n), reports the QA verdict and closes the issue only if the user confirms.
+
 ### 7. Repeat
 
 Go back to step 1 until the milestone has no open issues.
@@ -90,6 +93,8 @@ When the milestone backlog is empty, the orchestrator:
 1. Runs the full check set of both projects and confirms the milestone **Definition of done** in `milestones.md`.
 2. Ticks the acceptance criteria, updates the status in `milestones.md` and in `plan.md` §8, and the *Current state* sections of `AGENTS.md`, `backend.md` and `frontend.md`.
 3. Reports to the user and asks whether to push the branch and open the PR. Pushing and opening PRs only happen when the user says so.
+
+The `/close-milestone [N]` command runs this step: it verifies the milestone, updates every doc, commits on the milestone branch and asks before pushing.
 
 ## Rules
 
