@@ -127,12 +127,12 @@
 - Router `/api/transactions` with filters `from`, `to`, `type`, `category_id`, `subcategory_id`, pagination, ordered by date desc.
 - Validation: `amount > 0`; `category.kind == type`; subcategory belongs to the category; `gross_amount` only for income and `≥ amount`; category IDs must belong to the user.
 - Response includes the computed `deduction_rate` when `gross_amount` is present.
-- Enables the category delete 409 from M3.
+- Enables the category delete 409 from M3: replace the stub `category_ids_in_use()` in `app/services/categories.py` (always `False` today) with a real query. Already filed as issue **#16** (label `m4`); the frontend already shows the API's 409 message, so no UI work is needed for it.
 
 #### Frontend
 
 - Transactions page: table (date, type, category › subcategory, note, amount coloured as income/expense), filters (period, type, category), pagination.
-- Create/edit dialog: subcategory list depends on the chosen category; "Gross amount" field shown only for income; the deduction rate is shown live.
+- Create/edit dialog: subcategory list depends on the chosen category (reuse `useCategories()` from `src/hooks/useCategories.ts`, which already returns both trees in API order); "Gross amount" field shown only for income; the deduction rate is shown live.
 - Delete with confirmation.
 
 #### Acceptance criteria

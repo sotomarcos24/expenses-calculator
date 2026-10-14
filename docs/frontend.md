@@ -38,7 +38,7 @@ The last line is the full check set: run it before saying a frontend task is don
 
 ## Current state
 
-- Pages are placeholders (`<Placeholder milestone={N} />`); replace them when the corresponding milestone is built. Login and register are real forms (M2).
+- Real pages: Login and Register (M2), Categories (M3). Dashboard, Transactions, Investments and Simulator are still placeholders (`<Placeholder milestone={N} />`); replace them when the corresponding milestone is built.
 - Categories page (M3): Expenses / Income trees (`src/components/CategoryTree.tsx`), side by side from `md` up (plain `<section>`s labelled by their heading, no tab roles) and as WAI-ARIA tabs below it (switching to another tab closes the open inline editor; shrinking to mobile selects the tab of the open editor), collapsed by default, in API order (never re-sorted). Inline add (category / subcategory), rename and delete with an inline confirmation (`CategoryNameForm`, `DeleteConfirmation` in `src/components/`); only one inline editor is open at a time, modelled by `CategoryEditor` in `src/lib/categoryEditor.ts` and held by the page. Data comes from `useCategories()` in `src/hooks/useCategories.ts` (one `GET /api/categories`, split by `kind` on the client); the mutation hooks `useCreateCategory` / `useRenameCategory` / `useDeleteCategory` live in the same file and invalidate `CATEGORIES_QUERY_KEY` on success and on 404 (no optimistic updates). Names are validated with `categoryNameSchema` (`src/lib/categorySchemas.ts`: trimmed, 1–100 characters); API errors are turned into text by `categoryErrorMessage` (`src/lib/categoryErrors.ts`: string `detail` of a 404/409/422 verbatim, generic message otherwise).
 - `useMediaQuery(query)` (`src/hooks/useMediaQuery.ts`, built on `window.matchMedia` + `useSyncExternalStore`) tracks a media query; `MD_MEDIA_QUERY` is Tailwind v4's default `md` breakpoint (`(min-width: 48rem)`). Use it only when behaviour (not just styling) depends on the breakpoint.
 - Tests: jsdom has no `matchMedia`, so `src/test/matchMedia.ts` provides a controllable mock that `src/test/setup.ts` installs before every test at a mobile width (375px). Call `installMatchMedia(DESKTOP_WIDTH)` before rendering to start at desktop width, and `resizeTo(width)` to change it (fires `change`, wrapped in `act`); `matchMediaListenerCount(query)` checks listeners are removed.
@@ -49,5 +49,7 @@ The last line is the full check set: run it before saying a frontend task is don
   - shadcn/ui is not initialised. Either run its CLI (non-interactive flags) or write small components in `src/components/`; whichever is chosen, they must use the theme tokens.
 
 ## Known caveats
+
+- On the Categories page the tablist still has a `md:hidden` class; it is redundant (the tablist is only rendered below `md`) but harmless.
 
 - `openapi-typescript` (7.13.0) declares `typescript: ^5.x` as a peer dependency, while the frontend uses TypeScript 6. Decision: it is **not** a devDependency; `gen:api` runs the pinned exact version through `npx --yes openapi-typescript@7.13.0`. Do not install it, do not use `--force` / `--legacy-peer-deps` and do not downgrade TypeScript. Bump the pinned version deliberately.
