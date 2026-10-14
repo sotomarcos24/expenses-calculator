@@ -159,10 +159,14 @@ Prefix `/api`. JSON in and out. Money fields are serialized as **strings** (`"12
 
 | Method | Path | Description |
 | --- | --- | --- |
-| GET | `/categories?kind=` | tree: categories with nested subcategories |
-| POST | `/categories` | `{name, kind, parent_id?}` |
-| PATCH | `/categories/{id}` | rename |
-| DELETE | `/categories/{id}` | **409** if it (or one of its subcategories) has transactions |
+| GET | `/categories?kind=` | **200** + `list[CategoryTreeNode]`: the user's top-level categories ordered by id, each with its `subcategories` ordered by id. Without `kind` both kinds are returned; `kind` other than `income` / `expense` is **422** |
+| POST | `/categories` | `CategoryCreate {name, kind, parent_id?}` → **201** + `CategoryRead`. **404** if `parent_id` does not exist or belongs to another user; **422** if the parent is a subcategory (max two levels) or has a different `kind`; **409** on a duplicate name |
+| PATCH | `/categories/{id}` | `CategoryUpdate {name}` (rename only; any other field is **422**) → **200** + `CategoryRead`; **404**, **409** on a duplicate name |
+| DELETE | `/categories/{id}` | **204**, deletes the category and its subcategories; **404**; **409** `"This category or one of its subcategories has transactions"` and nothing is deleted |
+
+`CategoryRead` is `{id, name, kind, parent_id}` (`parent_id` is `null` for a top-level category); `CategoryTreeNode` adds `subcategories: list[CategoryRead]`. Request bodies reject unknown fields (422). `name` is stripped at both ends and must then be 1–100 characters (422 otherwise). A category id that does not exist or belongs to another user is **404** `"Category not found"`.
+
+Duplicates are **409** `"A category with this name already exists at this level"`, compared case-insensitively (SQL `lower()`) on the trimmed name: among the user's top-level categories of the same `kind`, or among the subcategories of the same parent. Renaming a category to its own name or changing only its case is allowed. A unique-constraint race on commit is also returned as 409. The "has transactions" check is `category_ids_in_use()` in `app/services/categories.py`, which always returns `False` until transactions exist (M4).
 
 ### Transactions
 

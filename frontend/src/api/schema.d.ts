@@ -89,10 +89,89 @@ export interface paths {
     patch?: never
     trace?: never
   }
+  '/api/categories': {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    /** List Categories */
+    get: operations['list_categories_api_categories_get']
+    put?: never
+    /** Create Category */
+    post: operations['create_category_api_categories_post']
+    delete?: never
+    options?: never
+    head?: never
+    patch?: never
+    trace?: never
+  }
+  '/api/categories/{category_id}': {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    get?: never
+    put?: never
+    post?: never
+    /** Delete Category */
+    delete: operations['delete_category_api_categories__category_id__delete']
+    options?: never
+    head?: never
+    /** Rename Category */
+    patch: operations['rename_category_api_categories__category_id__patch']
+    trace?: never
+  }
 }
 export type webhooks = Record<string, never>
 export interface components {
   schemas: {
+    /** CategoryCreate */
+    CategoryCreate: {
+      /** Name */
+      name: string
+      kind: components['schemas']['CategoryKind']
+      /** Parent Id */
+      parent_id?: number | null
+    }
+    /**
+     * CategoryKind
+     * @enum {string}
+     */
+    CategoryKind: 'income' | 'expense'
+    /** CategoryRead */
+    CategoryRead: {
+      /** Id */
+      id: number
+      /** Name */
+      name: string
+      kind: components['schemas']['CategoryKind']
+      /** Parent Id */
+      parent_id: number | null
+    }
+    /** CategoryTreeNode */
+    CategoryTreeNode: {
+      /** Id */
+      id: number
+      /** Name */
+      name: string
+      kind: components['schemas']['CategoryKind']
+      /** Parent Id */
+      parent_id: number | null
+      /** Subcategories */
+      subcategories: components['schemas']['CategoryRead'][]
+    }
+    /**
+     * CategoryUpdate
+     * @description Rename only: moving a category to another parent or kind is not supported.
+     */
+    CategoryUpdate: {
+      /** Name */
+      name: string
+    }
     /** HTTPValidationError */
     HTTPValidationError: {
       /** Detail */
@@ -281,6 +360,142 @@ export interface operations {
         }
         content: {
           'application/json': components['schemas']['UserRead']
+        }
+      }
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['HTTPValidationError']
+        }
+      }
+    }
+  }
+  list_categories_api_categories_get: {
+    parameters: {
+      query?: {
+        kind?: components['schemas']['CategoryKind'] | null
+      }
+      header?: never
+      path?: never
+      cookie?: {
+        access_token?: string | null
+      }
+    }
+    requestBody?: never
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['CategoryTreeNode'][]
+        }
+      }
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['HTTPValidationError']
+        }
+      }
+    }
+  }
+  create_category_api_categories_post: {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: {
+        access_token?: string | null
+      }
+    }
+    requestBody: {
+      content: {
+        'application/json': components['schemas']['CategoryCreate']
+      }
+    }
+    responses: {
+      /** @description Successful Response */
+      201: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['CategoryRead']
+        }
+      }
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['HTTPValidationError']
+        }
+      }
+    }
+  }
+  delete_category_api_categories__category_id__delete: {
+    parameters: {
+      query?: never
+      header?: never
+      path: {
+        category_id: number
+      }
+      cookie?: {
+        access_token?: string | null
+      }
+    }
+    requestBody?: never
+    responses: {
+      /** @description Successful Response */
+      204: {
+        headers: {
+          [name: string]: unknown
+        }
+        content?: never
+      }
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['HTTPValidationError']
+        }
+      }
+    }
+  }
+  rename_category_api_categories__category_id__patch: {
+    parameters: {
+      query?: never
+      header?: never
+      path: {
+        category_id: number
+      }
+      cookie?: {
+        access_token?: string | null
+      }
+    }
+    requestBody: {
+      content: {
+        'application/json': components['schemas']['CategoryUpdate']
+      }
+    }
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['CategoryRead']
         }
       }
       /** @description Validation Error */
