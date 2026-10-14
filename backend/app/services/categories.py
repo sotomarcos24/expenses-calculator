@@ -2,11 +2,11 @@
 
 from collections.abc import Sequence
 
-from sqlalchemy import func, select
+from sqlalchemy import exists, func, or_, select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session, selectinload
 
-from app.models import Category, CategoryKind, User
+from app.models import Category, CategoryKind, Transaction, User
 
 # Default categories from plan.md §4.2, in display order: (kind, name, subcategory names).
 # Inserted in this exact order, so ordering by id reproduces it.
@@ -138,18 +138,41 @@ def rename_category(db: Session, user_id: int, category_id: int, name: str) -> C
 
 
 def category_ids_in_use(db: Session, user_id: int, category_ids: Sequence[int]) -> bool:
-    """Whether any of these categories has transactions.
+    """Whether any of the user's transactions references one of these categories.
 
-    There is no transactions table until M4, so nothing is ever in use yet (#16).
+    A category is in use when a transaction of ``user_id`` has it as ``category_id`` or
+    ``subcategory_id``. A single ``EXISTS`` query; no rows are loaded.
     """
-    return False
+    if not category_ids:
+        return False
+    query = select(
+        exists().where(
+            Transaction.user_id == user_id,
+            or_(
+                Transaction.category_id.in_(category_ids),
+                Transaction.subcategory_id.in_(category_ids),
+            ),
+        )
+    )
+    return bool(db.scalar(query))
 
 
 def delete_category(db: Session, user_id: int, category_id: int) -> None:
-    """Delete the category and its subcategories, unless any of them has transactions."""
+    """Delete the category and its subcategories, unless any of them has transactions.
+
+    The FK on ``transactions`` is the safety net: if a transaction was created between the
+    check and the delete, the commit fails, is rolled back and is reported as in use too.
+    """
     category = get_category(db, user_id, category_id)
     ids = [category.id, *(sub.id for sub in category.subcategories)]
     if category_ids_in_use(db, user_id, ids):
         raise CategoryInUseError
+    if category.parent is not None:
+        # Keep an already loaded parent collection in sync (expire_on_commit is off).
+        category.parent.subcategories.remove(category)
     db.delete(category)
-    db.commit()
+    try:
+        db.commit()
+    except IntegrityError as exc:
+        db.rollback()
+        raise CategoryInUseError from exc

@@ -1,3 +1,5 @@
+from datetime import date
+from decimal import Decimal
 from typing import Any
 
 import pytest
@@ -5,7 +7,7 @@ from fastapi.testclient import TestClient
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
-from app.models import Category
+from app.models import Category, CategoryKind, Transaction
 from app.services import categories as service
 from tests.conftest import JSON_HEADERS, AuthenticatedClient
 
@@ -303,35 +305,182 @@ def test_delete_subcategory_leaves_parent_and_siblings(auth_client: Authenticate
     assert shape(get_tree(client, "expense"))[2] == ("Transport", ["Car payment", "Train", "Metro"])
 
 
-def test_delete_in_use_returns_409(
-    auth_client: AuthenticatedClient, db_session: Session, monkeypatch: pytest.MonkeyPatch
+def add_transaction(
+    db: Session,
+    user_id: int,
+    category_id: int,
+    subcategory_id: int | None = None,
+    kind: CategoryKind = CategoryKind.EXPENSE,
+) -> int:
+    """Insert a transaction directly with the ORM and return its id."""
+    transaction = Transaction(
+        user_id=user_id,
+        type=kind,
+        date=date(2026, 1, 15),
+        amount=Decimal("42.50"),
+        category_id=category_id,
+        subcategory_id=subcategory_id,
+    )
+    db.add(transaction)
+    db.commit()
+    return transaction.id
+
+
+def transaction_exists(db: Session, transaction_id: int) -> bool:
+    db.expire_all()
+    return db.get(Transaction, transaction_id) is not None
+
+
+def test_delete_in_use_via_subcategory_returns_409(
+    auth_client: AuthenticatedClient, db_session: Session
 ) -> None:
     client = auth_client.client
     category_ids = ids(client)
-    calls: list[list[int]] = []
+    transaction_id = add_transaction(
+        db_session, auth_client.user_id, category_ids["Food"], category_ids["Groceries"]
+    )
 
-    def in_use(db: Session, user_id: int, ids_: list[int]) -> bool:
-        assert user_id == auth_client.user_id
-        calls.append(sorted(ids_))
-        return True
-
-    monkeypatch.setattr(service, "category_ids_in_use", in_use)
-    before = db_names(db_session, auth_client.user_id)
-
-    for name in ("Transport", "Fuel"):
+    for name in ("Food", "Groceries"):
         response = delete(client, category_ids[name])
         assert response.status_code == 409
         assert response.json() == IN_USE
 
-    transport_family = sorted(
-        category_ids[n] for n in ("Transport", "Fuel", "Car payment", "Train", "Metro")
+    names = db_names(db_session, auth_client.user_id)
+    assert {"Food", "Groceries", "Restaurants"} <= names
+    assert len(names) == 21
+    assert {"Food", "Groceries", "Restaurants"} <= set(ids(client))
+    assert transaction_exists(db_session, transaction_id)
+
+
+def test_delete_in_use_without_subcategory(
+    auth_client: AuthenticatedClient, db_session: Session
+) -> None:
+    client = auth_client.client
+    category_ids = ids(client)
+    add_transaction(db_session, auth_client.user_id, category_ids["Food"])
+
+    response = delete(client, category_ids["Food"])
+    assert response.status_code == 409
+    assert response.json() == IN_USE
+
+    assert delete(client, category_ids["Restaurants"]).status_code == 204
+    remaining = ids(client)
+    assert "Restaurants" not in remaining
+    assert {"Food", "Groceries"} <= set(remaining)
+
+
+def test_delete_income_in_use_and_unused(
+    auth_client: AuthenticatedClient, db_session: Session
+) -> None:
+    client = auth_client.client
+    category_ids = ids(client)
+    add_transaction(
+        db_session, auth_client.user_id, category_ids["Salary"], kind=CategoryKind.INCOME
     )
-    assert calls == [transport_family, [category_ids["Fuel"]]]
-    assert db_names(db_session, auth_client.user_id) == before
+
+    response = delete(client, category_ids["Salary"])
+    assert response.status_code == 409
+    assert response.json() == IN_USE
+    assert delete(client, category_ids["Dividends"]).status_code == 204
+    remaining = ids(client)
+    assert "Salary" in remaining
+    assert "Dividends" not in remaining
 
 
-def test_category_ids_in_use_is_false_in_m3(db_session: Session) -> None:
-    assert service.category_ids_in_use(db_session, 1, [1, 2, 3]) is False
+def test_delete_unused_family_while_another_is_in_use(
+    auth_client: AuthenticatedClient, db_session: Session
+) -> None:
+    client = auth_client.client
+    category_ids = ids(client)
+    add_transaction(
+        db_session, auth_client.user_id, category_ids["Food"], category_ids["Groceries"]
+    )
+
+    assert delete(client, category_ids["Transport"]).status_code == 204
+    transport_family = {"Transport", "Fuel", "Car payment", "Train", "Metro"}
+    assert not transport_family & set(ids(client))
+    assert not transport_family & db_names(db_session, auth_client.user_id)
+    assert len(db_names(db_session, auth_client.user_id)) == 21 - 5
+
+
+def test_delete_allowed_after_blocking_transaction_is_removed(
+    auth_client: AuthenticatedClient, db_session: Session
+) -> None:
+    client = auth_client.client
+    category_ids = ids(client)
+    transaction_id = add_transaction(
+        db_session, auth_client.user_id, category_ids["Food"], category_ids["Groceries"]
+    )
+    assert delete(client, category_ids["Food"]).status_code == 409
+
+    transaction = db_session.get(Transaction, transaction_id)
+    assert transaction is not None
+    db_session.delete(transaction)
+    db_session.commit()
+
+    assert delete(client, category_ids["Food"]).status_code == 204
+    assert not {"Food", "Groceries", "Restaurants"} & set(ids(client))
+
+
+def test_other_users_transactions_do_not_block_delete(
+    two_users: tuple[AuthenticatedClient, AuthenticatedClient], db_session: Session
+) -> None:
+    alice, bob = two_users
+    alice_ids = ids(alice.client)
+    bob_ids = ids(bob.client)
+    bob_transaction = add_transaction(
+        db_session, bob.user_id, bob_ids["Food"], bob_ids["Groceries"]
+    )
+    bob_tree_before = get_tree(bob.client)
+
+    assert delete(alice.client, alice_ids["Groceries"]).status_code == 204
+    assert delete(alice.client, alice_ids["Food"]).status_code == 204
+    assert not {"Food", "Groceries", "Restaurants"} & set(ids(alice.client))
+
+    assert get_tree(bob.client) == bob_tree_before
+    assert transaction_exists(db_session, bob_transaction)
+    transaction = db_session.get(Transaction, bob_transaction)
+    assert transaction is not None
+    assert transaction.user_id == bob.user_id
+    assert transaction.category_id == bob_ids["Food"]
+    assert transaction.subcategory_id == bob_ids["Groceries"]
+
+
+def test_delete_fk_race_returns_409(
+    auth_client: AuthenticatedClient, db_session: Session, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    client = auth_client.client
+    category_ids = ids(client)
+    transaction_id = add_transaction(db_session, auth_client.user_id, category_ids["Food"])
+    # Simulate a transaction created after the check: only the FK can stop the delete.
+    monkeypatch.setattr(service, "category_ids_in_use", lambda *args, **kwargs: False)
+
+    response = delete(client, category_ids["Food"])
+    assert response.status_code == 409
+    assert response.json() == IN_USE
+
+    assert {"Food", "Groceries", "Restaurants"} <= db_names(db_session, auth_client.user_id)
+    assert transaction_exists(db_session, transaction_id)
+    assert client.get("/api/categories").status_code == 200
+    assert {"Food", "Groceries", "Restaurants"} <= set(ids(client))
+
+
+def test_category_ids_in_use(
+    two_users: tuple[AuthenticatedClient, AuthenticatedClient], db_session: Session
+) -> None:
+    alice, bob = two_users
+    alice_ids = ids(alice.client)
+    family = [alice_ids["Food"], alice_ids["Groceries"]]
+
+    assert service.category_ids_in_use(db_session, alice.user_id, family) is False
+    add_transaction(db_session, alice.user_id, alice_ids["Food"], alice_ids["Groceries"])
+    assert service.category_ids_in_use(db_session, alice.user_id, family) is True
+    assert service.category_ids_in_use(db_session, alice.user_id, [alice_ids["Groceries"]]) is True
+    assert (
+        service.category_ids_in_use(db_session, alice.user_id, [alice_ids["Restaurants"]]) is False
+    )
+    assert service.category_ids_in_use(db_session, bob.user_id, family) is False
+    assert service.category_ids_in_use(db_session, alice.user_id, []) is False
 
 
 # --- Auth and ownership -----------------------------------------------------------------------
