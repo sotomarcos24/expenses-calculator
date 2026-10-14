@@ -126,10 +126,15 @@ All tables have `id` (integer PK), `created_at` and `updated_at`. Every user-own
 | user_id | FK | |
 | name | varchar(100) | |
 | type | enum(`stock`, `fund`, `etf`, `crypto`, `deposit`, `real_estate`, `other`) | |
-| platform | varchar(100) | free text |
+| platform | varchar(100), nullable | free text, optional; `NULL` = no platform (e.g. real estate, a deposit held directly) |
 | amount_invested | numeric(14,2) | `≥ 0` |
 | current_value | numeric(14,2) | `≥ 0`, updated manually |
 | value_updated_at | date | date of the last manual update |
+
+- `type` is stored like `categories.kind`: a string (non-native enum, `stock` / `fund` / `etf` / `crypto` / `deposit` / `real_estate` / `other`, the `InvestmentType` enum) with the CHECK `ck_investments_type`, so Postgres needs no `CREATE TYPE`.
+- CHECK constraints: `ck_investments_amount_invested_non_negative` (`amount_invested >= 0`) and `ck_investments_current_value_non_negative` (`current_value >= 0`).
+- Index: `ix_investments_user_id` on `user_id`. Deleting a user deletes their investments (`ON DELETE CASCADE`); there is no ORM back-reference from `User`.
+- `platform` is optional: `NULL` means no platform. How the API turns an empty value into `NULL` is defined with the endpoints (§6).
 
 Gain/loss (`current_value − amount_invested`) and gain % (`gain / amount_invested`, `null` if the amount invested is 0) are computed, not stored.
 
