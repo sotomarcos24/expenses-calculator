@@ -1,4 +1,4 @@
-import { fireEvent, screen, within } from '@testing-library/react'
+import { fireEvent, screen, waitFor, within } from '@testing-library/react'
 import { describe, expect, it } from 'vitest'
 import type { CategoryKind, CategoryTreeNode } from '../api/types.ts'
 import { jsonResponse, mockMe, renderApp } from '../test/renderApp.tsx'
@@ -229,5 +229,528 @@ describe('CategoriesPage', () => {
     expect(await screen.findByText('No income categories yet.')).toBeInTheDocument()
     expect(screen.queryByRole('list', { name: 'Income categories' })).not.toBeInTheDocument()
     expect(screen.queryByText('No expense categories yet.')).not.toBeInTheDocument()
+  })
+})
+
+type Request = { method: string; path: string; body: unknown }
+
+/**
+ * In-memory categories API. `override` can answer a request first (return `undefined` to let
+ * the fake server handle it). Mutations are recorded in `requests` (GETs are not).
+ */
+function fakeServer(
+  initial: CategoryTreeNode[] = DEFAULT_TREE,
+  override?: (request: Request) => Response | Promise<Response> | undefined,
+) {
+  let data: CategoryTreeNode[] = structuredClone(initial)
+  let id = 1000
+  const requests: Request[] = []
+
+  const handler: Handler = (path, init) => {
+    const method = (init.method ?? 'GET').toUpperCase()
+    const body = init.body ? JSON.parse(String(init.body)) : undefined
+    if (!path.startsWith('/api/categories')) {
+      throw new Error(`Unexpected request: ${path}`)
+    }
+    if (method === 'GET') {
+      return jsonResponse(data)
+    }
+    const request = { method, path, body }
+    requests.push(request)
+    const overridden = override?.(request)
+    if (overridden) {
+      return overridden
+    }
+    const targetId = Number(path.split('/').pop())
+    if (method === 'POST') {
+      const created = {
+        id: id++,
+        name: body.name,
+        kind: body.kind,
+        parent_id: body.parent_id ?? null,
+      }
+      if (created.parent_id === null) {
+        data.push({ ...created, subcategories: [] })
+      } else {
+        data.find((category) => category.id === created.parent_id)!.subcategories.push(created)
+      }
+      return jsonResponse(created, 201)
+    }
+    if (method === 'PATCH') {
+      for (const category of data) {
+        for (const item of [category, ...category.subcategories]) {
+          if (item.id === targetId) {
+            item.name = body.name
+          }
+        }
+      }
+      return jsonResponse({ id: targetId, name: body.name })
+    }
+    if (method === 'DELETE') {
+      data = data
+        .filter((category) => category.id !== targetId)
+        .map((category) => ({
+          ...category,
+          subcategories: category.subcategories.filter((sub) => sub.id !== targetId),
+        }))
+      return new Response(null, { status: 204 })
+    }
+    throw new Error(`Unexpected method: ${method}`)
+  }
+  return { handler, requests }
+}
+
+const DUPLICATE = 'A category with this name already exists at this level'
+const IN_USE = 'This category or one of its subcategories has transactions'
+
+function idOf(name: string) {
+  for (const category of DEFAULT_TREE) {
+    if (category.name === name) return category.id
+    const sub = category.subcategories.find((item) => item.name === name)
+    if (sub) return sub.id
+  }
+  throw new Error(`No category ${name}`)
+}
+
+function section(name: 'Expenses' | 'Income') {
+  return screen.getByRole('tabpanel', { name })
+}
+
+async function renderManaged(
+  initial: CategoryTreeNode[] = DEFAULT_TREE,
+  override?: Parameters<typeof fakeServer>[1],
+) {
+  const server = fakeServer(initial, override)
+  const result = await renderCategories(server.handler)
+  await screen.findByRole('heading', { name: 'Expenses' })
+  return { ...result, requests: server.requests }
+}
+
+function typeAndSubmit(label: string, value: string) {
+  const input = screen.getByRole('textbox', { name: label })
+  fireEvent.change(input, { target: { value } })
+  fireEvent.submit((input as HTMLInputElement).form!)
+  return input
+}
+
+function getCategoriesCount(fetchMock: { mock: { calls: unknown[][] } }) {
+  return fetchMock.mock.calls.filter(
+    ([path, init]) =>
+      path === '/api/categories' && ((init as RequestInit)?.method ?? 'GET') === 'GET',
+  ).length
+}
+
+describe('CategoriesPage — managing categories', () => {
+  it('adds a top-level expense category with a trimmed name at the end', async () => {
+    const { requests } = await renderManaged()
+
+    fireEvent.click(within(section('Expenses')).getByRole('button', { name: 'Add category' }))
+    const input = screen.getByRole('textbox', { name: 'Category name' })
+    expect(input).toHaveFocus()
+    typeAndSubmit('Category name', '  Health  ')
+
+    expect(await within(section('Expenses')).findByText('Health')).toBeInTheDocument()
+    expect(requests).toEqual([
+      { method: 'POST', path: '/api/categories', body: { name: 'Health', kind: 'expense' } },
+    ])
+    expect(topLevelNames('Expense categories')).toEqual([
+      'Housing',
+      'Food',
+      'Transport',
+      'Leisure',
+      'Other',
+      'Health',
+    ])
+    expect(screen.queryByRole('textbox', { name: 'Category name' })).not.toBeInTheDocument()
+  })
+
+  it('adds an income category', async () => {
+    const { requests } = await renderManaged()
+
+    fireEvent.click(screen.getByRole('tab', { name: 'Income' }))
+    fireEvent.click(within(section('Income')).getByRole('button', { name: 'Add category' }))
+    typeAndSubmit('Category name', 'Bonus')
+
+    expect(await within(section('Income')).findByText('Bonus')).toBeInTheDocument()
+    expect(requests[0].body).toEqual({ name: 'Bonus', kind: 'income' })
+    expect(topLevelNames('Income categories').at(-1)).toBe('Bonus')
+  })
+
+  it('adds a subcategory at the end of a collapsed parent and expands it', async () => {
+    const { requests } = await renderManaged()
+    const food = screen.getByRole('button', { name: 'Food' })
+    expect(food).toHaveAttribute('aria-expanded', 'false')
+
+    fireEvent.click(screen.getByRole('button', { name: 'Add subcategory to Food' }))
+    expect(food).toHaveAttribute('aria-expanded', 'true')
+    const input = screen.getByRole('textbox', { name: 'Subcategory name' })
+    expect(input).toHaveFocus()
+    expect(input.closest('ul')).toHaveAccessibleName('Food subcategories')
+    typeAndSubmit('Subcategory name', 'Coffee')
+
+    await waitFor(() =>
+      expect(visibleSubcategories('Food')).toEqual(['Groceries', 'Restaurants', 'Coffee']),
+    )
+    expect(requests[0].body).toEqual({ name: 'Coffee', kind: 'expense', parent_id: idOf('Food') })
+    expect(food).toHaveAttribute('aria-expanded', 'true')
+  })
+
+  it('makes a category without subcategories expandable after adding one', async () => {
+    const { requests } = await renderManaged()
+    expect(screen.queryByRole('button', { name: 'Salary' })).not.toBeInTheDocument()
+
+    fireEvent.click(screen.getByRole('button', { name: 'Add subcategory to Salary' }))
+    typeAndSubmit('Subcategory name', 'Overtime')
+
+    const salary = await screen.findByRole('button', { name: 'Salary' })
+    expect(salary).toHaveAttribute('aria-expanded', 'true')
+    expect(visibleSubcategories('Salary')).toEqual(['Overtime'])
+    expect(requests[0].body).toEqual({
+      name: 'Overtime',
+      kind: 'income',
+      parent_id: idOf('Salary'),
+    })
+  })
+
+  it('offers only Rename and Delete on subcategories', async () => {
+    await renderManaged()
+    fireEvent.click(screen.getByRole('button', { name: 'Housing' }))
+
+    expect(screen.getByRole('button', { name: 'Rename Rent' })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Delete Rent' })).toBeInTheDocument()
+    expect(
+      screen.queryByRole('button', { name: 'Add subcategory to Rent' }),
+    ).not.toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Add subcategory to Housing' })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Rename Housing' })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Delete Housing' })).toBeInTheDocument()
+  })
+
+  it('renames a category in place', async () => {
+    const { requests } = await renderManaged()
+
+    fireEvent.click(screen.getByRole('button', { name: 'Rename Transport' }))
+    const input = screen.getByRole('textbox', { name: 'Name' })
+    expect(input).toHaveValue('Transport')
+    expect(input).toHaveFocus()
+    typeAndSubmit('Name', 'Commute')
+
+    expect(await screen.findByRole('button', { name: 'Commute' })).toBeInTheDocument()
+    expect(requests).toEqual([
+      { method: 'PATCH', path: `/api/categories/${idOf('Transport')}`, body: { name: 'Commute' } },
+    ])
+    expect(topLevelNames('Expense categories')).toEqual([
+      'Housing',
+      'Food',
+      'Commute',
+      'Leisure',
+      'Other',
+    ])
+  })
+
+  it('renames a subcategory', async () => {
+    const { requests } = await renderManaged()
+    fireEvent.click(screen.getByRole('button', { name: 'Food' }))
+
+    fireEvent.click(screen.getByRole('button', { name: 'Rename Groceries' }))
+    typeAndSubmit('Name', 'Supermarket')
+
+    await waitFor(() =>
+      expect(visibleSubcategories('Food')).toEqual(['Supermarket', 'Restaurants']),
+    )
+    expect(requests[0]).toEqual({
+      method: 'PATCH',
+      path: `/api/categories/${idOf('Groceries')}`,
+      body: { name: 'Supermarket' },
+    })
+  })
+
+  it('sends no request for Escape or an unchanged name, but sends a case-only rename', async () => {
+    const { requests } = await renderManaged()
+
+    fireEvent.click(screen.getByRole('button', { name: 'Rename Transport' }))
+    const input = screen.getByRole('textbox', { name: 'Name' })
+    fireEvent.change(input, { target: { value: 'Something else' } })
+    fireEvent.keyDown(input, { key: 'Escape' })
+    expect(screen.queryByRole('textbox', { name: 'Name' })).not.toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Transport' })).toBeInTheDocument()
+
+    fireEvent.click(screen.getByRole('button', { name: 'Rename Transport' }))
+    typeAndSubmit('Name', ' Transport ')
+    expect(screen.queryByRole('textbox', { name: 'Name' })).not.toBeInTheDocument()
+
+    fireEvent.click(screen.getByRole('button', { name: 'Rename Food' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Cancel' }))
+    expect(requests).toEqual([])
+
+    fireEvent.click(screen.getByRole('button', { name: 'Rename Food' }))
+    typeAndSubmit('Name', 'FOOD')
+    expect(await screen.findByRole('button', { name: 'FOOD' })).toBeInTheDocument()
+    expect(requests).toEqual([
+      { method: 'PATCH', path: `/api/categories/${idOf('Food')}`, body: { name: 'FOOD' } },
+    ])
+  })
+
+  it('asks for confirmation before deleting a category and its subcategories', async () => {
+    const { requests } = await renderManaged()
+
+    fireEvent.click(screen.getByRole('button', { name: 'Delete Housing' }))
+    expect(screen.getByText('Delete "Housing" and its 3 subcategories?')).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Cancel' })).toHaveFocus()
+    fireEvent.click(screen.getByRole('button', { name: 'Cancel' }))
+    expect(screen.queryByText(/Delete "Housing"/)).not.toBeInTheDocument()
+
+    fireEvent.click(screen.getByRole('button', { name: 'Delete Housing' }))
+    fireEvent.keyDown(screen.getByRole('button', { name: 'Cancel' }), { key: 'Escape' })
+    expect(screen.queryByText(/Delete "Housing"/)).not.toBeInTheDocument()
+    expect(requests).toEqual([])
+
+    fireEvent.click(screen.getByRole('button', { name: 'Housing' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Delete Housing' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Delete' }))
+
+    await waitFor(() =>
+      expect(screen.queryByRole('button', { name: 'Housing' })).not.toBeInTheDocument(),
+    )
+    for (const name of ['Rent', 'Mortgage', 'Utilities']) {
+      expect(screen.queryByText(name)).not.toBeInTheDocument()
+    }
+    expect(requests).toEqual([
+      { method: 'DELETE', path: `/api/categories/${idOf('Housing')}`, body: undefined },
+    ])
+    expect(topLevelNames('Expense categories')).toEqual(['Food', 'Transport', 'Leisure', 'Other'])
+  })
+
+  it('words the confirmation for a single subcategory, a leaf and a subcategory', async () => {
+    const body = [
+      ...tree('expense', [
+        ['Pets', ['Vet']],
+        ['Gifts', []],
+      ]),
+    ]
+    await renderManaged(body)
+
+    fireEvent.click(screen.getByRole('button', { name: 'Delete Pets' }))
+    expect(screen.getByText('Delete "Pets" and its 1 subcategory?')).toBeInTheDocument()
+
+    fireEvent.click(screen.getByRole('button', { name: 'Delete Gifts' }))
+    expect(screen.queryByText(/Delete "Pets"/)).not.toBeInTheDocument()
+    expect(screen.getByText('Delete "Gifts"?')).toBeInTheDocument()
+
+    fireEvent.click(screen.getByRole('button', { name: 'Pets' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Delete Vet' }))
+    expect(screen.getByText('Delete "Vet"?')).toBeInTheDocument()
+  })
+
+  it('deletes a subcategory', async () => {
+    const { requests } = await renderManaged()
+    fireEvent.click(screen.getByRole('button', { name: 'Food' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Delete Restaurants' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Delete' }))
+
+    await waitFor(() => expect(visibleSubcategories('Food')).toEqual(['Groceries']))
+    expect(requests[0].path).toBe(`/api/categories/${idOf('Restaurants')}`)
+  })
+
+  it('validates names on the client without sending a request', async () => {
+    const { requests } = await renderManaged()
+
+    fireEvent.click(within(section('Expenses')).getByRole('button', { name: 'Add category' }))
+    typeAndSubmit('Category name', '   ')
+    expect(screen.getByRole('alert')).toHaveTextContent('Name is required')
+    expect(screen.getByRole('textbox', { name: 'Category name' })).toHaveAttribute(
+      'aria-invalid',
+      'true',
+    )
+
+    typeAndSubmit('Category name', 'a'.repeat(101))
+    expect(screen.getByRole('alert')).toHaveTextContent('Name must be at most 100 characters')
+    expect(requests).toEqual([])
+
+    fireEvent.click(screen.getByRole('button', { name: 'Rename Food' }))
+    typeAndSubmit('Name', '')
+    expect(screen.getByRole('alert')).toHaveTextContent('Name is required')
+    expect(requests).toEqual([])
+
+    fireEvent.click(screen.getByRole('button', { name: 'Cancel' }))
+    fireEvent.click(within(section('Expenses')).getByRole('button', { name: 'Add category' }))
+    typeAndSubmit('Category name', 'b'.repeat(100))
+    expect(await screen.findByText('b'.repeat(100))).toBeInTheDocument()
+    expect(requests).toEqual([
+      { method: 'POST', path: '/api/categories', body: { name: 'b'.repeat(100), kind: 'expense' } },
+    ])
+  })
+
+  it('shows a duplicate 409 next to the add input and keeps the typed text', async () => {
+    const { requests } = await renderManaged(DEFAULT_TREE, ({ method }) =>
+      method === 'POST' ? jsonResponse({ detail: DUPLICATE }, 409) : undefined,
+    )
+
+    fireEvent.click(within(section('Expenses')).getByRole('button', { name: 'Add category' }))
+    typeAndSubmit('Category name', 'food')
+
+    expect(await screen.findByRole('alert')).toHaveTextContent(DUPLICATE)
+    expect(screen.getByRole('textbox', { name: 'Category name' })).toHaveValue('food')
+    expect(requests).toHaveLength(1)
+    expect(topLevelNames('Expense categories')).toHaveLength(5)
+
+    fireEvent.click(screen.getByRole('button', { name: 'Cancel' }))
+    expect(screen.queryByRole('alert')).not.toBeInTheDocument()
+  })
+
+  it('shows a duplicate 409 next to the rename input and keeps the typed text', async () => {
+    await renderManaged(DEFAULT_TREE, ({ method }) =>
+      method === 'PATCH' ? jsonResponse({ detail: DUPLICATE }, 409) : undefined,
+    )
+
+    fireEvent.click(screen.getByRole('button', { name: 'Rename Leisure' }))
+    typeAndSubmit('Name', 'Food')
+
+    const alert = await screen.findByRole('alert')
+    expect(alert).toHaveTextContent(DUPLICATE)
+    const input = screen.getByRole('textbox', { name: 'Name' })
+    expect(input).toHaveValue('Food')
+    expect(alert.closest('li')).toBe(input.closest('li'))
+
+    // Starting another action clears the message.
+    fireEvent.click(screen.getByRole('button', { name: 'Delete Other' }))
+    expect(screen.queryByRole('alert')).not.toBeInTheDocument()
+    expect(screen.queryByRole('textbox', { name: 'Name' })).not.toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Leisure' })).toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: 'Food' })).toBeInTheDocument()
+  })
+
+  it('shows the in-use 409 on the row after a failed delete and keeps the category', async () => {
+    await renderManaged(DEFAULT_TREE, ({ method }) =>
+      method === 'DELETE' ? jsonResponse({ detail: IN_USE }, 409) : undefined,
+    )
+
+    fireEvent.click(screen.getByRole('button', { name: 'Delete Food' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Delete' }))
+
+    const alert = await screen.findByRole('alert')
+    expect(alert).toHaveTextContent(IN_USE)
+    expect(alert.closest('li')).toBe(screen.getByRole('button', { name: 'Food' }).closest('li'))
+    expect(screen.queryByText(/Delete "Food"/)).not.toBeInTheDocument()
+    expect(topLevelNames('Expense categories')).toContain('Food')
+  })
+
+  it('shows the generic message on a 500', async () => {
+    await renderManaged(DEFAULT_TREE, () => new Response('oops', { status: 500 }))
+
+    fireEvent.click(screen.getByRole('button', { name: 'Rename Food' }))
+    typeAndSubmit('Name', 'Meals')
+    expect(await screen.findByRole('alert')).toHaveTextContent(
+      'Something went wrong. Please try again.',
+    )
+    expect(screen.getByRole('textbox', { name: 'Name' })).toHaveValue('Meals')
+
+    fireEvent.click(screen.getByRole('button', { name: 'Delete Other' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Delete' }))
+    expect(await screen.findByRole('alert')).toHaveTextContent(
+      'Something went wrong. Please try again.',
+    )
+    expect(screen.getByText('Other')).toBeInTheDocument()
+  })
+
+  it('shows "Category not found" on a 404 and refetches the tree', async () => {
+    const { fetchMock } = await renderManaged(DEFAULT_TREE, ({ method }) =>
+      method === 'PATCH' ? jsonResponse({ detail: 'Category not found' }, 404) : undefined,
+    )
+    const before = getCategoriesCount(fetchMock)
+
+    fireEvent.click(screen.getByRole('button', { name: 'Rename Food' }))
+    typeAndSubmit('Name', 'Meals')
+
+    expect(await screen.findByRole('alert')).toHaveTextContent('Category not found')
+    expect(getCategoriesCount(fetchMock)).toBe(before + 1)
+  })
+
+  it('disables Save and Delete while a request is pending', async () => {
+    let release: (response: Response) => void = () => {}
+    const { requests } = await renderManaged(DEFAULT_TREE, ({ method }) =>
+      method === 'DELETE' || method === 'POST'
+        ? new Promise<Response>((resolve) => {
+            release = resolve
+          })
+        : undefined,
+    )
+
+    fireEvent.click(within(section('Expenses')).getByRole('button', { name: 'Add category' }))
+    typeAndSubmit('Category name', 'Health')
+    await waitFor(() => expect(screen.getByRole('button', { name: 'Save' })).toBeDisabled())
+    fireEvent.submit(
+      (screen.getByRole('textbox', { name: 'Category name' }) as HTMLInputElement).form!,
+    )
+    expect(requests).toHaveLength(1)
+    release(jsonResponse({ detail: DUPLICATE }, 409))
+    expect(await screen.findByRole('alert')).toHaveTextContent(DUPLICATE)
+    expect(screen.getByRole('button', { name: 'Save' })).toBeEnabled()
+
+    fireEvent.click(screen.getByRole('button', { name: 'Delete Other' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Delete' }))
+    await waitFor(() => expect(screen.getByRole('button', { name: 'Delete' })).toBeDisabled())
+    fireEvent.click(screen.getByRole('button', { name: 'Delete' }))
+    expect(requests).toHaveLength(2)
+    release(new Response(null, { status: 204 }))
+    await waitFor(() => expect(screen.queryByText('Delete "Other"?')).not.toBeInTheDocument())
+  })
+
+  it('keeps only one inline editor open at a time', async () => {
+    await renderManaged()
+
+    fireEvent.click(screen.getByRole('button', { name: 'Rename Transport' }))
+    expect(screen.getByRole('textbox', { name: 'Name' })).toBeInTheDocument()
+
+    fireEvent.click(screen.getByRole('button', { name: 'Delete Salary' }))
+    expect(screen.queryByRole('textbox', { name: 'Name' })).not.toBeInTheDocument()
+    expect(screen.getByText('Delete "Salary"?')).toBeInTheDocument()
+
+    fireEvent.click(within(section('Expenses')).getByRole('button', { name: 'Add category' }))
+    expect(screen.queryByText('Delete "Salary"?')).not.toBeInTheDocument()
+    expect(screen.getAllByRole('textbox')).toHaveLength(1)
+
+    fireEvent.click(screen.getByRole('button', { name: 'Add subcategory to Food' }))
+    expect(screen.queryByRole('textbox', { name: 'Category name' })).not.toBeInTheDocument()
+    expect(screen.getAllByRole('textbox')).toHaveLength(1)
+  })
+
+  it('keeps expanded categories expanded after a change', async () => {
+    await renderManaged()
+    fireEvent.click(screen.getByRole('button', { name: 'Transport' }))
+
+    fireEvent.click(screen.getByRole('button', { name: 'Rename Food' }))
+    typeAndSubmit('Name', 'Meals')
+    expect(await screen.findByRole('button', { name: 'Meals' })).toBeInTheDocument()
+
+    expect(screen.getByRole('button', { name: 'Transport' })).toHaveAttribute(
+      'aria-expanded',
+      'true',
+    )
+    expect(screen.getByRole('button', { name: 'Meals' })).toHaveAttribute('aria-expanded', 'false')
+  })
+
+  it('offers "Add category" in an empty section and adds one', async () => {
+    const { requests } = await renderManaged(DEFAULT_EXPENSES)
+
+    const income = section('Income')
+    expect(within(income).getByText('No income categories yet.')).toBeInTheDocument()
+    fireEvent.click(within(income).getByRole('button', { name: 'Add category' }))
+    typeAndSubmit('Category name', 'Salary')
+
+    expect(await within(section('Income')).findByText('Salary')).toBeInTheDocument()
+    expect(requests[0].body).toEqual({ name: 'Salary', kind: 'income' })
+    expect(screen.queryByText('No income categories yet.')).not.toBeInTheDocument()
+  })
+
+  it('shows the empty message and "Add category" after deleting every income category', async () => {
+    const body = [...DEFAULT_EXPENSES, ...tree('income', [['Wages', []]])]
+    await renderManaged(body)
+
+    fireEvent.click(screen.getByRole('button', { name: 'Delete Wages' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Delete' }))
+
+    expect(await screen.findByText('No income categories yet.')).toBeInTheDocument()
+    expect(within(section('Income')).getByRole('button', { name: 'Add category' })).toBeEnabled()
   })
 })

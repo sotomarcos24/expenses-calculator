@@ -1,31 +1,111 @@
 import { useRef, useState, type KeyboardEvent } from 'react'
-import type { CategoryTreeNode } from '../api/types.ts'
+import type { CategoryKind, CategoryTreeNode } from '../api/types.ts'
+import { Button } from '../components/Button.tsx'
 import { CategoryTree } from '../components/CategoryTree.tsx'
 import { FormError } from '../components/FormError.tsx'
 import { PageHeader } from '../components/PageHeader.tsx'
-import { useCategories } from '../hooks/useCategories.ts'
+import {
+  useCategories,
+  useCreateCategory,
+  useDeleteCategory,
+  useRenameCategory,
+} from '../hooks/useCategories.ts'
+import { categoryErrorMessage } from '../lib/categoryErrors.ts'
+import type { CategoryEditor } from '../lib/categoryEditor.ts'
 
 type Section = 'expenses' | 'income'
 
-const SECTIONS: { key: Section; title: string; label: string; emptyMessage: string }[] = [
+const SECTIONS: {
+  key: Section
+  kind: CategoryKind
+  title: string
+  label: string
+  emptyMessage: string
+}[] = [
   {
     key: 'expenses',
+    kind: 'expense',
     title: 'Expenses',
     label: 'Expense categories',
     emptyMessage: 'No expense categories yet.',
   },
   {
     key: 'income',
+    kind: 'income',
     title: 'Income',
     label: 'Income categories',
     emptyMessage: 'No income categories yet.',
   },
 ]
 
+/**
+ * The single inline editor of the page and the requests it triggers. Opening an editor replaces
+ * the current one (discarding unsaved text and clearing its error). When a request settles, the
+ * result is applied only if that editor is still the open one.
+ */
+function useCategoryEditor() {
+  const [editor, setEditor] = useState<CategoryEditor | null>(null)
+  const create = useCreateCategory()
+  const rename = useRenameCategory()
+  const remove = useDeleteCategory()
+  const pending = create.isPending || rename.isPending || remove.isPending
+
+  const settle = (started: CategoryEditor, next: CategoryEditor | null) =>
+    setEditor((current) => (current === started ? next : current))
+
+  const save = async (name: string) => {
+    if (pending || (editor?.type !== 'add' && editor?.type !== 'rename')) {
+      return
+    }
+    if (editor.type === 'rename' && name === editor.name) {
+      setEditor(null)
+      return
+    }
+    const started = { ...editor, error: undefined }
+    setEditor(started)
+    try {
+      if (started.type === 'add') {
+        await create.mutateAsync(
+          started.parentId === null
+            ? { name, kind: started.kind }
+            : { name, kind: started.kind, parent_id: started.parentId },
+        )
+      } else {
+        await rename.mutateAsync({ id: started.id, name })
+      }
+      settle(started, null)
+    } catch (error) {
+      settle(started, { ...started, error: categoryErrorMessage(error) })
+    }
+  }
+
+  const confirmDelete = async () => {
+    if (pending || editor?.type !== 'delete') {
+      return
+    }
+    const started = editor
+    try {
+      await remove.mutateAsync(started.id)
+      settle(started, null)
+    } catch (error) {
+      settle(started, { ...started, type: 'failed', error: categoryErrorMessage(error) })
+    }
+  }
+
+  return {
+    editor,
+    pending,
+    setEditor,
+    save: (name: string) => void save(name),
+    confirmDelete: () => void confirmDelete(),
+  }
+}
+
 function CategoriesContent() {
   const { isPending, isError, refetch, isFetching, expenses, income } = useCategories()
   const [active, setActive] = useState<Section>('expenses')
   const tabRefs = useRef<Partial<Record<Section, HTMLButtonElement | null>>>({})
+  const { editor, pending, setEditor, save, confirmDelete } = useCategoryEditor()
 
   if (isPending) {
     return (
@@ -39,14 +119,15 @@ function CategoriesContent() {
     return (
       <div className="flex max-w-sm flex-col gap-3">
         <FormError message="Could not load categories." />
-        <button
-          type="button"
+        <Button
+          variant="secondary"
+          size="sm"
           onClick={() => void refetch()}
           disabled={isFetching}
-          className="self-start rounded-md border border-border bg-background px-3 py-1.5 text-sm font-medium text-foreground transition-colors hover:bg-accent hover:text-primary disabled:cursor-not-allowed disabled:opacity-60"
+          className="self-start"
         >
           Try again
-        </button>
+        </Button>
       </div>
     )
   }
@@ -121,8 +202,14 @@ function CategoriesContent() {
               </h2>
               <CategoryTree
                 categories={trees[section.key]}
+                kind={section.kind}
                 label={section.label}
                 emptyMessage={section.emptyMessage}
+                editor={editor}
+                pending={pending}
+                onEditorChange={setEditor}
+                onSave={save}
+                onConfirmDelete={confirmDelete}
               />
             </section>
           )
