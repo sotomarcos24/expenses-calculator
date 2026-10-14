@@ -77,7 +77,7 @@ docs/       specs, milestones, process, team roles
 
 ## Current state
 
-- Milestones 1 (scaffolding) and 2 (authentication) are done; the next milestone is shown in `docs/milestones.md`.
+- Milestones 1 (scaffolding), 2 (authentication) and 3 (categories) are done; the next milestone is shown in `docs/milestones.md`.
 - The API contract is the committed `openapi.json` at the repo root; after any backend route or schema change, re-export it and regenerate the frontend types (see `docs/backend.md` → *Commands*). CI fails if either is stale.
 - Git: `main` tracks `origin` (`github.com/sotomarcos24/expenses-calculator`).
 

@@ -25,7 +25,7 @@
 | --- | --- | --- | --- | --- |
 | 1 | Scaffolding | Repo, tooling, CI, app shell | — | ✅ Done |
 | 2 | Authentication | Sign up, log in, log out, protected routes | 1 | ✅ Done |
-| 3 | Categories | Default categories + management UI | 2 | ⬜ Pending |
+| 3 | Categories | Default categories + management UI | 2 | ✅ Done |
 | 4 | Transactions | Income/expense CRUD, filters, gross/net salary | 3 | ⬜ Pending |
 | 5 | Investments | Portfolio CRUD and gain/loss | 2 | ⬜ Pending |
 | 6 | Dashboard | Period summary and charts | 4, 5 | ⬜ Pending |
@@ -107,11 +107,11 @@
 
 #### Acceptance criteria
 
-- [ ] A new user sees exactly the default categories and subcategories from §4.2.
-- [ ] Categories and subcategories can be added, renamed and deleted.
-- [ ] Duplicate names at the same level are rejected (409).
-- [ ] A third level cannot be created (422).
-- [ ] User A cannot see, rename or delete user B's categories (404).
+- [x] A new user sees exactly the default categories and subcategories from §4.2.
+- [x] Categories and subcategories can be added, renamed and deleted.
+- [x] Duplicate names at the same level are rejected (409).
+- [x] A third level cannot be created (422).
+- [x] User A cannot see, rename or delete user B's categories (404).
 
 **Tests:** seed contents; level and kind validation; duplicates; ownership; delete cascade of subcategories when unused.
 
