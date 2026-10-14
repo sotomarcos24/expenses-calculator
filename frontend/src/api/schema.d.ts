@@ -125,6 +125,43 @@ export interface paths {
     patch: operations['rename_category_api_categories__category_id__patch']
     trace?: never
   }
+  '/api/transactions': {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    /** List Transactions */
+    get: operations['list_transactions_api_transactions_get']
+    put?: never
+    /** Create Transaction */
+    post: operations['create_transaction_api_transactions_post']
+    delete?: never
+    options?: never
+    head?: never
+    patch?: never
+    trace?: never
+  }
+  '/api/transactions/{transaction_id}': {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    /** Get Transaction */
+    get: operations['get_transaction_api_transactions__transaction_id__get']
+    put?: never
+    post?: never
+    /** Delete Transaction */
+    delete: operations['delete_transaction_api_transactions__transaction_id__delete']
+    options?: never
+    head?: never
+    /** Update Transaction */
+    patch: operations['update_transaction_api_transactions__transaction_id__patch']
+    trace?: never
+  }
 }
 export type webhooks = Record<string, never>
 export interface components {
@@ -203,6 +240,96 @@ export interface components {
       email: string
       /** Password */
       password: string
+    }
+    /** TransactionCreate */
+    TransactionCreate: {
+      type: components['schemas']['CategoryKind']
+      /**
+       * Date
+       * Format: date
+       */
+      date: string
+      /** Amount */
+      amount: number | string
+      /** Gross Amount */
+      gross_amount?: number | string | null
+      /** Category Id */
+      category_id: number
+      /** Subcategory Id */
+      subcategory_id?: number | null
+      /** Note */
+      note?: string | null
+    }
+    /** TransactionPage */
+    TransactionPage: {
+      /** Items */
+      items: components['schemas']['TransactionRead'][]
+      /** Total */
+      total: number
+    }
+    /** TransactionRead */
+    TransactionRead: {
+      /** Id */
+      id: number
+      type: components['schemas']['CategoryKind']
+      /**
+       * Date
+       * Format: date
+       */
+      date: string
+      /** Amount */
+      amount: string
+      /** Gross Amount */
+      gross_amount: string | null
+      /** Deduction Rate */
+      deduction_rate: string | null
+      /** Category Id */
+      category_id: number
+      /** Category Name */
+      category_name: string
+      /** Subcategory Id */
+      subcategory_id: number | null
+      /** Subcategory Name */
+      subcategory_name: string | null
+      /** Note */
+      note: string | null
+      /**
+       * Created At
+       * Format: date-time
+       */
+      created_at: string
+      /**
+       * Updated At
+       * Format: date-time
+       */
+      updated_at: string
+    }
+    /**
+     * TransactionUpdate
+     * @description Partial update: omitted fields are unchanged, explicit ``null`` clears nullable fields.
+     *
+     *     ``type``, ``date``, ``amount`` and ``category_id`` are not nullable, so an explicit ``null``
+     *     is a 422. Their ``None`` default only means "not sent" (it is hidden from the JSON schema),
+     *     and the service reads the sent fields with ``model_dump(exclude_unset=True)``.
+     */
+    TransactionUpdate: {
+      /** Type */
+      type?: components['schemas']['CategoryKind']
+      /**
+       * Date
+       * Format: date
+       */
+      date?: string
+      /** Amount */
+      amount?: number | string
+      /** Gross Amount */
+      gross_amount?: number | string | null
+      /** Category Id */
+      category_id?: number
+      /** Subcategory Id */
+      subcategory_id?: number | null
+      /** Note */
+      note?: string | null
     }
     /** UserRead */
     UserRead: {
@@ -496,6 +623,181 @@ export interface operations {
         }
         content: {
           'application/json': components['schemas']['CategoryRead']
+        }
+      }
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['HTTPValidationError']
+        }
+      }
+    }
+  }
+  list_transactions_api_transactions_get: {
+    parameters: {
+      query?: {
+        from?: string | null
+        to?: string | null
+        type?: components['schemas']['CategoryKind'] | null
+        category_id?: number | null
+        subcategory_id?: number | null
+        page?: number
+        page_size?: number
+      }
+      header?: never
+      path?: never
+      cookie?: {
+        access_token?: string | null
+      }
+    }
+    requestBody?: never
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['TransactionPage']
+        }
+      }
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['HTTPValidationError']
+        }
+      }
+    }
+  }
+  create_transaction_api_transactions_post: {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: {
+        access_token?: string | null
+      }
+    }
+    requestBody: {
+      content: {
+        'application/json': components['schemas']['TransactionCreate']
+      }
+    }
+    responses: {
+      /** @description Successful Response */
+      201: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['TransactionRead']
+        }
+      }
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['HTTPValidationError']
+        }
+      }
+    }
+  }
+  get_transaction_api_transactions__transaction_id__get: {
+    parameters: {
+      query?: never
+      header?: never
+      path: {
+        transaction_id: number
+      }
+      cookie?: {
+        access_token?: string | null
+      }
+    }
+    requestBody?: never
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['TransactionRead']
+        }
+      }
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['HTTPValidationError']
+        }
+      }
+    }
+  }
+  delete_transaction_api_transactions__transaction_id__delete: {
+    parameters: {
+      query?: never
+      header?: never
+      path: {
+        transaction_id: number
+      }
+      cookie?: {
+        access_token?: string | null
+      }
+    }
+    requestBody?: never
+    responses: {
+      /** @description Successful Response */
+      204: {
+        headers: {
+          [name: string]: unknown
+        }
+        content?: never
+      }
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['HTTPValidationError']
+        }
+      }
+    }
+  }
+  update_transaction_api_transactions__transaction_id__patch: {
+    parameters: {
+      query?: never
+      header?: never
+      path: {
+        transaction_id: number
+      }
+      cookie?: {
+        access_token?: string | null
+      }
+    }
+    requestBody: {
+      content: {
+        'application/json': components['schemas']['TransactionUpdate']
+      }
+    }
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['TransactionRead']
         }
       }
       /** @description Validation Error */
