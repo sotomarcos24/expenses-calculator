@@ -6,6 +6,7 @@ from sqlalchemy.orm import Session
 
 from app.models import User
 from app.security import hash_password, normalize_email, verify_password
+from app.services.categories import seed_default_categories
 
 # Verified against when the email is unknown, so login takes about the same time either way.
 _DUMMY_PASSWORD_HASH = hash_password("dummy-password-for-timing-only")
@@ -22,6 +23,9 @@ def get_user_by_email(db: Session, email: str) -> User | None:
 def register_user(db: Session, email: str, password: str) -> User:
     """Create a user with a normalised email and an Argon2 password hash.
 
+    The user and their default categories are created in a single transaction: if seeding
+    fails, nothing is committed.
+
     Raises ``EmailAlreadyRegisteredError`` if the email is taken, either on the pre-check
     or when the unique constraint fires on insert (concurrent registration).
     """
@@ -31,10 +35,17 @@ def register_user(db: Session, email: str, password: str) -> User:
     user = User(email=email, password_hash=hash_password(password))
     db.add(user)
     try:
-        db.commit()
+        # Only the user INSERT runs here, so an IntegrityError can only be the email.
+        db.flush()
     except IntegrityError as exc:
         db.rollback()
         raise EmailAlreadyRegisteredError from exc
+    try:
+        seed_default_categories(db, user)
+        db.commit()
+    except Exception:
+        db.rollback()
+        raise
     db.refresh(user)
     return user
 

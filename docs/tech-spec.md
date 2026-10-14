@@ -92,9 +92,13 @@ All tables have `id` (integer PK), `created_at` and `updated_at`. Every user-own
 | kind | enum(`income`, `expense`) | |
 | parent_id | FK → categories, nullable | `NULL` = top-level category; set = subcategory |
 
+- `kind` is stored as a string (non-native enum, `income` / `expense`) with a CHECK constraint, so Postgres needs no `CREATE TYPE`.
 - Unique on (`user_id`, `kind`, `parent_id`, `name`).
+- Partial unique index `uq_categories_top_level_name` on (`user_id`, `kind`, `lower(name)`) `WHERE parent_id IS NULL`: the constraint above cannot stop duplicate top-level names because `NULL`s are distinct.
+- Names are unique per level **case-insensitively** (`Food` = `food`): among a user's top-level categories of the same `kind`, and among the subcategories of one parent. The top level is enforced by the DB (index above) and the service; subcategories are enforced by the service (the DB constraint above is case-sensitive).
+- Deleting a category deletes its subcategories (`ON DELETE CASCADE` on `parent_id`); deleting a user deletes their categories.
 - Only two levels: a subcategory's parent must be top-level and of the same `kind` (validated in the service layer).
-- Default set from plan.md §4.2 is created when the user registers. Income categories have no subcategories by default.
+- Default set from plan.md §4.2 is created when the user registers, inserted in that order (parents before children), so ordering by `id` gives the §4.2 order. Income categories have no subcategories by default.
 
 ### `transactions`
 
@@ -127,7 +131,7 @@ Gain/loss (`current_value − amount_invested`) and gain % (`gain / amount_inves
 
 ## 5. Authentication and authorization
 
-- **Register:** `POST /api/auth/register` validates the email (stored lowercase, so `A@B.com` = `a@b.com`) and a password of 8 to 128 characters (422 outside that range; the upper bound protects Argon2), hashes it with Argon2, creates the user and logs the user in. Seeding the default categories in the same DB transaction is added in milestone 3.
+- **Register:** `POST /api/auth/register` validates the email (stored lowercase, so `A@B.com` = `a@b.com`) and a password of 8 to 128 characters (422 outside that range; the upper bound protects Argon2), hashes it with Argon2, creates the user, seeds the default categories (plan.md §4.2) in the same DB transaction, and logs the user in. If seeding fails, nothing is committed.
 - **Login:** verifies the hash and issues a JWT (`sub` = user id, `exp` = `ACCESS_TOKEN_DAYS`, default 7 days) signed with HS256 using `JWT_SECRET`.
 - **Cookie:** `access_token`, `HttpOnly`, `SameSite=Lax`, `Secure` in production (`COOKIE_SECURE`), `Path=/api`, `Max-Age` = `ACCESS_TOKEN_DAYS`. The token is never readable from JavaScript, so it is not exposed to XSS.
 - **Logout:** clears the cookie.
