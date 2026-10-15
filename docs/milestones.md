@@ -27,7 +27,7 @@
 | 2 | Authentication | Sign up, log in, log out, protected routes | 1 | ✅ Done |
 | 3 | Categories | Default categories + management UI | 2 | ✅ Done |
 | 4 | Transactions | Income/expense CRUD, filters, gross/net salary | 3 | ✅ Done |
-| 5 | Investments | Portfolio CRUD and gain/loss | 2 | ⬜ Pending |
+| 5 | Investments | Portfolio CRUD and gain/loss | 2 | ✅ Done |
 | 6 | Dashboard | Period summary and charts | 4, 5 | ⬜ Pending |
 | 7 | Simulator | Modes A/B/C with three scenarios | 4, 5 | ⬜ Pending |
 | 8 | Polish and deployment | Production-ready MVP online | 1–7 | ⬜ Pending |
@@ -149,7 +149,7 @@
 
 ---
 
-## M5 — Investments
+## M5 — Investments ✅
 
 **Goal:** manual portfolio tracking with gain/loss (§4.5).
 
@@ -167,11 +167,11 @@
 
 #### Acceptance criteria
 
-- [ ] Investments can be created, edited, deleted and listed.
-- [ ] Invested 1,000 and current value 1,150 shows +$150.00 / +15.0%.
-- [ ] Portfolio totals add up all investments correctly.
-- [ ] An investment with 0 invested shows "—" as its percentage, without errors.
-- [ ] Ownership enforced (404 for other users' investments).
+- [x] Investments can be created, edited, deleted and listed.
+- [x] Invested 1,000 and current value 1,150 shows +$150.00 / +15.0%.
+- [x] Portfolio totals add up all investments correctly.
+- [x] An investment with 0 invested shows "—" as its percentage, without errors.
+- [x] Ownership enforced (404 for other users' investments).
 
 **Tests:** gain/loss calculations (positive, negative, zero invested); totals; `value_updated_at` behaviour; ownership.
 

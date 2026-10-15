@@ -81,8 +81,8 @@ docs/       specs, milestones, process, team roles
 
 ## Current state
 
-- Milestones 1 (scaffolding), 2 (authentication), 3 (categories) and 4 (transactions) are done. Next: **M5 — Investments** (branch `m5-investments`, from an up-to-date `main`). It has no issues yet: the PM breaks the M5 section of `docs/milestones.md` into issues at intake (create the `m5` label first).
-- Open backlog issues not tied to a milestone (#9 return to the requested page after login, #10 login rate limiting) need the user's decision before any work.
+- Milestones 1 (scaffolding), 2 (authentication), 3 (categories), 4 (transactions) and 5 (investments) are done. Next: **M6 — Dashboard** (branch `m6-dashboard`, from an up-to-date `main` once the M5 PR is merged). It has no issues yet: `/plan-milestone` has the PM break the M6 section of `docs/milestones.md` into issues (create the `m6` label first).
+- Open issues outside the current milestone: #9 (return to the requested page after login) and #10 (login rate limiting) are labelled `m8`; #33 (form dialogs lose focus while saving / Escape ignored after an API error, found during M5) has no milestone and needs the user's decision before any work.
 - The API contract is the committed `openapi.json` at the repo root; after any backend route or schema change, re-export it and regenerate the frontend types (see `docs/backend.md` → *Commands*). CI fails if either is stale.
 - Git: `main` tracks `origin` (`github.com/sotomarcos24/expenses-calculator`).
 
