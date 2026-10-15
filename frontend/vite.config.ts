@@ -15,6 +15,8 @@ export default defineConfig({
   },
   test: {
     environment: 'jsdom',
+    // The contrast test reads the palette from index.css (?raw), which Vitest empties by default.
+    css: { include: [/index\.css/] },
     setupFiles: ['./src/test/setup.ts'],
   },
 })

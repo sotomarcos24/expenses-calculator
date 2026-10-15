@@ -184,7 +184,10 @@ describe('Add transaction', () => {
     const listCallsBefore = listCallCount(fetchMock)
     save(dialog)
 
-    expect(await screen.findByText('Transaction saved.')).toHaveAttribute('role', 'status')
+    expect((await screen.findByText('Transaction saved.')).parentElement).toHaveAttribute(
+      'role',
+      'status',
+    )
     expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
     expect(mutationCalls(fetchMock)).toEqual([
       {

@@ -1,10 +1,11 @@
+import { Button } from '../components/Button.tsx'
 import { FormError } from '../components/FormError.tsx'
 import { PageHeader } from '../components/PageHeader.tsx'
 import { SimulatorWorkspace } from '../components/SimulatorWorkspace.tsx'
 import { useSimulatorDefaults } from '../hooks/useSimulator.ts'
 
 export function SimulatorPage() {
-  const { data, isPending, isError } = useSimulatorDefaults()
+  const { data, isPending, isError, isFetching, refetch } = useSimulatorDefaults()
 
   return (
     <>
@@ -19,11 +20,20 @@ export function SimulatorPage() {
       ) : (
         <>
           {isError && (
-            <div className="mb-4">
+            <div className="mb-4 flex flex-col items-start gap-3">
               <FormError message="Couldn't load your defaults. Enter the values yourself." />
+              <Button
+                variant="secondary"
+                size="sm"
+                onClick={() => void refetch()}
+                disabled={isFetching}
+              >
+                Try again
+              </Button>
             </div>
           )}
-          <SimulatorWorkspace defaults={data} />
+          {/* Remounted when a retry brings the defaults, so the form is pre-filled with them. */}
+          <SimulatorWorkspace key={data ? 'loaded' : 'empty'} defaults={data} />
         </>
       )}
     </>

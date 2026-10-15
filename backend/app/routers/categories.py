@@ -1,8 +1,17 @@
-from fastapi import APIRouter, HTTPException, status
+from datetime import date
+from typing import Annotated
+
+from fastapi import APIRouter, HTTPException, Query, status
 
 from app.db import DbSession
 from app.models import CategoryKind
-from app.schemas.categories import CategoryCreate, CategoryRead, CategoryTreeNode, CategoryUpdate
+from app.schemas.categories import (
+    CategoryCreate,
+    CategoryRead,
+    CategoryTotals,
+    CategoryTreeNode,
+    CategoryUpdate,
+)
 from app.security import CurrentUser
 from app.services import categories as service
 
@@ -23,6 +32,21 @@ def list_categories(
         CategoryTreeNode.model_validate(category)
         for category in service.list_category_tree(db, user.id, kind)
     ]
+
+
+@router.get("/totals")
+def category_totals(
+    user: CurrentUser,
+    db: DbSession,
+    date_from: Annotated[date, Query(alias="from")],
+    date_to: Annotated[date, Query(alias="to")],
+) -> list[CategoryTotals]:
+    if date_from > date_to:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
+            detail="'from' must be on or before 'to'",
+        )
+    return service.category_totals(db, user.id, date_from, date_to)
 
 
 @router.post("", status_code=status.HTTP_201_CREATED)

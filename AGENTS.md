@@ -82,8 +82,8 @@ docs/       specs, milestones, process, team roles
 
 ## Current state
 
-- Milestones 1 (scaffolding), 2 (authentication), 3 (categories), 4 (transactions), 5 (investments), 6 (dashboard) and 7 (simulator) are done. Next: **M8 — Polish and deployment** (branch `m8-polish-deploy`, from an up-to-date `main` once the M7 PR is merged). It has no issues yet: `/plan-milestone` has the PM break the M8 section of `docs/milestones.md` into issues (create the `m8` label first if missing; #9 and #10 already carry it).
-- Open issues outside the current milestone: #9 (return to the requested page after login) and #10 (login rate limiting) are labelled `m8`; #33 (form dialogs lose focus while saving / Escape ignored after an API error, found during M5) has no milestone and needs the user's decision before any work.
+- Milestones 1 (scaffolding), 2 (authentication), 3 (categories), 4 (transactions), 5 (investments), 6 (dashboard) and 7 (simulator) are done. **M8 — Polish and deployment** is partially done: the polish part (#44 UX, #45 accessibility, #10 rate limiting, #9 post-login redirect, #48/#49 category totals, #33 dialog focus) is merged into `main`; the deployment part is **pending** and its acceptance criteria stay unticked in `docs/milestones.md` (see its *Progress notes*).
+- Open issues: #46 (production serving, Dockerfile, Postgres + Docker CI jobs; needs the user to approve the `psycopg[binary]` dependency) and #47 (deploy to a free tier, README production steps, no-secrets check; needs the user to create the provider account and paste secrets; depends on #46). Both are labelled `m8` and `groomed`. Work them from a new branch off `main` (e.g. `m8-deploy`) with `/next-issue`; when both pass QA, run `/close-milestone` to mark M8 ✅. M9 (nice-to-haves) is optional and follows.
 - The API contract is the committed `openapi.json` at the repo root; after any backend route or schema change, re-export it and regenerate the frontend types (see `docs/backend.md` → *Commands*). CI fails if either is stale.
 - Git: `main` tracks `origin` (`github.com/sotomarcos24/expenses-calculator`).
 

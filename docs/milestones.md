@@ -30,7 +30,7 @@
 | 5 | Investments | Portfolio CRUD and gain/loss | 2 | ✅ Done |
 | 6 | Dashboard | Period summary and charts | 4, 5 | ✅ Done |
 | 7 | Simulator | Modes A/B/C with three scenarios | 4, 5 | ✅ Done |
-| 8 | Polish and deployment | Production-ready MVP online | 1–7 | ⬜ Pending |
+| 8 | Polish and deployment | Production-ready MVP online | 1–7 | 🟡 Polish done; deployment pending (#46, #47) |
 | 9 | Nice-to-haves | Recurring transactions, CSV export, i18n | 8 | ⬜ Optional |
 
 ---
@@ -239,7 +239,7 @@
 
 ---
 
-## M8 — Polish and deployment
+## M8 — Polish and deployment 🟡
 
 **Goal:** the MVP is usable, robust and online.
 
@@ -251,13 +251,21 @@
 - Postgres: run all migrations and the test suite against Postgres once (CI job with a Postgres service).
 - Deploy to a free tier (Render or Fly.io) with managed Postgres; `COOKIE_SECURE=true`, strong `JWT_SECRET`, migrations on deploy.
 - README: production configuration and deploy steps.
+- Spec extension (#48, #49, outside the original scope): record transactions from the Categories page on subcategories, with period totals per subcategory and per category (see `docs/plan.md` §4.2). Backend `GET /categories/totals` (#48); frontend (#49): add-transaction buttons, period selector and totals on `/categories`.
 
 #### Acceptance criteria
 
-- [ ] The app is reachable at a public HTTPS URL.
-- [ ] Full flow works in production: sign up → categories → transactions → investments → dashboard → simulator.
-- [ ] Tests pass against both SQLite and Postgres.
-- [ ] No secrets in the repo.
+- [ ] The app is reachable at a public HTTPS URL. *(pending, #47)*
+- [ ] Full flow works in production: sign up → categories → transactions → investments → dashboard → simulator. *(pending, #47)*
+- [ ] Tests pass against both SQLite and Postgres. *(pending, #46)*
+- [ ] No secrets in the repo. *(pending, #47: no-secrets CI check and history review)*
+
+#### Progress notes
+
+- **Done (polish, merged to `main`):** UX pass (#44), accessibility pass (#45), login rate limiting (#10), return to the requested page after login (#9), `GET /categories/totals` (#48), add-transaction and period totals on `/categories` (#49), and the shared `Dialog` focus fix (#33, no milestone).
+- **Pending (deployment, deliberately left open):** #46 (FastAPI serves `frontend/dist`, `ENVIRONMENT=production` settings guard, multi-stage Dockerfile, `backend-postgres` and `docker` CI jobs, needs the `psycopg[binary]` driver approved by the user) and #47 (Render/Fly.io deploy config, README "Production" section, no-secrets check, production smoke test; needs the user to create the provider account and paste secrets). #47 depends on #46.
+- **Next:** do #46, then #47 with `/next-issue` on a new branch from `main`. Milestone is complete (✅) only when all four acceptance criteria above are ticked; then remove these notes.
+- Docker is not installed locally, so the Dockerfile is verifiable only in CI.
 
 ---
 

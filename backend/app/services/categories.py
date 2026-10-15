@@ -1,12 +1,16 @@
 """Category business logic: the default set, the tree, create, rename and delete."""
 
 from collections.abc import Sequence
+from datetime import date
+from decimal import Decimal
 
-from sqlalchemy import exists, func, or_, select
+from sqlalchemy import Numeric, exists, func, or_, select, type_coerce
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session, selectinload
 
 from app.models import Category, CategoryKind, Transaction, User
+from app.schemas.categories import CategoryTotals, SubcategoryTotals
+from app.schemas.money import CENT
 
 # Default categories from plan.md §4.2, in display order: (kind, name, subcategory names).
 # Inserted in this exact order, so ordering by id reproduces it.
@@ -67,6 +71,48 @@ def list_category_tree(
     if kind is not None:
         query = query.where(Category.kind == kind)
     return list(db.scalars(query))
+
+
+def category_totals(
+    db: Session, user_id: int, date_from: date, date_to: date
+) -> list[CategoryTotals]:
+    """Period sums for every category and subcategory of the user (``0.00`` when empty).
+
+    A category total adds its direct transactions (no subcategory) and its subcategories'.
+    """
+    rows = db.execute(
+        select(
+            Transaction.category_id,
+            Transaction.subcategory_id,
+            type_coerce(func.sum(Transaction.amount), Numeric(16, 2)),
+        )
+        .where(
+            Transaction.user_id == user_id,
+            Transaction.date >= date_from,
+            Transaction.date <= date_to,
+        )
+        .group_by(Transaction.category_id, Transaction.subcategory_id)
+    ).all()
+    zero = Decimal(0).quantize(CENT)
+    sub_sums: dict[int, Decimal] = {}
+    category_sums: dict[int, Decimal] = {}
+    for category_id, subcategory_id, total in rows:
+        # SQLite sums as floats: quantizing to cents removes the representation error.
+        amount = Decimal(total).quantize(CENT)
+        category_sums[category_id] = category_sums.get(category_id, zero) + amount
+        if subcategory_id is not None:
+            sub_sums[subcategory_id] = amount
+    return [
+        CategoryTotals(
+            category_id=category.id,
+            total=category_sums.get(category.id, zero),
+            subcategories=[
+                SubcategoryTotals(id=sub.id, total=sub_sums.get(sub.id, zero))
+                for sub in category.subcategories
+            ],
+        )
+        for category in list_category_tree(db, user_id)
+    ]
 
 
 def get_category(db: Session, user_id: int, category_id: int) -> Category:

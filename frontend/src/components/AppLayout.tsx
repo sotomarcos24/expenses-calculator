@@ -1,6 +1,8 @@
+import type { MouseEvent } from 'react'
 import { NavLink, Outlet } from 'react-router'
 import { useLogout, useMe } from '../hooks/useAuth.ts'
 import { Logo } from './Logo.tsx'
+import { ToastProvider } from './ToastProvider.tsx'
 
 const NAV_ITEMS = [
   { to: '/', label: 'Dashboard', end: true },
@@ -11,7 +13,8 @@ const NAV_ITEMS = [
 ]
 
 function navClass({ isActive }: { isActive: boolean }) {
-  const base = 'whitespace-nowrap rounded-md px-3 py-2 text-sm font-medium transition-colors'
+  const base =
+    'inline-flex min-h-10 items-center whitespace-nowrap rounded-md px-3 py-2 text-sm font-medium transition-colors'
   return isActive
     ? `${base} bg-primary text-primary-foreground`
     : `${base} text-muted hover:bg-accent hover:text-primary`
@@ -40,32 +43,58 @@ function UserBox() {
   )
 }
 
+const MAIN_ID = 'main-content'
+
+/** First tab stop: jumps over the navigation to the page content. */
+function SkipLink() {
+  const skip = (event: MouseEvent<HTMLAnchorElement>) => {
+    event.preventDefault()
+    document.getElementById(MAIN_ID)?.focus()
+  }
+  return (
+    <a
+      href={`#${MAIN_ID}`}
+      onClick={skip}
+      className="sr-only rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground focus:not-sr-only focus:fixed focus:top-2 focus:left-2 focus:z-50"
+    >
+      Skip to content
+    </a>
+  )
+}
+
 export function AppLayout() {
   return (
-    <div className="min-h-dvh md:flex">
-      <aside className="flex flex-col border-b border-border bg-surface md:min-h-dvh md:w-60 md:shrink-0 md:border-r md:border-b-0">
-        {/* Mobile: logo and user on one row. Desktop: `contents` lets the user box move to the
+    <ToastProvider>
+      <SkipLink />
+      <div className="min-h-dvh md:flex">
+        <header className="flex flex-col border-b border-border bg-surface md:min-h-dvh md:w-60 md:shrink-0 md:border-r md:border-b-0">
+          {/* Mobile: logo and user on one row. Desktop: `contents` lets the user box move to the
             bottom of the sidebar. */}
-        <div className="flex items-center justify-between gap-3 px-4 py-4 md:contents">
-          <div className="shrink-0 md:px-5 md:py-6">
-            <Logo />
+          <div className="flex items-center justify-between gap-3 px-4 py-4 md:contents">
+            <div className="shrink-0 md:px-5 md:py-6">
+              <Logo />
+            </div>
+            <UserBox />
           </div>
-          <UserBox />
-        </div>
-        <nav
-          aria-label="Main"
-          className="flex gap-1 overflow-x-auto px-4 pb-3 md:flex-col md:px-3 md:pb-0"
+          <nav
+            aria-label="Main"
+            className="flex gap-1 overflow-x-auto px-4 pb-3 md:flex-col md:px-3 md:pb-0"
+          >
+            {NAV_ITEMS.map((item) => (
+              <NavLink key={item.to} to={item.to} end={item.end} className={navClass}>
+                {item.label}
+              </NavLink>
+            ))}
+          </nav>
+        </header>
+        <main
+          id={MAIN_ID}
+          tabIndex={-1}
+          className="mx-auto w-full max-w-6xl min-w-0 flex-1 px-4 py-6 md:px-8 md:py-8"
         >
-          {NAV_ITEMS.map((item) => (
-            <NavLink key={item.to} to={item.to} end={item.end} className={navClass}>
-              {item.label}
-            </NavLink>
-          ))}
-        </nav>
-      </aside>
-      <main className="mx-auto w-full max-w-6xl min-w-0 flex-1 px-4 py-6 md:px-8 md:py-8">
-        <Outlet />
-      </main>
-    </div>
+          <Outlet />
+        </main>
+      </div>
+    </ToastProvider>
   )
 }

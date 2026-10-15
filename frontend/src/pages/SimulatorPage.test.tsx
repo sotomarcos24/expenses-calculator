@@ -214,7 +214,7 @@ describe('SimulatorPage', () => {
         .getAllByRole('listitem')
         .map((item) => item.textContent),
     ).toEqual(['Pessimistic', 'Base', 'Optimistic'])
-    expect(screen.getByRole('table')).toBeInTheDocument()
+    expect(screen.getByRole('table', { name: /Base scenario by year/ })).toBeInTheDocument()
   })
 
   it('toggles nominal / real without a new request', async () => {
@@ -457,6 +457,21 @@ describe('SimulatorPage', () => {
     run()
     await screen.findByRole('article', { name: 'Base scenario' })
     expect(calls).toHaveLength(1)
+  })
+
+  it('offers Try again for the defaults and pre-fills the form once the retry succeeds', async () => {
+    let fail = true
+    renderSimulator({
+      defaults: () => (fail ? jsonResponse({ detail: 'boom' }, 500) : jsonResponse(DEFAULTS)),
+    })
+    expect(await screen.findByRole('alert')).toHaveTextContent("Couldn't load your defaults")
+    expect(field('Starting amount ($)').value).toBe('')
+
+    fail = false
+    fireEvent.click(screen.getByRole('button', { name: 'Try again' }))
+    await waitFor(() => expect(field('Starting amount ($)').value).not.toBe(''))
+    expect(screen.queryByRole('alert')).not.toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: 'Try again' })).not.toBeInTheDocument()
   })
 
   it('shows a loading state while the defaults load', async () => {

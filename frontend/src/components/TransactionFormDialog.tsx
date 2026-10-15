@@ -78,6 +78,12 @@ function deductionRateText(amount: string, gross: string) {
 type TransactionFormDialogProps = {
   /** Row to edit (pre-fills the form, saves with `PATCH`); `null` adds a new transaction. */
   transaction: TransactionRead | null
+  /**
+   * Values pre-filled in a new transaction (ignored when editing), over `emptyTransactionForm()`.
+   */
+  defaults?: Partial<TransactionFormInput>
+  /** With `defaults`: type, category and subcategory cannot be changed (add from a category row). */
+  lockCategory?: boolean
   /** Cancel / Escape: closes without saving. */
   onClose: () => void
   /** Called after a successful save, once the list has been refetched. */
@@ -92,6 +98,8 @@ type TransactionFormDialogProps = {
  */
 export function TransactionFormDialog({
   transaction,
+  defaults,
+  lockCategory = false,
   onClose,
   onSaved,
   fallbackFocusRef,
@@ -110,7 +118,9 @@ export function TransactionFormDialog({
     formState: { errors },
   } = useForm<TransactionFormInput, unknown, TransactionPayload>({
     resolver: zodResolver(transactionFormSchema),
-    defaultValues: transaction ? transactionToForm(transaction) : emptyTransactionForm(),
+    defaultValues: transaction
+      ? transactionToForm(transaction)
+      : { ...emptyTransactionForm(), ...defaults },
     mode: 'onSubmit',
     reValidateMode: 'onChange',
   })
@@ -133,6 +143,8 @@ export function TransactionFormDialog({
   const selectedCategory = options.find((category) => String(category.id) === categoryId)
   const subcategories = selectedCategory?.subcategories ?? []
   const noCategories = categories.isSuccess && options.length === 0
+
+  const locked = lockCategory && !transaction
 
   const onSubmit = (body: TransactionPayload) => {
     if (mutation.isPending) {
@@ -175,6 +187,7 @@ export function TransactionFormDialog({
                   type="radio"
                   value={option.value}
                   className="size-4 accent-primary"
+                  disabled={locked}
                   {...typeField}
                 />
                 {option.label}
@@ -214,7 +227,7 @@ export function TransactionFormDialog({
             <select
               {...aria}
               className={controlClass(errors.category_id?.message)}
-              disabled={categories.isPending}
+              disabled={categories.isPending || locked}
               {...categoryField}
             >
               <option value="">Select a category</option>
@@ -240,7 +253,7 @@ export function TransactionFormDialog({
             <select
               {...aria}
               className={controlClass(errors.subcategory_id?.message)}
-              disabled={subcategories.length === 0}
+              disabled={subcategories.length === 0 || locked}
               {...register('subcategory_id')}
             >
               <option value="">None</option>

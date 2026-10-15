@@ -44,13 +44,20 @@ const DEFAULT_INCOME = tree('income', [
 const DEFAULT_TREE = [...DEFAULT_EXPENSES, ...DEFAULT_INCOME]
 
 function categoriesCalls(fetchMock: { mock: { calls: unknown[][] } }) {
-  return fetchMock.mock.calls.filter(([path]) => String(path).startsWith('/api/categories'))
+  return fetchMock.mock.calls.filter(
+    ([path]) =>
+      String(path).startsWith('/api/categories') &&
+      !String(path).startsWith('/api/categories/totals'),
+  )
 }
 
 function answer(body: CategoryTreeNode[]): Handler {
   return (path) => {
     if (path === '/api/categories') {
       return jsonResponse(body)
+    }
+    if (path.startsWith('/api/categories/totals')) {
+      return jsonResponse([])
     }
     throw new Error(`Unexpected request: ${path}`)
   }
@@ -202,6 +209,9 @@ describe('CategoriesPage', () => {
   it('shows an error with "Try again" and renders the tree once a retry succeeds', async () => {
     let fail = true
     const { fetchMock } = await renderCategories((path) => {
+      if (path.startsWith('/api/categories/totals')) {
+        return jsonResponse([])
+      }
       if (path !== '/api/categories') {
         throw new Error(`Unexpected request: ${path}`)
       }
@@ -340,6 +350,36 @@ function getCategoriesCount(fetchMock: { mock: { calls: unknown[][] } }) {
       path === '/api/categories' && ((init as RequestInit)?.method ?? 'GET') === 'GET',
   ).length
 }
+
+describe('CategoriesPage — toasts', () => {
+  it('shows a success toast for add, subcategory add, rename and delete, and no toast on failure', async () => {
+    await renderManaged()
+    fireEvent.click(screen.getByRole('button', { name: 'Add subcategory to Food' }))
+    typeAndSubmit('Subcategory name', 'Snacks')
+    expect(await screen.findByText('Subcategory added.')).toBeInTheDocument()
+
+    fireEvent.click(screen.getByRole('button', { name: 'Rename Transport' }))
+    typeAndSubmit('Name', 'Travel')
+    expect(await screen.findByText('Category renamed.')).toBeInTheDocument()
+
+    fireEvent.click(within(section('Expenses')).getByRole('button', { name: 'Add category' }))
+    typeAndSubmit('Category name', 'Pets')
+    expect(await screen.findByText('Category added.')).toBeInTheDocument()
+
+    fireEvent.click(screen.getByRole('button', { name: 'Delete Pets' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Delete' }))
+    expect(await screen.findByText('Category deleted.')).toBeInTheDocument()
+    expect(screen.getByText('Category deleted.').parentElement).toHaveAttribute('role', 'status')
+  })
+
+  it('shows no success toast when a save fails', async () => {
+    await renderManaged(DEFAULT_TREE, () => jsonResponse({ detail: DUPLICATE }, 409))
+    fireEvent.click(within(section('Expenses')).getByRole('button', { name: 'Add category' }))
+    typeAndSubmit('Category name', 'Food')
+    expect(await screen.findByText(DUPLICATE)).toBeInTheDocument()
+    expect(screen.queryByText('Category added.')).not.toBeInTheDocument()
+  })
+})
 
 describe('CategoriesPage — managing categories', () => {
   it('adds a top-level expense category with a trimmed name at the end', async () => {

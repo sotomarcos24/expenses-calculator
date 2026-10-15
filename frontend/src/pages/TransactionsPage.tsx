@@ -8,6 +8,7 @@ import { TransactionDeleteDialog } from '../components/TransactionDeleteDialog.t
 import { TransactionFilters } from '../components/TransactionFilters.tsx'
 import { TransactionFormDialog } from '../components/TransactionFormDialog.tsx'
 import { TransactionTable } from '../components/TransactionTable.tsx'
+import { useToast } from '../hooks/useToast.ts'
 import { useCategories } from '../hooks/useCategories.ts'
 import {
   TRANSACTIONS_PAGE_SIZE,
@@ -34,8 +35,6 @@ type TransactionsContentProps = {
   onAdd: () => void
   onEdit: (transaction: TransactionRead) => void
   onDelete: (transaction: TransactionRead) => void
-  /** Called on every filter change (it replaces the page message). */
-  onFiltersChange: () => void
 }
 
 function NoTransactionsYet({ onAdd }: { onAdd: () => void }) {
@@ -49,12 +48,7 @@ function NoTransactionsYet({ onAdd }: { onAdd: () => void }) {
   )
 }
 
-function TransactionsContent({
-  onAdd,
-  onEdit,
-  onDelete,
-  onFiltersChange,
-}: TransactionsContentProps) {
+function TransactionsContent({ onAdd, onEdit, onDelete }: TransactionsContentProps) {
   const [filters, setFilters] = useState<TransactionFilterState>(DEFAULT_FILTERS)
   const [page, setPage] = useState(1)
   const { data: categories = [], isSuccess: categoriesLoaded } = useCategories()
@@ -77,7 +71,6 @@ function TransactionsContent({
   const changeFilters = (next: TransactionFilterState) => {
     setFilters(next)
     setPage(1)
-    onFiltersChange()
   }
 
   const clearFilters = () => changeFilters(CLEARED_FILTERS)
@@ -160,16 +153,9 @@ type DialogState =
   | { mode: 'edit'; transaction: TransactionRead }
   | { mode: 'delete'; transaction: TransactionRead }
 
-/**
- * Result of the last action, shown above the list: a polite status (`Transaction saved.` /
- * `Transaction deleted.`) or an alert (`Transaction not found` after deleting a row already gone).
- * Any new action replaces it.
- */
-type PageMessage = { kind: 'status' | 'alert'; text: string } | null
-
 export function TransactionsPage() {
   const [dialog, setDialog] = useState<DialogState>({ mode: 'closed' })
-  const [message, setMessage] = useState<PageMessage>(null)
+  const toast = useToast()
   const addButtonRef = useRef<HTMLButtonElement>(null)
   // After a delete the row and its Delete button are gone: focus goes to "Add transaction".
   const focusAddOnClose = useRef(false)
@@ -181,15 +167,13 @@ export function TransactionsPage() {
     }
   }, [dialog])
 
-  const open = (next: DialogState) => {
-    setMessage(null)
-    setDialog(next)
-  }
+  const open = (next: DialogState) => setDialog(next)
   const close = () => setDialog({ mode: 'closed' })
-  const closeWith = (next: PageMessage) => {
+  // Closes the dialog and moves focus to "Add transaction" (the row and its buttons are gone).
+  const closeWith = (show: () => void) => {
     focusAddOnClose.current = true
     close()
-    setMessage(next)
+    show()
   }
   const onAdd = () => open({ mode: 'create' })
 
@@ -204,24 +188,10 @@ export function TransactionsPage() {
           </Button>
         }
       />
-      {/* Always rendered so the confirmation is announced; it matters when the saved transaction
-          falls outside the current filters and does not show in the list. */}
-      <p
-        role="status"
-        className={message?.kind === 'status' ? 'mb-4 text-sm text-foreground' : 'sr-only'}
-      >
-        {message?.kind === 'status' ? message.text : ''}
-      </p>
-      {message?.kind === 'alert' && (
-        <div className="mb-4">
-          <FormError message={message.text} />
-        </div>
-      )}
       <TransactionsContent
         onAdd={onAdd}
         onEdit={(transaction) => open({ mode: 'edit', transaction })}
         onDelete={(transaction) => open({ mode: 'delete', transaction })}
-        onFiltersChange={() => setMessage(null)}
       />
       {(dialog.mode === 'create' || dialog.mode === 'edit') && (
         <TransactionFormDialog
@@ -229,7 +199,7 @@ export function TransactionsPage() {
           onClose={close}
           onSaved={() => {
             close()
-            setMessage({ kind: 'status', text: 'Transaction saved.' })
+            toast.success('Transaction saved.')
           }}
           fallbackFocusRef={addButtonRef}
         />
@@ -238,8 +208,8 @@ export function TransactionsPage() {
         <TransactionDeleteDialog
           transaction={dialog.transaction}
           onClose={close}
-          onDeleted={() => closeWith({ kind: 'status', text: 'Transaction deleted.' })}
-          onNotFound={(text) => closeWith({ kind: 'alert', text })}
+          onDeleted={() => closeWith(() => toast.success('Transaction deleted.'))}
+          onNotFound={(text) => closeWith(() => toast.error(text))}
           fallbackFocusRef={addButtonRef}
         />
       )}

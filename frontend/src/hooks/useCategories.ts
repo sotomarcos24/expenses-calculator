@@ -2,14 +2,22 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { ApiError, apiFetch } from '../api/client.ts'
 import type {
   CategoryCreate,
+  CategoryTotals,
   CategoryKind,
   CategoryRead,
   CategoryTreeNode,
   CategoryUpdate,
 } from '../api/types.ts'
+import type { DashboardRange } from '../lib/dashboardPeriod.ts'
 
 /** Cache key of the category trees (both kinds). Invalidate it after any category change. */
 export const CATEGORIES_QUERY_KEY = ['categories'] as const
+
+/**
+ * Prefix of every category-totals query key (each period). Invalidate it after any transaction or
+ * category change.
+ */
+export const CATEGORY_TOTALS_QUERY_KEY = ['category-totals'] as const
 
 /** Top-level categories of `kind`, keeping the API order (creation order; never re-sorted). */
 export function categoriesOfKind(categories: CategoryTreeNode[], kind: CategoryKind) {
@@ -34,13 +42,30 @@ export function useCategories() {
 }
 
 /**
+ * Period totals per category and subcategory (`GET /api/categories/totals`) for `range`; `null`
+ * disables the request (invalid custom range). Amounts are decimal strings.
+ */
+export function useCategoryTotals(range: DashboardRange | null) {
+  return useQuery({
+    queryKey: [...CATEGORY_TOTALS_QUERY_KEY, range?.from, range?.to],
+    queryFn: () =>
+      apiFetch<CategoryTotals[]>(`/categories/totals?from=${range!.from}&to=${range!.to}`),
+    enabled: range !== null,
+  })
+}
+
+/**
  * Callbacks shared by the category mutations: refetch the trees after a success, and after a 404
  * too (the category was already gone, so the tree must resync). The returned promises are awaited
  * by TanStack Query, so `mutateAsync` settles once the refetch is done. No optimistic updates.
  */
 function useResyncCategories() {
   const queryClient = useQueryClient()
-  const resync = () => queryClient.invalidateQueries({ queryKey: CATEGORIES_QUERY_KEY })
+  const resync = () =>
+    Promise.all([
+      queryClient.invalidateQueries({ queryKey: CATEGORIES_QUERY_KEY }),
+      queryClient.invalidateQueries({ queryKey: CATEGORY_TOTALS_QUERY_KEY }),
+    ])
   return {
     onSuccess: resync,
     onError: (error: unknown) =>

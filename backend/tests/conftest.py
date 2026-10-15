@@ -7,6 +7,7 @@ from fastapi.testclient import TestClient
 from sqlalchemy.orm import Session, sessionmaker
 from sqlalchemy.pool import StaticPool
 
+from app.config import get_settings
 from app.db import get_db, make_engine
 from app.main import create_app
 from app.models import Base
@@ -24,6 +25,16 @@ class AuthenticatedClient:
     email: str
     password: str
     user_id: int
+
+
+@pytest.fixture(autouse=True)
+def _rate_limits_off(monkeypatch: pytest.MonkeyPatch) -> Iterator[None]:
+    """Suites register many users from one IP: disable the limits unless a test sets them."""
+    monkeypatch.setenv("RATE_LIMIT_LOGIN_ATTEMPTS", "0")
+    monkeypatch.setenv("RATE_LIMIT_REGISTER_ATTEMPTS", "0")
+    get_settings.cache_clear()
+    yield
+    get_settings.cache_clear()
 
 
 @pytest.fixture

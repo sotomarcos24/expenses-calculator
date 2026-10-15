@@ -7,7 +7,12 @@ import { Button } from '../components/Button.tsx'
 import { FormError } from '../components/FormError.tsx'
 import { TextField } from '../components/TextField.tsx'
 import { useRegister } from '../hooks/useAuth.ts'
-import { fieldErrorsFrom422, GENERIC_ERROR } from '../lib/authErrors.ts'
+import {
+  fieldErrorsFrom422,
+  GENERIC_ERROR,
+  isRateLimited,
+  TOO_MANY_ATTEMPTS,
+} from '../lib/authErrors.ts'
 import {
   EMAIL_INVALID,
   registerSchema,
@@ -46,6 +51,10 @@ export function RegisterPage() {
             type: 'server',
             message: typeof error.detail === 'string' ? error.detail : EMAIL_TAKEN,
           })
+          return
+        }
+        if (isRateLimited(error)) {
+          setError('root.server', { type: 'server', message: TOO_MANY_ATTEMPTS })
           return
         }
         const fieldErrors = fieldErrorsFrom422(error, FIELD_MESSAGES_422)

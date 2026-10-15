@@ -1,12 +1,17 @@
 import { zodResolver } from '@hookform/resolvers/zod'
 import { useForm } from 'react-hook-form'
-import { Link, useNavigate } from 'react-router'
+import { Link, useLocation, useNavigate } from 'react-router'
 import { AuthCard } from '../components/AuthCard.tsx'
 import { Button } from '../components/Button.tsx'
 import { FormError } from '../components/FormError.tsx'
 import { TextField } from '../components/TextField.tsx'
 import { isUnauthorized, useLogin } from '../hooks/useAuth.ts'
-import { fieldErrorsFrom422, GENERIC_ERROR } from '../lib/authErrors.ts'
+import {
+  fieldErrorsFrom422,
+  GENERIC_ERROR,
+  isRateLimited,
+  TOO_MANY_ATTEMPTS,
+} from '../lib/authErrors.ts'
 import {
   EMAIL_INVALID,
   loginSchema,
@@ -14,6 +19,7 @@ import {
   type LoginFormInput,
   type LoginFormValues,
 } from '../lib/authSchemas.ts'
+import { redirectTargetFromState } from '../lib/redirect.ts'
 
 export const INVALID_CREDENTIALS = 'Invalid email or password'
 
@@ -21,6 +27,7 @@ const FIELD_MESSAGES_422 = { email: EMAIL_INVALID, password: PASSWORD_TOO_LONG }
 
 export function LoginPage() {
   const navigate = useNavigate()
+  const location = useLocation()
   const login = useLogin()
   const {
     register,
@@ -36,11 +43,15 @@ export function LoginPage() {
   const onSubmit = (values: LoginFormValues) => {
     clearErrors()
     login.mutate(values, {
-      onSuccess: () => navigate('/', { replace: true }),
+      onSuccess: () => navigate(redirectTargetFromState(location.state), { replace: true }),
       onError: (error) => {
         // Never say which field was wrong.
         if (isUnauthorized(error)) {
           setError('root.server', { type: 'server', message: INVALID_CREDENTIALS })
+          return
+        }
+        if (isRateLimited(error)) {
+          setError('root.server', { type: 'server', message: TOO_MANY_ATTEMPTS })
           return
         }
         const fieldErrors = fieldErrorsFrom422(error, FIELD_MESSAGES_422)

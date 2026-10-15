@@ -12,6 +12,12 @@ class Settings(BaseSettings):
     jwt_secret: str = "dev-only-insecure-jwt-secret-change-me-in-production"
     access_token_days: int = 7
     cookie_secure: bool = False
+    # Per-IP attempts per window on login / register; 0 disables that limit.
+    rate_limit_login_attempts: int = 10
+    rate_limit_register_attempts: int = 5
+    rate_limit_window_seconds: int = 60
+    # Number of trusted reverse proxies in front of the app (0 = use the socket IP).
+    trusted_proxy_count: int = 0
 
 
 @lru_cache

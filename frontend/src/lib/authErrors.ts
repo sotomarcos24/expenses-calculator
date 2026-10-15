@@ -2,6 +2,12 @@ import { ApiError } from '../api/client.ts'
 
 export const GENERIC_ERROR = 'Something went wrong. Please try again.'
 
+export const TOO_MANY_ATTEMPTS = 'Too many attempts. Try again later.'
+
+export function isRateLimited(error: unknown) {
+  return error instanceof ApiError && error.status === 429
+}
+
 export type AuthField = 'email' | 'password'
 
 type FieldMessages = Record<AuthField, string>
