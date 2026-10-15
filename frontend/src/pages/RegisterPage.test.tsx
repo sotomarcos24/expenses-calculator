@@ -110,6 +110,17 @@ describe('RegisterPage', () => {
     })
   })
 
+  it('shows the "Too many attempts" message on 429 and stays on /register', async () => {
+    const { router } = await renderRegister(() =>
+      jsonResponse({ detail: 'Too many attempts. Try again later.' }, 429),
+    )
+    fill('user@example.com', '12345678')
+    submit()
+
+    expect(await screen.findByText('Too many attempts. Try again later.')).toBeInTheDocument()
+    expect(router.state.location.pathname).toBe('/register')
+  })
+
   it('shows the duplicate-email message under Email on 409 and stays on /register', async () => {
     const { router } = await renderRegister(() =>
       jsonResponse({ detail: 'An account with this email already exists' }, 409),

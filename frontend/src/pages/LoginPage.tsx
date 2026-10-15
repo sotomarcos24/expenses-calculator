@@ -6,7 +6,12 @@ import { Button } from '../components/Button.tsx'
 import { FormError } from '../components/FormError.tsx'
 import { TextField } from '../components/TextField.tsx'
 import { isUnauthorized, useLogin } from '../hooks/useAuth.ts'
-import { fieldErrorsFrom422, GENERIC_ERROR } from '../lib/authErrors.ts'
+import {
+  fieldErrorsFrom422,
+  GENERIC_ERROR,
+  isRateLimited,
+  TOO_MANY_ATTEMPTS,
+} from '../lib/authErrors.ts'
 import {
   EMAIL_INVALID,
   loginSchema,
@@ -43,6 +48,10 @@ export function LoginPage() {
         // Never say which field was wrong.
         if (isUnauthorized(error)) {
           setError('root.server', { type: 'server', message: INVALID_CREDENTIALS })
+          return
+        }
+        if (isRateLimited(error)) {
+          setError('root.server', { type: 'server', message: TOO_MANY_ATTEMPTS })
           return
         }
         const fieldErrors = fieldErrorsFrom422(error, FIELD_MESSAGES_422)

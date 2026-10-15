@@ -148,6 +148,7 @@ Gain/loss (`current_value − amount_invested`) and gain % (`gain / amount_inves
 - **CSRF:** `SameSite=Lax` plus requiring `Content-Type: application/json` on every `POST`/`PUT`/`PATCH`/`DELETE` request, including body-less ones such as logout; anything else returns **415**. The frontend `apiFetch` always sends the header on these methods.
 - **Authorization:** a `current_user` dependency guards every router except auth. Every query filters by `user_id`. Fetching another user's resource returns **404** (not 403, so the API does not reveal that the resource exists). Foreign keys sent in a body (e.g. `category_id`) are checked to belong to the current user.
 - Login errors return a generic message ("Invalid email or password").
+- **Rate limiting:** `POST /api/auth/login` and `POST /api/auth/register` are limited per client IP by an in-memory sliding-window counter (`app/ratelimit.py`, one counter per scope). Defaults: 10 login and 5 register attempts per 60 s (`RATE_LIMIT_LOGIN_ATTEMPTS`, `RATE_LIMIT_REGISTER_ATTEMPTS`, `RATE_LIMIT_WINDOW_SECONDS`; `0` disables a limit). Every attempt counts, and the check runs before the password is verified, so a correct password is also rejected once limited. Over the limit the API answers **429** `{"detail": "Too many attempts. Try again later."}` (same for any email) with `Retry-After` in whole seconds (>= 1). The client IP is the socket peer, or, with `TRUSTED_PROXY_COUNT=N > 0`, the Nth entry from the right of `X-Forwarded-For` (the left side is client-controlled), falling back to the peer if the header is missing or too short. The counter is per process (run a single worker) and resets on restart.
 
 ## 6. API
 
@@ -379,7 +380,7 @@ Target: 100% coverage of `simulator/` and ≥ 80% of the backend. CI (GitHub Act
 
 ## 10. Configuration and local development
 
-Backend environment variables: `DATABASE_URL` (default `sqlite:///./dev.db`), `JWT_SECRET` (the development default is at least 32 bytes, as PyJWT recommends for HS256; rejecting the default in production is part of milestone 8), `COOKIE_SECURE` (default `false` locally), `ACCESS_TOKEN_DAYS` (default 7).
+Backend environment variables: `DATABASE_URL` (default `sqlite:///./dev.db`), `JWT_SECRET` (the development default is at least 32 bytes, as PyJWT recommends for HS256; rejecting the default in production is part of milestone 8), `COOKIE_SECURE` (default `false` locally), `ACCESS_TOKEN_DAYS` (default 7), `RATE_LIMIT_LOGIN_ATTEMPTS` (10), `RATE_LIMIT_REGISTER_ATTEMPTS` (5), `RATE_LIMIT_WINDOW_SECONDS` (60), `TRUSTED_PROXY_COUNT` (0; set to the number of reverse proxies in production, see §5).
 
 ```text
 backend:   uv sync && uv run alembic upgrade head && uv run fastapi dev app/main.py   # :8000

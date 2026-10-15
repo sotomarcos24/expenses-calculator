@@ -71,6 +71,17 @@ describe('LoginPage', () => {
     expect(JSON.parse(init.body as string)).toEqual({ email: 'user@example.com', password: 'x' })
   })
 
+  it('shows the "Too many attempts" message on 429 and stays on /login', async () => {
+    const { router } = await renderLogin(() =>
+      jsonResponse({ detail: 'Too many attempts. Try again later.' }, 429),
+    )
+    fill('user@example.com', 'x')
+    submit()
+
+    expect(await screen.findByText('Too many attempts. Try again later.')).toBeInTheDocument()
+    expect(router.state.location.pathname).toBe('/login')
+  })
+
   it('shows "Invalid email or password" on 401, keeps the email and stays on /login', async () => {
     const { router } = await renderLogin(() =>
       jsonResponse({ detail: 'Invalid email or password' }, 401),

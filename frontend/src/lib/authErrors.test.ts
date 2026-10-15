@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { ApiError } from '../api/client.ts'
-import { fieldErrorsFrom422 } from './authErrors.ts'
+import { fieldErrorsFrom422, isRateLimited } from './authErrors.ts'
 
 const messages = { email: 'Bad email', password: 'Bad password' }
 const item = (loc: unknown[]) => ({ loc, msg: 'raw pydantic', type: 'value_error' })
@@ -19,5 +19,13 @@ describe('fieldErrorsFrom422', () => {
     ['a non-ApiError', new TypeError('Failed to fetch')],
   ])('returns null for %s', (_label, error) => {
     expect(fieldErrorsFrom422(error, messages)).toBeNull()
+  })
+})
+
+describe('isRateLimited', () => {
+  it('is true only for a 429 ApiError', () => {
+    expect(isRateLimited(new ApiError(429, 'x'))).toBe(true)
+    expect(isRateLimited(new ApiError(401, 'x'))).toBe(false)
+    expect(isRateLimited(new TypeError('x'))).toBe(false)
   })
 })
