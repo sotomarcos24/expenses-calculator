@@ -9,8 +9,8 @@ from sqlalchemy import ColumnElement, func, select
 from sqlalchemy.orm import Session, selectinload
 
 from app.models import Category, CategoryKind, Transaction
+from app.schemas.money import RATE_STEP
 from app.schemas.transactions import (
-    RATE_STEP,
     TransactionCreate,
     TransactionRead,
     TransactionUpdate,

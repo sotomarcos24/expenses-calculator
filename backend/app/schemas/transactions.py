@@ -8,17 +8,15 @@ from pydantic import (
     BaseModel,
     ConfigDict,
     Field,
-    PlainSerializer,
     ValidationInfo,
     field_validator,
 )
 from pydantic.json_schema import SkipJsonSchema
 
 from app.models import CategoryKind
+from app.schemas.money import MoneyOut, RateOut
 
 NOTE_MAX_LENGTH = 500
-CENT = Decimal("0.01")
-RATE_STEP = Decimal("0.0001")
 # Fields a partial update may omit but never set to null.
 NOT_NULLABLE = ("type", "date", "amount", "category_id")
 
@@ -41,16 +39,6 @@ def normalize_note(value: str | None) -> str | None:
 # Request money: a positive decimal with at most 2 decimal places that fits NUMERIC(12, 2).
 # Pydantic rejects NaN / Infinity and non-numeric strings for Decimal fields.
 MoneyIn = Annotated[Decimal, Field(gt=0, max_digits=12, decimal_places=2)]
-
-# Response money: always a JSON string with exactly 2 decimals ("10.50").
-MoneyOut = Annotated[
-    Decimal, PlainSerializer(lambda value: str(value.quantize(CENT)), return_type=str)
-]
-
-# Deduction rate: a fraction as a JSON string with 4 decimals ("0.2000").
-RateOut = Annotated[
-    Decimal, PlainSerializer(lambda value: str(value.quantize(RATE_STEP)), return_type=str)
-]
 
 Note = Annotated[str | None, AfterValidator(normalize_note)]
 

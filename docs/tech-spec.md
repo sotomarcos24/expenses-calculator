@@ -126,17 +126,22 @@ All tables have `id` (integer PK), `created_at` and `updated_at`. Every user-own
 | user_id | FK | |
 | name | varchar(100) | |
 | type | enum(`stock`, `fund`, `etf`, `crypto`, `deposit`, `real_estate`, `other`) | |
-| platform | varchar(100) | free text |
+| platform | varchar(100), nullable | free text, optional; `NULL` = no platform (e.g. real estate, a deposit held directly) |
 | amount_invested | numeric(14,2) | `≥ 0` |
 | current_value | numeric(14,2) | `≥ 0`, updated manually |
 | value_updated_at | date | date of the last manual update |
+
+- `type` is stored like `categories.kind`: a string (non-native enum, `stock` / `fund` / `etf` / `crypto` / `deposit` / `real_estate` / `other`, the `InvestmentType` enum) with the CHECK `ck_investments_type`, so Postgres needs no `CREATE TYPE`.
+- CHECK constraints: `ck_investments_amount_invested_non_negative` (`amount_invested >= 0`) and `ck_investments_current_value_non_negative` (`current_value >= 0`).
+- Index: `ix_investments_user_id` on `user_id`. Deleting a user deletes their investments (`ON DELETE CASCADE`); there is no ORM back-reference from `User`.
+- `platform` is optional: `NULL` means no platform. How the API turns an empty value into `NULL` is defined with the endpoints (§6).
 
 Gain/loss (`current_value − amount_invested`) and gain % (`gain / amount_invested`, `null` if the amount invested is 0) are computed, not stored.
 
 ## 5. Authentication and authorization
 
 - **Register:** `POST /api/auth/register` validates the email (stored lowercase, so `A@B.com` = `a@b.com`) and a password of 8 to 128 characters (422 outside that range; the upper bound protects Argon2), hashes it with Argon2, creates the user, seeds the default categories (plan.md §4.2) in the same DB transaction, and logs the user in. If seeding fails, nothing is committed.
-- **Login:** verifies the hash and issues a JWT (`sub` = user id, `exp` = `ACCESS_TOKEN_DAYS`, default 7 days) signed with HS256 using `JWT_SECRET`.
+- **Login:** verifies the hash and issues a JWT (`sub` = user id, `exp` = `ACCESS_TOKEN_DAYS`, default 7 days) signed with HS256 using `JWT_SECRET`. Tokens are decoded with a 5-second leeway for clock skew (applies to both `iat` and `exp`).
 - **Cookie:** `access_token`, `HttpOnly`, `SameSite=Lax`, `Secure` in production (`COOKIE_SECURE`), `Path=/api`, `Max-Age` = `ACCESS_TOKEN_DAYS`. The token is never readable from JavaScript, so it is not exposed to XSS.
 - **Logout:** clears the cookie.
 - **Same origin:** in development Vite proxies `/api` to FastAPI. In production the backend serves the built frontend, or both sit behind the same domain. This avoids CORS and third-party cookie issues.
@@ -221,9 +226,36 @@ The subcategory is optional even when the category has subcategories. A rejected
 
 | Method | Path | Description |
 | --- | --- | --- |
-| GET | `/investments` | list with computed gain/loss, plus a portfolio totals block |
-| POST | `/investments` | create |
-| GET / PATCH / DELETE | `/investments/{id}` | `PATCH` with `current_value` also updates `value_updated_at` (defaults to today) |
+| GET | `/investments` | **200** + `InvestmentList {items, totals}`: all the user's investments with computed gain/loss, plus the portfolio totals |
+| POST | `/investments` | `InvestmentCreate` → **201** + `InvestmentRead`; **422** |
+| GET | `/investments/{id}` | **200** + `InvestmentRead`; **404** |
+| PATCH | `/investments/{id}` | `InvestmentUpdate` (partial) → **200** + `InvestmentRead`; **404**, **422** |
+| DELETE | `/investments/{id}` | **204**, no body; **404** |
+
+All five need the cookie (**401** `"Not authenticated"`); `POST`/`PATCH`/`DELETE` with a non-JSON `Content-Type` are **415** (§5). An investment id that does not exist or belongs to another user is **404** `"Investment not found"`; a non-integer id is 422.
+
+**Schemas.**
+
+- `InvestmentCreate {name, type, platform?, amount_invested, current_value, value_updated_at?}`: `type` is one of `stock`, `fund`, `etf`, `crypto`, `deposit`, `real_estate`, `other` (`InvestmentType`; anything else 422); `platform` defaults to `null`; `value_updated_at` is an ISO date (`YYYY-MM-DD`) that may be omitted (see below) but not sent as `null` (422).
+- `InvestmentUpdate`: the same fields, all optional. Omitted fields are unchanged, an explicit `null` (or `""`) clears `platform`, and an explicit `null` for `name`, `type`, `amount_invested`, `current_value` or `value_updated_at` is 422. `{}` is 200 and changes nothing. A rejected PATCH leaves the row unchanged.
+- `InvestmentRead {id, name, type, platform, amount_invested, current_value, value_updated_at, gain, gain_pct, created_at, updated_at}`.
+- `InvestmentList {items: list[InvestmentRead], totals: PortfolioTotals}` and `PortfolioTotals {total_invested, current_value, gain, gain_pct}` (the dashboard `investments` block below, without `by_type`).
+- Request bodies reject unknown fields (422). `name` is trimmed at both ends and must then be 1–100 characters.
+
+**Platform.** Trimmed at both ends; omitted, `null`, empty or whitespace-only is stored as `null`; more than 100 characters after trimming is 422.
+
+**Money.** Requests send decimal strings. `amount_invested` and `current_value` must be `≥ 0` (0 is valid), have at most 2 decimal places and fit `NUMERIC(14,2)` (max `999999999999.99`); `NaN`, `Infinity` and non-numeric strings are 422. Responses return money as strings with exactly 2 decimals (`"150.00"`, `"-50.00"`). `gain` = `current_value − amount_invested`; `gain_pct` = `gain / amount_invested` with `Decimal`, quantized to **4 decimals half up** and returned as a fraction string (`"0.1500"` = 15 %, `"-0.1000"`), `null` when `amount_invested` is 0. Neither is stored (`compute_gain()` / `compute_gain_pct()` in `app/services/investments.py`).
+
+**`value_updated_at`.** "Today" is the **server's local date** (`today()` in `app/services/investments.py`, the single source tests replace). Future dates are allowed, as for transaction dates, so a browser whose local date is already "tomorrow" gets no false 422; the UI may always send the date explicitly.
+
+- Create: the date sent, or today when omitted.
+- PATCH with `current_value` and without `value_updated_at`: today, even if the value equals the stored one (the user confirmed it today).
+- PATCH with `value_updated_at` (with or without `current_value`): the date sent.
+- PATCH without either field: unchanged.
+
+**Totals.** Summed with `Decimal` over **all** the user's investments: `total_invested`, `current_value`, `gain` = `current_value − total_invested`, `gain_pct` = `gain / total_invested` (4 decimals half up), `null` when `total_invested` is 0. With no investments the money fields are `"0.00"` and `gain_pct` is `null`. Totals are not stored, so they may exceed `NUMERIC(14,2)` (`compute_totals()`).
+
+**Order.** `name` case-insensitive ascending (SQL `lower(name)`), then `id` ascending. No pagination or filters (a personal portfolio is small).
 
 ### Dashboard
 

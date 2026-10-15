@@ -35,6 +35,48 @@ export function formatSignedAmount(type: CategoryKind, amount: string): string {
   return `${type === 'income' ? '+' : '−'}${formatCurrency(amount)}`
 }
 
+/**
+ * Sign of a decimal string from the API ("150.00" → 1, "-50.00" → -1, "0.00" / "-0.00" → 0),
+ * read from the text itself so the value is never converted to a number.
+ */
+export function decimalSign(value: string): -1 | 0 | 1 {
+  const trimmed = value.trim()
+  if (/^[-+]?0*\.?0*$/.test(trimmed)) {
+    return 0
+  }
+  return trimmed.startsWith('-') ? -1 : 1
+}
+
+/** Prefix for a signed display value: "+" for positive, "−" (U+2212) for negative, none for zero. */
+function signPrefix(sign: -1 | 0 | 1): string {
+  return sign > 0 ? '+' : sign < 0 ? '−' : ''
+}
+
+/**
+ * Money that can be negative, with an explicit sign (gain/loss): "150.00" → "+$150.00",
+ * "-50.00" → "−$50.00" (U+2212), "0.00" → "$0.00".
+ */
+export function formatSignedCurrency(amount: string): string {
+  const formatted = formatCurrency(Math.abs(Number(amount)))
+  // A tiny amount rounding to $0.00 is shown without a sign.
+  const sign = formatted === formatCurrency(0) ? 0 : decimalSign(amount)
+  return `${signPrefix(sign)}${formatted}`
+}
+
+/**
+ * Ratio that can be negative, as a signed percentage (gain/loss %): "0.1500" → "+15.0%",
+ * "-0.1000" → "−10.0%" (U+2212), "0.0000" → "0.0%", `null` (nothing invested) → "—".
+ */
+export function formatSignedPercent(ratio: string | null): string {
+  if (ratio === null) {
+    return '—'
+  }
+  const formatted = formatPercent(Math.abs(Number(ratio)))
+  // A ratio rounding to 0.0% (e.g. "0.0001") is shown without a sign.
+  const sign = formatted === formatPercent(0) ? 0 : decimalSign(ratio)
+  return `${signPrefix(sign)}${formatted}`
+}
+
 /** Category of a transaction for display: "Food" or, with a subcategory, "Food › Groceries". */
 export function formatCategoryLabel({
   category_name,

@@ -19,6 +19,7 @@ export function moneyErrorMessage(label: string, error: MoneyError): string {
     case 'required':
       return `${label} is required`
     case 'not-positive':
+    case 'negative':
       return `${label} must be greater than 0`
     case 'too-many-decimals':
       return TOO_MANY_DECIMALS
