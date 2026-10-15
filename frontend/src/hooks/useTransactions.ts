@@ -6,6 +6,7 @@ import type {
   TransactionRead,
   TransactionUpdate,
 } from '../api/types.ts'
+import { CATEGORY_TOTALS_QUERY_KEY } from './useCategories.ts'
 import type { TransactionListParams } from '../lib/transactionFilters.ts'
 
 /**
@@ -63,7 +64,12 @@ export function useTransactionsTotal(enabled: boolean) {
  */
 function useResyncTransactions() {
   const queryClient = useQueryClient()
-  const resync = () => queryClient.invalidateQueries({ queryKey: TRANSACTIONS_QUERY_KEY })
+  // The Categories page shows period totals computed from the transactions.
+  const resync = () =>
+    Promise.all([
+      queryClient.invalidateQueries({ queryKey: TRANSACTIONS_QUERY_KEY }),
+      queryClient.invalidateQueries({ queryKey: CATEGORY_TOTALS_QUERY_KEY }),
+    ])
   return {
     onSuccess: resync,
     onError: (error: unknown) =>

@@ -1,17 +1,21 @@
 import { useRef, useState, type KeyboardEvent } from 'react'
 import type { CategoryKind, CategoryTreeNode } from '../api/types.ts'
 import { Button } from '../components/Button.tsx'
-import { CategoryTree } from '../components/CategoryTree.tsx'
+import { CategoryTree, type TransactionTarget } from '../components/CategoryTree.tsx'
 import { FormError } from '../components/FormError.tsx'
 import { PageHeader } from '../components/PageHeader.tsx'
+import { PeriodSelector } from '../components/PeriodSelector.tsx'
+import { TransactionFormDialog } from '../components/TransactionFormDialog.tsx'
 import {
   useCategories,
+  useCategoryTotals,
   useCreateCategory,
   useDeleteCategory,
   useRenameCategory,
 } from '../hooks/useCategories.ts'
 import { useToast } from '../hooks/useToast.ts'
 import { MD_MEDIA_QUERY, useMediaQuery } from '../hooks/useMediaQuery.ts'
+import { DEFAULT_PERIOD, dashboardRange, type DashboardPeriod } from '../lib/dashboardPeriod.ts'
 import { categoryErrorMessage } from '../lib/categoryErrors.ts'
 import type { CategoryEditor } from '../lib/categoryEditor.ts'
 
@@ -110,6 +114,11 @@ function useCategoryEditor() {
 }
 
 function CategoriesContent() {
+  const [period, setPeriod] = useState<DashboardPeriod>(DEFAULT_PERIOD)
+  const range = dashboardRange(period)
+  const totalsQuery = useCategoryTotals(range)
+  const toast = useToast()
+  const [target, setTarget] = useState<TransactionTarget | null>(null)
   const { isPending, isError, refetch, isFetching, expenses, income } = useCategories()
   const [active, setActive] = useState<Section>('expenses')
   const tabRefs = useRef<Partial<Record<Section, HTMLButtonElement | null>>>({})
@@ -153,6 +162,17 @@ function CategoriesContent() {
 
   const trees: Record<Section, CategoryTreeNode[]> = { expenses, income }
 
+  // Totals of the selected period by category / subcategory id (ids are unique across both).
+  const totals =
+    range !== null && totalsQuery.data
+      ? new Map(
+          totalsQuery.data.flatMap((category) => [
+            [category.category_id, category.total] as const,
+            ...category.subcategories.map((sub) => [sub.id, sub.total] as const),
+          ]),
+        )
+      : undefined
+
   // Switching to another tab discards the open editor, which would otherwise stay open, hidden.
   const activate = (next: Section) => {
     if (next === active) {
@@ -175,6 +195,26 @@ function CategoriesContent() {
 
   return (
     <>
+      <PeriodSelector value={period} onChange={setPeriod} />
+      {range !== null && totalsQuery.isPending && (
+        <p role="status" className="mb-4 text-sm text-muted">
+          Loading totals…
+        </p>
+      )}
+      {range !== null && totalsQuery.isError && (
+        <div className="mb-4 flex max-w-sm flex-col gap-3">
+          <FormError message="Could not load totals." />
+          <Button
+            variant="secondary"
+            size="sm"
+            onClick={() => void totalsQuery.refetch()}
+            disabled={totalsQuery.isFetching}
+            className="self-start"
+          >
+            Try again
+          </Button>
+        </div>
+      )}
       {/* Mobile only: one section at a time. Desktop (md+) shows both columns, with no tabs. */}
       {!isDesktop && (
         <div
@@ -240,11 +280,29 @@ function CategoriesContent() {
                 onEditorChange={setEditor}
                 onSave={save}
                 onConfirmDelete={confirmDelete}
+                totals={totals}
+                onAddTransaction={setTarget}
               />
             </section>
           )
         })}
       </div>
+      {target && (
+        <TransactionFormDialog
+          transaction={null}
+          defaults={{
+            type: target.kind,
+            category_id: String(target.categoryId),
+            subcategory_id: target.subcategoryId === null ? '' : String(target.subcategoryId),
+          }}
+          lockCategory
+          onClose={() => setTarget(null)}
+          onSaved={() => {
+            setTarget(null)
+            toast.success('Transaction saved.')
+          }}
+        />
+      )}
     </>
   )
 }

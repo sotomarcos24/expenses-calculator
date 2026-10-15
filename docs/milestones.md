@@ -251,6 +251,7 @@
 - Postgres: run all migrations and the test suite against Postgres once (CI job with a Postgres service).
 - Deploy to a free tier (Render or Fly.io) with managed Postgres; `COOKIE_SECURE=true`, strong `JWT_SECRET`, migrations on deploy.
 - README: production configuration and deploy steps.
+- Spec extension (#48, #49, outside the original scope): record transactions from the Categories page on subcategories, with period totals per subcategory and per category (see `docs/plan.md` §4.2). Backend `GET /categories/totals` (#48); frontend (#49): add-transaction buttons, period selector and totals on `/categories`.
 
 #### Acceptance criteria
 

@@ -59,6 +59,12 @@ const SCENARIO = {
 
 function mockApi() {
   return mockMe(200, (path) => {
+    if (path.startsWith('/api/categories/totals')) {
+      return jsonResponse([
+        { category_id: 1, total: '40.00', subcategories: [{ id: 2, total: '40.00' }] },
+        { category_id: 5, total: '0.00', subcategories: [] },
+      ])
+    }
     if (path.startsWith('/api/categories')) return jsonResponse(CATEGORIES)
     if (path.startsWith('/api/transactions')) return jsonResponse({ items: [], total: 0 })
     if (path.startsWith('/api/investments')) {
@@ -196,6 +202,24 @@ describe('every form control has a label', () => {
     fireEvent.click((await screen.findAllByRole('button', { name: 'Add category' }))[0])
     expect(await screen.findByRole('textbox')).toHaveAccessibleName(/name/i)
     expect(unnamed(document.body)).toEqual([])
+  })
+
+  it('Categories: the add-transaction buttons and the prefilled dialog', async () => {
+    mockApi()
+    renderApp('/categories')
+    await screen.findByRole('heading', { level: 1, name: 'Categories' })
+    fireEvent.click(await screen.findByRole('button', { name: 'Food' }))
+    expect(screen.getByLabelText('Period')).toBeInTheDocument()
+    const add = screen.getByRole('button', { name: 'Add expense to Groceries' })
+    expect(screen.getByRole('button', { name: 'Add income to Salary' })).toBeInTheDocument()
+    expect(unnamed(document.body)).toEqual([])
+    add.focus()
+    fireEvent.click(add)
+    const dialog = await screen.findByRole('dialog', { name: 'Add transaction' })
+    expect(unnamed(dialog)).toEqual([])
+    fireEvent.keyDown(dialog, { key: 'Escape' })
+    await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument())
+    expect(add).toHaveFocus()
   })
 
   it('Investments: the Add and Update value dialogs and icon-less row buttons', async () => {

@@ -43,6 +43,7 @@ Acceptance criteria:
   - **Income:** Salary, Rental income, Dividends, Other income.
 - A user can add, rename and delete their own categories and subcategories.
 - A category that has transactions cannot be deleted without reassigning or deleting them first.
+- From the Categories page the user can record an expense or income directly on a subcategory (or on a category that has no subcategories); the transaction dialog opens with type, category and subcategory preset and locked. Every category and subcategory row shows its total for a selectable period (default: current month), and a category's total is the sum of its subcategories plus its own direct transactions. Real transactions only, no budgets.
 
 ### 4.3 Transactions (income and expenses)
 

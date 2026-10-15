@@ -6,6 +6,7 @@ import {
   editorTargetExists,
   type CategoryEditor,
 } from '../lib/categoryEditor.ts'
+import { formatCurrency } from '../lib/format.ts'
 import { Button } from './Button.tsx'
 import { CategoryNameForm } from './CategoryNameForm.tsx'
 import { DeleteConfirmation } from './DeleteConfirmation.tsx'
@@ -27,6 +28,18 @@ type CategoryTreeProps = {
   onSave: (name: string) => void
   /** Confirms the open delete editor. */
   onConfirmDelete: () => void
+  /** Period total (decimal string) by category / subcategory id; `undefined` while not loaded. */
+  totals?: ReadonlyMap<number, string>
+  /** Opens the transaction dialog for a subcategory row, or a category row without children. */
+  onAddTransaction: (target: TransactionTarget) => void
+}
+
+/** Where a transaction added from the tree goes. */
+export type TransactionTarget = {
+  kind: CategoryKind
+  categoryId: number
+  /** `null` for a category without subcategories. */
+  subcategoryId: number | null
 }
 
 function Icon({ children }: { children: ReactNode }) {
@@ -57,6 +70,13 @@ function Chevron({ expanded }: { expanded: boolean }) {
 const PLUS = (
   <path d="M10.75 4.75a.75.75 0 0 0-1.5 0v4.5h-4.5a.75.75 0 0 0 0 1.5h4.5v4.5a.75.75 0 0 0 1.5 0v-4.5h4.5a.75.75 0 0 0 0-1.5h-4.5v-4.5Z" />
 )
+const DOLLAR = (
+  <path
+    fillRule="evenodd"
+    d="M10 18a8 8 0 1 0 0-16 8 8 0 0 0 0 16Zm.75-12.25a.75.75 0 0 0-1.5 0v.34a2.25 2.25 0 0 0 .3 4.41h.9a.75.75 0 0 1 0 1.5H8.5a.75.75 0 0 0 0 1.5h.75v.25a.75.75 0 0 0 1.5 0v-.34a2.25 2.25 0 0 0-.3-4.41h-.9a.75.75 0 0 1 0-1.5h1.9a.75.75 0 0 0 0-1.5h-.75v-.25Z"
+    clipRule="evenodd"
+  />
+)
 const PENCIL = (
   <path d="M13.59 3.59a2 2 0 0 1 2.82 2.82l-8.5 8.5a1 1 0 0 1-.46.26l-3.2.8a.5.5 0 0 1-.61-.6l.8-3.21a1 1 0 0 1 .26-.46l8.89-8.11Z" />
 )
@@ -70,15 +90,27 @@ const TRASH = (
 
 type RowActionsProps = {
   name: string
+  kind: CategoryKind
   onAdd?: () => void
+  onAddTransaction?: () => void
   onRename: () => void
   onDelete: () => void
 }
 
 /** Always-visible icon actions of a row; every accessible name includes the item name. */
-function RowActions({ name, onAdd, onRename, onDelete }: RowActionsProps) {
+function RowActions({ name, kind, onAdd, onAddTransaction, onRename, onDelete }: RowActionsProps) {
   return (
     <div className="flex shrink-0 items-center">
+      {onAddTransaction && (
+        <Button
+          variant="ghost"
+          size="icon"
+          aria-label={`Add ${kind} to ${name}`}
+          onClick={onAddTransaction}
+        >
+          <Icon>{DOLLAR}</Icon>
+        </Button>
+      )}
       {onAdd && (
         <Button
           variant="ghost"
@@ -102,6 +134,18 @@ function RowActions({ name, onAdd, onRename, onDelete }: RowActionsProps) {
         <Icon>{TRASH}</Icon>
       </Button>
     </div>
+  )
+}
+
+/** Period total of a row; renders nothing until the totals are loaded. */
+function RowTotal({ value }: { value: string | undefined }) {
+  if (value === undefined) {
+    return null
+  }
+  return (
+    <span className="shrink-0 self-center py-1.5 pr-1 text-sm font-medium text-foreground tabular-nums">
+      {formatCurrency(value)}
+    </span>
   )
 }
 
@@ -132,6 +176,8 @@ export function CategoryTree({
   onEditorChange,
   onSave,
   onConfirmDelete,
+  totals,
+  onAddTransaction,
 }: CategoryTreeProps) {
   const idPrefix = useId()
   const [expanded, setExpanded] = useState<ReadonlySet<number>>(() => new Set())
@@ -198,10 +244,12 @@ export function CategoryTree({
         {isEditing('failed', category.id) && <RowError message={editorError(ownEditor)} />}
       </>
     ),
-    actions: (onAdd?: () => void) => (
+    actions: (onAdd?: () => void, onAddTransaction?: () => void) => (
       <RowActions
         name={category.name}
+        kind={kind}
         onAdd={onAdd}
+        onAddTransaction={onAddTransaction}
         onRename={() =>
           onEditorChange({ type: 'rename', kind, id: category.id, name: category.name })
         }
@@ -250,7 +298,19 @@ export function CategoryTree({
                       <span className="min-w-0 break-words">{category.name}</span>
                     </p>
                   )}
-                  {!row.renaming && row.actions(() => openAddSubcategory(category))}
+                  {!row.renaming && <RowTotal value={totals?.get(category.id)} />}
+                  {!row.renaming &&
+                    row.actions(
+                      () => openAddSubcategory(category),
+                      hasChildren
+                        ? undefined
+                        : () =>
+                            onAddTransaction({
+                              kind,
+                              categoryId: category.id,
+                              subcategoryId: null,
+                            }),
+                    )}
                 </div>
                 {row.below}
                 {(hasChildren || addingHere) && (
@@ -272,7 +332,15 @@ export function CategoryTree({
                                 {subcategory.name}
                               </span>
                             )}
-                            {!subRow.renaming && subRow.actions()}
+                            {!subRow.renaming && <RowTotal value={totals?.get(subcategory.id)} />}
+                            {!subRow.renaming &&
+                              subRow.actions(undefined, () =>
+                                onAddTransaction({
+                                  kind,
+                                  categoryId: category.id,
+                                  subcategoryId: subcategory.id,
+                                }),
+                              )}
                           </div>
                           {subRow.below}
                         </li>
