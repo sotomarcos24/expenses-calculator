@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { Link } from 'react-router'
 import { Cell, Pie, PieChart } from 'recharts'
 import type { CategoryTotal } from '../api/types.ts'
 import { formatCurrency } from '../lib/format.ts'
@@ -7,7 +8,7 @@ import { Button } from './Button.tsx'
 const CHART_COLORS = [1, 2, 3, 4, 5, 6, 7].map((n) => `var(--color-chart-${n})`)
 const CHART_SIZE = 240
 
-type Slice = { key: string; name: string; total: string }
+export type Slice = { key: string; name: string; total: string }
 
 function colorAt(index: number) {
   return CHART_COLORS[index % CHART_COLORS.length]
@@ -21,7 +22,7 @@ type SlicesProps = {
 }
 
 /** A pie and a list (name and amount per row). Rows are buttons when `onSelect` is set. */
-function PieWithList({ slices, onSelect, label }: SlicesProps) {
+export function PieWithList({ slices, onSelect, label }: SlicesProps) {
   return (
     <div className="flex flex-col items-center gap-6 md:flex-row md:items-start">
       <div aria-hidden="true" className="shrink-0">
@@ -128,7 +129,12 @@ export function ExpensePie({ categories }: { categories: CategoryTotal[] }) {
         Expenses by category
       </h2>
       {categories.length === 0 ? (
-        <p className="text-sm text-muted">No expenses in this period.</p>
+        <p className="text-sm text-muted">
+          No expenses in this period.{' '}
+          <Link to="/transactions" className="font-medium text-primary underline">
+            Add a transaction
+          </Link>
+        </p>
       ) : (
         <>
           <p className="mb-4 text-sm text-muted">Select a category to see its subcategories.</p>

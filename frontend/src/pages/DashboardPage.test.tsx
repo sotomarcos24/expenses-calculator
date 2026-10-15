@@ -172,4 +172,120 @@ describe('DashboardPage', () => {
       expect(screen.queryByRole('button', { name: 'Back' })).not.toBeInTheDocument()
     })
   })
+  describe('investments block', () => {
+    const HELD = {
+      total_invested: '1000.00',
+      current_value: '1150.00',
+      gain: '150.00',
+      gain_pct: '0.1500',
+      by_type: [
+        { type: 'etf' as const, current_value: '900.00' },
+        { type: 'real_estate' as const, current_value: '250.00' },
+        { type: 'crypto' as const, current_value: '0.00' },
+      ],
+    }
+
+    it('shows totals, gain/loss and a row per type held with human labels', async () => {
+      renderDashboard(() => ({ ...DATA, investments: HELD }))
+      const block = (await screen.findByRole('region', { name: 'Investments' })) as HTMLElement
+      expect(within(block).getByText('All investments, current values')).toBeInTheDocument()
+      expect(within(block).getByText('$1,000.00')).toBeInTheDocument()
+      expect(within(block).getByText('$1,150.00')).toBeInTheDocument()
+      expect(within(block).getByText('+$150.00')).toHaveClass('text-gain')
+      expect(within(block).getByText('+15.0%')).toHaveClass('text-gain')
+      const rows = within(
+        within(block).getByRole('list', { name: 'Investments by type' }),
+      ).getAllByRole('listitem')
+      expect(rows.map((row) => row.textContent)).toEqual(['ETF$900.00', 'Real estate$250.00'])
+      expect(within(block).getByRole('link', { name: 'View investments' })).toHaveAttribute(
+        'href',
+        '/investments',
+      )
+    })
+
+    it('shows a loss in red and a dash for a null percentage', async () => {
+      renderDashboard(() => ({
+        ...DATA,
+        investments: { ...HELD, gain: '-50.00', gain_pct: null },
+      }))
+      const block = (await screen.findByRole('region', { name: 'Investments' })) as HTMLElement
+      expect(within(block).getByText('−$50.00')).toHaveClass('text-loss')
+      expect(within(block).getByText('—')).toBeInTheDocument()
+    })
+
+    it('does not change when the period changes', async () => {
+      const calls = renderDashboard(() => ({ ...DATA, investments: HELD }))
+      const block = (await screen.findByRole('region', { name: 'Investments' })) as HTMLElement
+      const before = block.textContent
+      fireEvent.change(screen.getByLabelText('Period'), { target: { value: 'year' } })
+      await waitFor(() => expect(calls).toHaveLength(2))
+      await screen.findByText('Income')
+      expect(screen.getByRole('region', { name: 'Investments' }).textContent).toBe(before)
+    })
+  })
+
+  it('links to the simulator', async () => {
+    renderDashboard(() => DATA)
+    await screen.findByText('Income')
+    expect(screen.getByRole('link', { name: 'Open the simulator' })).toHaveAttribute(
+      'href',
+      '/simulator',
+    )
+  })
+
+  describe('empty states', () => {
+    const EMPTY: Dashboard = {
+      income_total: '0.00',
+      expense_total: '0.00',
+      savings: '0.00',
+      savings_rate: null,
+      expenses_by_category: [],
+      investments: INVESTMENTS,
+    }
+
+    it('shows both messages with links for a brand-new user, without errors', async () => {
+      const error = vi.spyOn(console, 'error').mockImplementation(() => {})
+      renderDashboard(() => EMPTY)
+      await screen.findByText('Income')
+      expect(within(kpi('Income')).getByText('$0.00')).toBeInTheDocument()
+      expect(within(kpi('Savings rate')).getByText('—')).toBeInTheDocument()
+      expect(screen.getByText(/No expenses in this period/)).toBeInTheDocument()
+      expect(screen.getByRole('link', { name: 'Add a transaction' })).toHaveAttribute(
+        'href',
+        '/transactions',
+      )
+      expect(screen.getByText(/No investments yet/)).toBeInTheDocument()
+      expect(screen.getByRole('link', { name: 'Add an investment' })).toHaveAttribute(
+        'href',
+        '/investments',
+      )
+      expect(screen.queryByRole('alert')).not.toBeInTheDocument()
+      expect(error).not.toHaveBeenCalled()
+      error.mockRestore()
+    })
+
+    it('shows only the investments message when there are expenses', async () => {
+      renderDashboard(() => DATA)
+      await screen.findByText('Income')
+      expect(screen.queryByText(/No expenses in this period/)).not.toBeInTheDocument()
+      expect(screen.getByText(/No investments yet/)).toBeInTheDocument()
+    })
+
+    it('shows only the expenses message when there are investments', async () => {
+      renderDashboard(() => ({
+        ...EMPTY,
+        investments: {
+          total_invested: '100.00',
+          current_value: '100.00',
+          gain: '0.00',
+          gain_pct: '0.0000',
+          by_type: [{ type: 'fund', current_value: '100.00' }],
+        },
+      }))
+      await screen.findByText('Income')
+      expect(screen.getByText(/No expenses in this period/)).toBeInTheDocument()
+      expect(screen.queryByText(/No investments yet/)).not.toBeInTheDocument()
+      expect(screen.getByRole('list', { name: 'Investments by type' })).toBeInTheDocument()
+    })
+  })
 })
