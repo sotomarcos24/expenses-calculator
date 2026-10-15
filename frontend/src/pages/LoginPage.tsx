@@ -1,6 +1,6 @@
 import { zodResolver } from '@hookform/resolvers/zod'
 import { useForm } from 'react-hook-form'
-import { Link, useNavigate } from 'react-router'
+import { Link, useLocation, useNavigate } from 'react-router'
 import { AuthCard } from '../components/AuthCard.tsx'
 import { Button } from '../components/Button.tsx'
 import { FormError } from '../components/FormError.tsx'
@@ -14,6 +14,7 @@ import {
   type LoginFormInput,
   type LoginFormValues,
 } from '../lib/authSchemas.ts'
+import { redirectTargetFromState } from '../lib/redirect.ts'
 
 export const INVALID_CREDENTIALS = 'Invalid email or password'
 
@@ -21,6 +22,7 @@ const FIELD_MESSAGES_422 = { email: EMAIL_INVALID, password: PASSWORD_TOO_LONG }
 
 export function LoginPage() {
   const navigate = useNavigate()
+  const location = useLocation()
   const login = useLogin()
   const {
     register,
@@ -36,7 +38,7 @@ export function LoginPage() {
   const onSubmit = (values: LoginFormValues) => {
     clearErrors()
     login.mutate(values, {
-      onSuccess: () => navigate('/', { replace: true }),
+      onSuccess: () => navigate(redirectTargetFromState(location.state), { replace: true }),
       onError: (error) => {
         // Never say which field was wrong.
         if (isUnauthorized(error)) {

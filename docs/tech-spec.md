@@ -352,7 +352,7 @@ Rates must be between −0.5 and 0.5 and horizons between 1 and 60 years. Withdr
 | `/investments` | table with gain/loss in $ and %, portfolio totals, quick "update value" action |
 | `/simulator` | tabs A / B / C; form pre-filled from `/simulator/defaults`; line chart with 3 lines (nominal/real toggle); results table; **visible disclaimer** ("Projections are estimates, not financial advice") |
 
-- Authenticated routes are wrapped in a guard that calls `/auth/me`. A `401` from any request clears the cached user and redirects to `/login`. A logged-in user visiting `/login` or `/register` is redirected to `/`.
+- Authenticated routes are wrapped in a guard that calls `/auth/me`. A `401` from any request clears the cached user and redirects to `/login`. The guard passes the requested location (path + search) to `/login` in router state (`state.from`), and after a successful login the user returns there if it is a safe internal path (single leading `/`, not `/login` or `/register`), otherwise to `/`; router state only, nothing survives a full reload. A logged-in user visiting `/login` or `/register` is redirected to `/`.
 - Currency is formatted with `Intl.NumberFormat('en-US', {style: 'currency', currency: 'USD'})`. Money stays a string until it is displayed.
 - Responsive layout (mobile first) with a sidebar on desktop.
 
