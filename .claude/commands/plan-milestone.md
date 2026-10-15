@@ -28,7 +28,7 @@ Launch one `project-manager` subagent with a prompt that includes:
 - Create the label first if missing: `gh label create m<N> --description "Milestone N — <name>" --color 1d76db`.
 - Aim for **2–3 issues** per milestone (e.g. backend + its tests, frontend + its tests). Split further only if an issue would not fit in one engineer session. Order them so that lower issue numbers do not depend on higher ones; dependencies are stated in the body ("Depends on #X").
 - Bodies in English following `docs/task-template.md`, grounded in `docs/plan.md`, `docs/tech-spec.md` and the milestone's acceptance criteria. Together the issues must cover **every** acceptance criterion of the milestone.
-- Every issue is fully groomed at creation (all sections of the task template, checkable acceptance criteria, edge cases, follow-ups linked) and labelled `m<N>` **and** `groomed`, so step 2 is skipped for them later.
+- Every issue is fully groomed at creation (all sections of the task template, checkable acceptance criteria, edge cases, follow-ups linked) and labelled `m<N>` **and** `groomed`, so the per-issue loop never needs the PM again.
 - Respect the non-goals in `docs/plan.md` §6 and the non-negotiable rules in `AGENTS.md` (data isolation test for every new endpoint, money as `Decimal`/decimal strings, etc.).
 - Do not modify repository files, create branches or write code.
 - Finish with a report: a table of the issues created (number, title, depends on) and which milestone acceptance criterion each one covers, plus any doubt or spec gap found. (Intake is the one PM run whose report may exceed 5 lines.)

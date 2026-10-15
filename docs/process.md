@@ -7,7 +7,7 @@ How work moves from "the user asks for something" to "it is merged". The main ag
 | Role | Who | Definition | Does | Never does |
 | --- | --- | --- | --- | --- |
 | Orchestrator | Main session | This document | Picks issues, launches subagents, passes context between them, closes issues, reports to the user | Grooms, implements or tests; reads full issue comments it does not need |
-| Project Manager | Subagent `project-manager` | [`team/pm.md`](team/pm.md) | Creates and grooms the milestone's issues with [`task-template.md`](task-template.md), files follow-up issues | Writes code |
+| Project Manager | Subagent `project-manager` | [`team/pm.md`](team/pm.md) | Creates and grooms the milestone's issues with [`task-template.md`](task-template.md) at intake only; re-grooms one issue only when the engineer reports an invalid criterion | Writes code |
 | Software Engineer | Subagent `software-engineer` | [`team/software-engineer.md`](team/software-engineer.md) | Implements one groomed issue, writes tests, commits | Closes issues, changes acceptance criteria |
 | QA Engineer | Subagent `qa-engineer` (Sonnet) | [`team/qa-engineer.md`](team/qa-engineer.md) | Checks the work against the acceptance criteria, posts PASS/FAIL | Changes code |
 
@@ -30,9 +30,6 @@ The subagents are declared in `.claude/agents/`; their behaviour comes from the 
       │
       ▼
  1. Pick next open issue ◄──────────────────────────┐
-      │                                             │
-      ▼                                             │
- 2. PM grooms it (skipped if already groomed)       │
       │                                             │
       ▼                                             │
  3. Engineer implements it ◄──────┐                 │
@@ -60,9 +57,14 @@ The user's request becomes issues before any work starts.
 
 The orchestrator picks the next open issue of the current milestone (see *The backlog*). Before the first issue of a milestone, it makes sure the branch `m<N>-<slug>` exists, created from an up-to-date `main`, and that the baseline checks are green.
 
-### 2. Groom (PM)
+### 2. Groom (PM) — intake only
 
-If the issue already has the `groomed` label (normally every issue created at intake), this step is skipped. Otherwise the orchestrator launches `project-manager` with the issue number; the PM rewrites the issue body with the task template, adds the `groomed` label, and files follow-up issues for anything moved out of scope. An issue is never implemented without being groomed.
+The PM does **not** take part in the per-issue loop: the issue created at intake already is the plan. Two cases only:
+
+- **Intake (step 0)**: the PM creates and grooms the issues.
+- **Exception**: the engineer reports an acceptance criterion that is wrong or impossible; the orchestrator launches the PM for that issue alone, then the engineer again.
+
+If an issue picked by the loop lacks the `groomed` label, the loop stops and asks the user; it never launches the PM by itself.
 
 ### 3. Implement (Engineer)
 
@@ -93,8 +95,8 @@ Go back to step 1 until the milestone has no open issues.
 
 Two commands run this loop:
 
-- `/run-milestone [N]` runs steps 1–7 for **every** open issue of the milestone, lowest number first and respecting "Depends on", without asking between issues. It closes each issue automatically on QA PASS and stops only after 3 consecutive FAILs on one issue (to ask the user) or when the backlog is empty (then it suggests `/close-milestone`). It never pushes or opens a PR.
-- `/next-issue [n]` runs steps 1–5 for **one** issue (the next one of the current milestone, or issue n), reports the QA verdict and closes the issue only if the user confirms.
+- `/run-milestone [N]` runs steps 1 and 3–7 for **every** open issue of the milestone, lowest number first and respecting "Depends on", without asking between issues. It closes each issue automatically on QA PASS and stops only after 3 consecutive FAILs on one issue (to ask the user) or when the backlog is empty (then it suggests `/close-milestone`). It never pushes or opens a PR.
+- `/next-issue [n]` runs steps 1 and 3–5 for **one** issue (the next one of the current milestone, or issue n), reports the QA verdict and closes the issue only if the user confirms.
 
 ### 8. Milestone wrap-up
 
@@ -108,7 +110,7 @@ The `/close-milestone [N]` command runs this step: it verifies the milestone, up
 
 ## Rules
 
-- Never implement an issue that is not groomed. Step 2 is skipped only for issues that already have the `groomed` label.
+- Never implement an issue that is not groomed. The loop never grooms: a missing `groomed` label stops it and the user decides.
 - The engineer does not close the issue.
 - QA does not fix the code; it only outputs PASS or FAIL.
 - The orchestrator closes the issue only after QA outputs PASS.
@@ -124,7 +126,7 @@ The `/close-milestone [N]` command runs this step: it verifies the milestone, up
 | Label | Meaning |
 | --- | --- |
 | `m<N>` | Belongs to milestone N |
-| `groomed` | PM has groomed it (normally at intake); ready for the engineer, step 2 is skipped |
+| `groomed` | PM has groomed it (at intake); ready for the engineer. The loop never grooms |
 | `follow-up` | Filed by the PM when moving something out of scope |
 | `backlog` | Not tied to a milestone; needs the user's decision |
 | `accessibility`, `bug`, … | Optional GitHub type labels, added on top of the ones above when they help |

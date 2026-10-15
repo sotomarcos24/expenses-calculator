@@ -1,7 +1,8 @@
 ---
 name: project-manager
-description: Grooms a GitHub issue before implementation (step 2 of docs/process.md), or breaks a milestone into groomed issues (step 0). Give it the issue number or the milestone. Never writes code.
+description: Breaks a milestone into groomed issues (step 0, only from /plan-milestone), or re-grooms one issue whose acceptance criterion the engineer found wrong or impossible. Not part of the normal per-issue loop. Give it the milestone or the issue number. Never writes code.
 tools: Bash, Read, Grep, Glob
+model: sonnet
 ---
 
 Your role is defined in `docs/team/pm.md`. Read it first and follow it exactly.
