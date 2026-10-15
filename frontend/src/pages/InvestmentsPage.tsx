@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react'
 import type { InvestmentRead } from '../api/types.ts'
 import { Button } from '../components/Button.tsx'
 import { FormError } from '../components/FormError.tsx'
+import { InvestmentDeleteDialog } from '../components/InvestmentDeleteDialog.tsx'
 import { InvestmentFormDialog } from '../components/InvestmentFormDialog.tsx'
 import { InvestmentTable } from '../components/InvestmentTable.tsx'
 import { InvestmentValueDialog } from '../components/InvestmentValueDialog.tsx'
@@ -21,9 +22,10 @@ type InvestmentsContentProps = {
   onAdd: () => void
   onEdit: (investment: InvestmentRead) => void
   onUpdateValue: (investment: InvestmentRead) => void
+  onDelete: (investment: InvestmentRead) => void
 }
 
-function InvestmentsContent({ onAdd, onEdit, onUpdateValue }: InvestmentsContentProps) {
+function InvestmentsContent({ onAdd, onEdit, onUpdateValue, onDelete }: InvestmentsContentProps) {
   const { data, isPending, isError, isFetching, refetch } = useInvestments()
 
   if (isError) {
@@ -58,17 +60,26 @@ function InvestmentsContent({ onAdd, onEdit, onUpdateValue }: InvestmentsContent
   return (
     <>
       <PortfolioTotalsCard totals={data.totals} />
-      <InvestmentTable investments={data.items} onEdit={onEdit} onUpdateValue={onUpdateValue} />
+      <InvestmentTable
+        investments={data.items}
+        onEdit={onEdit}
+        onUpdateValue={onUpdateValue}
+        onDelete={onDelete}
+      />
     </>
   )
 }
 
-/** Which dialog is open: none, a new investment, the edit of a row or its quick value update. */
+/**
+ * Which dialog is open: none, a new investment, the edit of a row, its quick value update or its
+ * delete confirmation.
+ */
 type DialogState =
   | { mode: 'closed' }
   | { mode: 'create' }
   | { mode: 'edit'; investment: InvestmentRead }
   | { mode: 'value'; investment: InvestmentRead }
+  | { mode: 'delete'; investment: InvestmentRead }
 
 /**
  * Result of the last action, shown above the content: a polite status (`Investment saved.`) or an
@@ -80,7 +91,7 @@ export function InvestmentsPage() {
   const [dialog, setDialog] = useState<DialogState>({ mode: 'closed' })
   const [message, setMessage] = useState<PageMessage>(null)
   const addButtonRef = useRef<HTMLButtonElement>(null)
-  // After a 404 the row and its buttons are gone: focus goes to "Add investment".
+  // After a delete or a 404 the row and its buttons are gone: focus goes to "Add investment".
   const focusAddOnClose = useRef(false)
 
   useEffect(() => {
@@ -95,6 +106,12 @@ export function InvestmentsPage() {
     setDialog(next)
   }
   const close = () => setDialog({ mode: 'closed' })
+  // Closes the dialog with a page message and moves focus to "Add investment" (the row is gone).
+  const closeWith = (next: PageMessage) => {
+    focusAddOnClose.current = true
+    close()
+    setMessage(next)
+  }
   const onAdd = () => open({ mode: 'create' })
 
   return (
@@ -124,7 +141,17 @@ export function InvestmentsPage() {
         onAdd={onAdd}
         onEdit={(investment) => open({ mode: 'edit', investment })}
         onUpdateValue={(investment) => open({ mode: 'value', investment })}
+        onDelete={(investment) => open({ mode: 'delete', investment })}
       />
+      {dialog.mode === 'delete' && (
+        <InvestmentDeleteDialog
+          investment={dialog.investment}
+          onClose={close}
+          onDeleted={() => closeWith({ kind: 'status', text: 'Investment deleted.' })}
+          onNotFound={(text) => closeWith({ kind: 'alert', text })}
+          fallbackFocusRef={addButtonRef}
+        />
+      )}
       {dialog.mode === 'value' && (
         <InvestmentValueDialog
           investment={dialog.investment}
@@ -133,11 +160,7 @@ export function InvestmentsPage() {
             close()
             setMessage({ kind: 'status', text: 'Value updated.' })
           }}
-          onNotFound={(text) => {
-            focusAddOnClose.current = true
-            close()
-            setMessage({ kind: 'alert', text })
-          }}
+          onNotFound={(text) => closeWith({ kind: 'alert', text })}
           fallbackFocusRef={addButtonRef}
         />
       )}

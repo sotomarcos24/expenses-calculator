@@ -210,7 +210,7 @@ describe('Update value button and dialog', () => {
     expect(updateButton('Bond')).toBeInTheDocument()
     // After Edit, in the Actions column.
     const actions = within(rowOf('ETF World').name.closest('tr')!).getAllByRole('button')
-    expect(actions.map((button) => button.textContent)).toEqual(['Edit', 'Update value'])
+    expect(actions.map((button) => button.textContent)).toEqual(['Edit', 'Update value', 'Delete'])
 
     const dialog = await openValue('ETF World')
     expect(dialog).toHaveAttribute('aria-modal', 'true')

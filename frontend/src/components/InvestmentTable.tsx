@@ -14,10 +14,20 @@ type InvestmentTableProps = {
   onEdit: (investment: InvestmentRead) => void
   /** Opens the quick "Update value" dialog of a row. */
   onUpdateValue: (investment: InvestmentRead) => void
+  /** Opens the delete confirmation of a row. */
+  onDelete: (investment: InvestmentRead) => void
 }
 
-/** Investments table, in the order returned by the API (never re-sorted), with row actions (Edit, Update value). */
-export function InvestmentTable({ investments, onEdit, onUpdateValue }: InvestmentTableProps) {
+/**
+ * Investments table, in the order returned by the API (never re-sorted), with row actions (Edit,
+ * Update value, Delete).
+ */
+export function InvestmentTable({
+  investments,
+  onEdit,
+  onUpdateValue,
+  onDelete,
+}: InvestmentTableProps) {
   return (
     <div className="overflow-x-auto rounded-xl border border-border">
       <table aria-label="Investments" className="min-w-full text-sm">
@@ -86,6 +96,14 @@ export function InvestmentTable({ investments, onEdit, onUpdateValue }: Investme
                     onClick={() => onUpdateValue(investment)}
                   >
                     Update value
+                  </Button>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    aria-label={`Delete ${investment.name}`}
+                    onClick={() => onDelete(investment)}
+                  >
+                    Delete
                   </Button>
                 </div>
               </td>

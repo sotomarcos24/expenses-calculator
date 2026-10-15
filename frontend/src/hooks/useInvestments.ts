@@ -57,3 +57,11 @@ export function useUpdateInvestment() {
     ...useResyncInvestments(),
   })
 }
+
+/** `DELETE /api/investments/{id}` (204): deletes an investment. */
+export function useDeleteInvestment() {
+  return useMutation({
+    mutationFn: (id: number) => apiFetch<void>(`/investments/${id}`, { method: 'DELETE' }),
+    ...useResyncInvestments(),
+  })
+}
