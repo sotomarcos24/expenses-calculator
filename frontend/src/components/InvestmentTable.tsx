@@ -12,10 +12,12 @@ type InvestmentTableProps = {
   investments: InvestmentRead[]
   /** Opens the edit dialog of a row. */
   onEdit: (investment: InvestmentRead) => void
+  /** Opens the quick "Update value" dialog of a row. */
+  onUpdateValue: (investment: InvestmentRead) => void
 }
 
-/** Investments table, in the order returned by the API (never re-sorted), with row actions (Edit). */
-export function InvestmentTable({ investments, onEdit }: InvestmentTableProps) {
+/** Investments table, in the order returned by the API (never re-sorted), with row actions (Edit, Update value). */
+export function InvestmentTable({ investments, onEdit, onUpdateValue }: InvestmentTableProps) {
   return (
     <div className="overflow-x-auto rounded-xl border border-border">
       <table aria-label="Investments" className="min-w-full text-sm">
@@ -76,6 +78,14 @@ export function InvestmentTable({ investments, onEdit }: InvestmentTableProps) {
                     onClick={() => onEdit(investment)}
                   >
                     Edit
+                  </Button>
+                  <Button
+                    variant="secondary"
+                    size="sm"
+                    aria-label={`Update value of ${investment.name}`}
+                    onClick={() => onUpdateValue(investment)}
+                  >
+                    Update value
                   </Button>
                 </div>
               </td>
