@@ -303,6 +303,79 @@
         }
       }
     },
+    "/api/categories/totals": {
+      "get": {
+        "tags": [
+          "categories"
+        ],
+        "summary": "Category Totals",
+        "operationId": "category_totals_api_categories_totals_get",
+        "parameters": [
+          {
+            "name": "from",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "date",
+              "title": "From"
+            }
+          },
+          {
+            "name": "to",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "date",
+              "title": "To"
+            }
+          },
+          {
+            "name": "access_token",
+            "in": "cookie",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Access Token"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/CategoryTotals"
+                  },
+                  "title": "Response Category Totals Api Categories Totals Get"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/categories/{category_id}": {
       "patch": {
         "tags": [
@@ -1642,6 +1715,33 @@
         ],
         "title": "CategoryTotal"
       },
+      "CategoryTotals": {
+        "properties": {
+          "category_id": {
+            "type": "integer",
+            "title": "Category Id"
+          },
+          "total": {
+            "type": "string",
+            "title": "Total"
+          },
+          "subcategories": {
+            "items": {
+              "$ref": "#/components/schemas/SubcategoryTotals"
+            },
+            "type": "array",
+            "title": "Subcategories"
+          }
+        },
+        "type": "object",
+        "required": [
+          "category_id",
+          "total",
+          "subcategories"
+        ],
+        "title": "CategoryTotals",
+        "description": "Period total of a top-level category: its direct transactions plus its subcategories'."
+      },
       "CategoryTreeNode": {
         "properties": {
           "id": {
@@ -2391,6 +2491,24 @@
           "total"
         ],
         "title": "SubcategoryTotal"
+      },
+      "SubcategoryTotals": {
+        "properties": {
+          "id": {
+            "type": "integer",
+            "title": "Id"
+          },
+          "total": {
+            "type": "string",
+            "title": "Total"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "total"
+        ],
+        "title": "SubcategoryTotals"
       },
       "TransactionCreate": {
         "properties": {

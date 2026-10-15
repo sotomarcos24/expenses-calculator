@@ -170,6 +170,7 @@ Prefix `/api`. JSON in and out. Money fields are serialized as **strings** (`"12
 | Method | Path | Description |
 | --- | --- | --- |
 | GET | `/categories?kind=` | **200** + `list[CategoryTreeNode]`: the user's top-level categories ordered by id, each with its `subcategories` ordered by id. Without `kind` both kinds are returned; `kind` other than `income` / `expense` is **422** |
+| GET | `/categories/totals?from=&to=` | `from` and `to` required dates (inclusive; missing, malformed or `from > to` is **422**) → **200** + `list[CategoryTotals]`: one entry per top-level category of the user (both kinds, ordered by id) `{category_id, total, subcategories: [{id, total}]}`, totals as 2-decimal strings (`"0.00"` when empty). A category total is its direct transactions plus its subcategories' in the period; a subcategory total is its own transactions. Declared before `/categories/{id}` |
 | POST | `/categories` | `CategoryCreate {name, kind, parent_id?}` → **201** + `CategoryRead`. **404** if `parent_id` does not exist or belongs to another user; **422** if the parent is a subcategory (max two levels) or has a different `kind`; **409** on a duplicate name |
 | PATCH | `/categories/{id}` | `CategoryUpdate {name}` (rename only; any other field is **422**) → **200** + `CategoryRead`; **404**, **409** on a duplicate name |
 | DELETE | `/categories/{id}` | **204**, deletes the category and its subcategories; **404**; **409** `"This category or one of its subcategories has transactions"` and nothing is deleted |

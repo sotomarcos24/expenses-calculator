@@ -3,6 +3,7 @@ from typing import Annotated
 from pydantic import BaseModel, ConfigDict, StringConstraints
 
 from app.models import CategoryKind
+from app.schemas.money import MoneyOut
 
 # Stripped at both ends, then 1-100 characters. Inner whitespace is kept as typed.
 CategoryName = Annotated[
@@ -37,3 +38,16 @@ class CategoryUpdate(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
     name: CategoryName
+
+
+class SubcategoryTotals(BaseModel):
+    id: int
+    total: MoneyOut
+
+
+class CategoryTotals(BaseModel):
+    """Period total of a top-level category: its direct transactions plus its subcategories'."""
+
+    category_id: int
+    total: MoneyOut
+    subcategories: list[SubcategoryTotals]

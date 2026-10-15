@@ -107,6 +107,23 @@ export interface paths {
     patch?: never
     trace?: never
   }
+  '/api/categories/totals': {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    /** Category Totals */
+    get: operations['category_totals_api_categories_totals_get']
+    put?: never
+    post?: never
+    delete?: never
+    options?: never
+    head?: never
+    patch?: never
+    trace?: never
+  }
   '/api/categories/{category_id}': {
     parameters: {
       query?: never
@@ -360,6 +377,18 @@ export interface components {
       total: string
       /** Subcategories */
       subcategories: components['schemas']['SubcategoryTotal'][]
+    }
+    /**
+     * CategoryTotals
+     * @description Period total of a top-level category: its direct transactions plus its subcategories'.
+     */
+    CategoryTotals: {
+      /** Category Id */
+      category_id: number
+      /** Total */
+      total: string
+      /** Subcategories */
+      subcategories: components['schemas']['SubcategoryTotals'][]
     }
     /** CategoryTreeNode */
     CategoryTreeNode: {
@@ -615,6 +644,13 @@ export interface components {
       id: number | null
       /** Name */
       name: string
+      /** Total */
+      total: string
+    }
+    /** SubcategoryTotals */
+    SubcategoryTotals: {
+      /** Id */
+      id: number
       /** Total */
       total: string
     }
@@ -1020,6 +1056,40 @@ export interface operations {
         }
         content: {
           'application/json': components['schemas']['CategoryRead']
+        }
+      }
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['HTTPValidationError']
+        }
+      }
+    }
+  }
+  category_totals_api_categories_totals_get: {
+    parameters: {
+      query: {
+        from: string
+        to: string
+      }
+      header?: never
+      path?: never
+      cookie?: {
+        access_token?: string | null
+      }
+    }
+    requestBody?: never
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['CategoryTotals'][]
         }
       }
       /** @description Validation Error */

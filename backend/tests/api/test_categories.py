@@ -537,3 +537,106 @@ def test_unknown_and_invalid_ids(auth_client: AuthenticatedClient) -> None:
         assert response.json() == NOT_FOUND
     assert patch(client, "abc", {"name": "X"}).status_code == 422
     assert delete(client, "abc").status_code == 422
+
+
+# --- Totals -----------------------------------------------------------------------------------
+
+
+def add_tx(
+    db: Session,
+    user_id: int,
+    category_id: int,
+    subcategory_id: int | None,
+    day: date,
+    amount: str,
+    kind: CategoryKind = CategoryKind.EXPENSE,
+) -> None:
+    db.add(
+        Transaction(
+            user_id=user_id,
+            type=kind,
+            date=day,
+            amount=Decimal(amount),
+            category_id=category_id,
+            subcategory_id=subcategory_id,
+        )
+    )
+    db.commit()
+
+
+def get_totals(client: TestClient, date_from: str, date_to: str) -> Any:
+    return client.get("/api/categories/totals", params={"from": date_from, "to": date_to})
+
+
+def totals_by_id(body: list[dict[str, Any]]) -> dict[int, str]:
+    result: dict[int, str] = {}
+    for node in body:
+        result[node["category_id"]] = node["total"]
+        for sub in node["subcategories"]:
+            result[sub["id"]] = sub["total"]
+    return result
+
+
+def test_totals_sums_period_boundaries_and_empty(
+    auth_client: AuthenticatedClient, db_session: Session
+) -> None:
+    c = ids(auth_client.client)
+    uid = auth_client.user_id
+    food, groceries, rest = c["Food"], c["Groceries"], c["Restaurants"]
+    add_tx(db_session, uid, food, groceries, date(2026, 10, 1), "100.10")
+    add_tx(db_session, uid, food, groceries, date(2026, 10, 31), "25.40")
+    add_tx(db_session, uid, food, None, date(2026, 10, 15), "10.00")
+    add_tx(db_session, uid, food, rest, date(2026, 9, 30), "999.00")
+    add_tx(db_session, uid, food, rest, date(2026, 11, 1), "999.00")
+    add_tx(db_session, uid, c["Salary"], None, date(2026, 10, 5), "3000.00", CategoryKind.INCOME)
+
+    response = get_totals(auth_client.client, "2026-10-01", "2026-10-31")
+
+    assert response.status_code == 200
+    body = response.json()
+    assert len(body) == 9
+    totals = totals_by_id(body)
+    assert totals[groceries] == "125.50"
+    assert totals[rest] == "0.00"
+    assert totals[food] == "135.50"
+    assert totals[c["Salary"]] == "3000.00"
+    assert totals[c["Housing"]] == "0.00"
+    assert totals[c["Rent"]] == "0.00"
+    assert totals[c["Dividends"]] == "0.00"
+
+
+def test_totals_ignore_other_users(
+    two_users: tuple[AuthenticatedClient, AuthenticatedClient], db_session: Session
+) -> None:
+    alice, bob = two_users
+    a, b = ids(alice.client), ids(bob.client)
+    add_tx(db_session, alice.user_id, a["Food"], a["Groceries"], date(2026, 10, 2), "50.00")
+    add_tx(db_session, bob.user_id, b["Food"], b["Groceries"], date(2026, 10, 2), "7.00")
+
+    alice_body = get_totals(alice.client, "2026-10-01", "2026-10-31").json()
+    bob_body = get_totals(bob.client, "2026-10-01", "2026-10-31").json()
+
+    assert set(totals_by_id(alice_body)) == set(a.values())
+    assert set(totals_by_id(bob_body)) == set(b.values())
+    assert totals_by_id(alice_body)[a["Food"]] == "50.00"
+    assert totals_by_id(bob_body)[b["Food"]] == "7.00"
+
+
+def test_totals_requires_auth(client: TestClient) -> None:
+    assert get_totals(client, "2026-10-01", "2026-10-31").status_code == 401
+
+
+@pytest.mark.parametrize(
+    "params",
+    [
+        {},
+        {"from": "2026-10-01"},
+        {"to": "2026-10-31"},
+        {"from": "nope", "to": "2026-10-31"},
+        {"from": "2026-10-31", "to": "2026-10-01"},
+    ],
+)
+def test_totals_rejects_bad_periods(
+    auth_client: AuthenticatedClient, params: dict[str, str]
+) -> None:
+    assert auth_client.client.get("/api/categories/totals", params=params).status_code == 422
