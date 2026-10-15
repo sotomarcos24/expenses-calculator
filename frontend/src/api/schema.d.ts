@@ -216,10 +216,117 @@ export interface paths {
     patch?: never
     trace?: never
   }
+  '/api/simulator/defaults': {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    /** Get Defaults */
+    get: operations['get_defaults_api_simulator_defaults_get']
+    put?: never
+    post?: never
+    delete?: never
+    options?: never
+    head?: never
+    patch?: never
+    trace?: never
+  }
+  '/api/simulator/accumulation': {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    get?: never
+    put?: never
+    /** Post Accumulation */
+    post: operations['post_accumulation_api_simulator_accumulation_post']
+    delete?: never
+    options?: never
+    head?: never
+    patch?: never
+    trace?: never
+  }
+  '/api/simulator/goal': {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    get?: never
+    put?: never
+    /** Post Goal */
+    post: operations['post_goal_api_simulator_goal_post']
+    delete?: never
+    options?: never
+    head?: never
+    patch?: never
+    trace?: never
+  }
+  '/api/simulator/withdrawal': {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    get?: never
+    put?: never
+    /** Post Withdrawal */
+    post: operations['post_withdrawal_api_simulator_withdrawal_post']
+    delete?: never
+    options?: never
+    head?: never
+    patch?: never
+    trace?: never
+  }
 }
 export type webhooks = Record<string, never>
 export interface components {
   schemas: {
+    /** AccumulationRequest */
+    AccumulationRequest: {
+      /** Starting Amount */
+      starting_amount: number | string
+      /** Contribution */
+      contribution: number | string
+      frequency: components['schemas']['Frequency']
+      /** Horizon Years */
+      horizon_years: number
+      scenarios: components['schemas']['ScenarioRatesIn']
+      /** Inflation Rate */
+      inflation_rate: number | string
+      /** Current Age */
+      current_age: number
+      /** Avg Monthly Expenses */
+      avg_monthly_expenses: number | string
+    }
+    /** AccumulationResponse */
+    AccumulationResponse: {
+      pessimistic: components['schemas']['AccumulationScenarioResult']
+      base: components['schemas']['AccumulationScenarioResult']
+      optimistic: components['schemas']['AccumulationScenarioResult']
+    }
+    /** AccumulationScenarioResult */
+    AccumulationScenarioResult: {
+      /** Points */
+      points: components['schemas']['YearPointOut'][]
+      /** Years Of Expenses Covered */
+      years_of_expenses_covered: string | null
+    }
+    /** AgePointOut */
+    AgePointOut: {
+      /** Age */
+      age: number
+      /** Nominal */
+      nominal: string
+      /** Real */
+      real: string
+    }
     /** CategoryCreate */
     CategoryCreate: {
       /** Name */
@@ -300,6 +407,47 @@ export interface components {
       gain_pct: string | null
       /** By Type */
       by_type: components['schemas']['TypeValue'][]
+    }
+    /**
+     * Frequency
+     * @description Contribution frequency; the value of ``periods_per_year`` is ``n`` in the spec.
+     * @enum {string}
+     */
+    Frequency: 'weekly' | 'monthly' | 'yearly'
+    /** GoalRequest */
+    GoalRequest: {
+      /** Starting Amount */
+      starting_amount: number | string
+      /** Target Amount */
+      target_amount: number | string
+      /** Years */
+      years: number
+      frequency: components['schemas']['Frequency']
+      scenarios: components['schemas']['ScenarioRatesIn']
+      /** Inflation Rate */
+      inflation_rate: number | string
+      /**
+       * Target Is Real
+       * @default true
+       */
+      target_is_real: boolean
+    }
+    /** GoalResponse */
+    GoalResponse: {
+      pessimistic: components['schemas']['GoalScenarioResult']
+      base: components['schemas']['GoalScenarioResult']
+      optimistic: components['schemas']['GoalScenarioResult']
+    }
+    /** GoalScenarioResult */
+    GoalScenarioResult: {
+      /** Required Contribution */
+      required_contribution: string
+      /** Total Contributed */
+      total_contributed: string
+      /** Already Reached */
+      already_reached: boolean
+      /** Nominal Target */
+      nominal_target: string
     }
     /** HTTPValidationError */
     HTTPValidationError: {
@@ -433,6 +581,34 @@ export interface components {
       /** Password */
       password: string
     }
+    /** ScenarioRatesIn */
+    ScenarioRatesIn: {
+      /** Pessimistic */
+      pessimistic: number | string
+      /** Base */
+      base: number | string
+      /** Optimistic */
+      optimistic: number | string
+    }
+    /** ScenarioRatesOut */
+    ScenarioRatesOut: {
+      /** Pessimistic */
+      pessimistic: string
+      /** Base */
+      base: string
+      /** Optimistic */
+      optimistic: string
+    }
+    /** SimulatorDefaults */
+    SimulatorDefaults: {
+      /** Starting Amount */
+      starting_amount: string
+      /** Avg Monthly Expenses */
+      avg_monthly_expenses: string
+      /** Inflation Rate */
+      inflation_rate: string
+      scenarios: components['schemas']['ScenarioRatesOut']
+    }
     /** SubcategoryTotal */
     SubcategoryTotal: {
       /** Id */
@@ -562,6 +738,74 @@ export interface components {
       input?: unknown
       /** Context */
       ctx?: Record<string, never>
+    }
+    /**
+     * WithdrawalMode
+     * @enum {string}
+     */
+    WithdrawalMode: 'percent' | 'fixed'
+    /** WithdrawalRequest */
+    WithdrawalRequest: {
+      /** Starting Amount */
+      starting_amount: number | string
+      /** Contribution */
+      contribution: number | string
+      frequency: components['schemas']['Frequency']
+      scenarios: components['schemas']['ScenarioRatesIn']
+      /** Inflation Rate */
+      inflation_rate: number | string
+      /** Current Age */
+      current_age: number
+      /** Avg Monthly Expenses */
+      avg_monthly_expenses: number | string
+      /** Retirement Age */
+      retirement_age: number
+      /**
+       * End Age
+       * @default 100
+       */
+      end_age: number
+      withdrawal_mode: components['schemas']['WithdrawalMode']
+      /** Withdrawal Rate */
+      withdrawal_rate?: number | string | null
+      /** Monthly Withdrawal */
+      monthly_withdrawal?: number | string | null
+    }
+    /** WithdrawalResponse */
+    WithdrawalResponse: {
+      pessimistic: components['schemas']['WithdrawalScenarioResult']
+      base: components['schemas']['WithdrawalScenarioResult']
+      optimistic: components['schemas']['WithdrawalScenarioResult']
+    }
+    /** WithdrawalScenarioResult */
+    WithdrawalScenarioResult: {
+      /** Balance At Retirement Nominal */
+      balance_at_retirement_nominal: string
+      /** Balance At Retirement Real */
+      balance_at_retirement_real: string
+      /** Monthly Income */
+      monthly_income: string
+      /** Expenses Coverage Pct */
+      expenses_coverage_pct: string | null
+      /** Lasts Until End */
+      lasts_until_end: boolean
+      /** Depletion Age */
+      depletion_age: number | null
+      /** Series */
+      series: components['schemas']['AgePointOut'][]
+    }
+    /** YearPointOut */
+    YearPointOut: {
+      /** Year */
+      year: number
+      /** Age */
+      age: number
+      /** Nominal */
+      nominal: string
+      /** Real */
+      real: string
+      /** Total Contributed */
+      total_contributed: string
     }
   }
   responses: never
@@ -1206,6 +1450,142 @@ export interface operations {
         }
         content: {
           'application/json': components['schemas']['Dashboard']
+        }
+      }
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['HTTPValidationError']
+        }
+      }
+    }
+  }
+  get_defaults_api_simulator_defaults_get: {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: {
+        access_token?: string | null
+      }
+    }
+    requestBody?: never
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['SimulatorDefaults']
+        }
+      }
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['HTTPValidationError']
+        }
+      }
+    }
+  }
+  post_accumulation_api_simulator_accumulation_post: {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: {
+        access_token?: string | null
+      }
+    }
+    requestBody: {
+      content: {
+        'application/json': components['schemas']['AccumulationRequest']
+      }
+    }
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['AccumulationResponse']
+        }
+      }
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['HTTPValidationError']
+        }
+      }
+    }
+  }
+  post_goal_api_simulator_goal_post: {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: {
+        access_token?: string | null
+      }
+    }
+    requestBody: {
+      content: {
+        'application/json': components['schemas']['GoalRequest']
+      }
+    }
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['GoalResponse']
+        }
+      }
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['HTTPValidationError']
+        }
+      }
+    }
+  }
+  post_withdrawal_api_simulator_withdrawal_post: {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: {
+        access_token?: string | null
+      }
+    }
+    requestBody: {
+      content: {
+        'application/json': components['schemas']['WithdrawalRequest']
+      }
+    }
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['WithdrawalResponse']
         }
       }
       /** @description Validation Error */
