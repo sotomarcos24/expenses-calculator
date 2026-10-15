@@ -42,8 +42,12 @@ Read **only when the task needs it**:
 Every task follows [`docs/process.md`](docs/process.md). In short:
 
 - The **main session is the orchestrator**. It launches the subagents in `.claude/agents/` — `project-manager`, `software-engineer`, `qa-engineer` — and does **not** groom, implement or test itself.
-- For each open issue of the current milestone: **PM grooms → Engineer implements → QA verifies** → on FAIL back to the engineer with the QA comment, on PASS the orchestrator closes the issue. Repeat until the backlog is empty, then do the milestone wrap-up.
-- Never skip grooming. The engineer never closes issues. QA never changes code. Only the orchestrator closes an issue, and only after `## QA: PASS`.
+- At intake (`/plan-milestone`) the PM creates **and grooms** every issue of the milestone in one pass (2–3 issues, labels `m<N>` + `groomed`).
+- For each open issue of the current milestone: **PM grooms (skipped if already `groomed`) → Engineer implements → QA verifies** → on FAIL back to the engineer with the QA comment, on PASS the orchestrator closes the issue. Repeat until the backlog is empty, then do the milestone wrap-up (`/close-milestone`).
+- `/run-milestone` runs the whole backlog without asking between issues and closes each on QA PASS; `/next-issue` runs a single issue and asks before closing. Neither pushes nor opens PRs.
+- Never implement an ungroomed issue. The engineer never closes issues. QA never changes code. Only the orchestrator closes an issue, and only after `## QA: PASS`.
+- QA (Sonnet) runs only the tests of the side(s) the issue changed, checks that every acceptance criterion is covered by a test, and opens the browser only for issues that change a page, at desktop width (375px is checked once in M8).
+- Subagents end with a report of at most 5 lines; details live in the issue comments. The orchestrator reads full comments only when a step needs them (e.g. a QA FAIL for the engineer).
 - After 3 consecutive QA FAILs on one issue, stop and ask the user.
 - Subagents start without context: always pass them the issue number, the branch and relevant user instructions.
 
@@ -96,3 +100,11 @@ docs/       specs, milestones, process, team roles
 - Development happens on Linux (WSL2). Docker is **not** installed locally; the Dockerfile planned for milestone 8 can only be verified in CI or on the hosting provider.
 - To check the app end to end, start the backend and the frontend dev servers and use `http://localhost:5173`; `/api/health` must answer through the proxy. Use a throwaway SQLite DB and register a **new** user (see `docs/backend.md` → *Known caveats*).
 - There is no browser in WSL. For scripted browser checks QA installs Playwright + headless Chromium in the session scratchpad (Chromium is cached in `~/.cache/ms-playwright`); it is **not** a project dependency, never add it to `package.json` without asking. Stop any servers you start.
+- QA never uses a dev server it did not start (port 8000 belongs to the user). It starts its own backend and frontend on free ports and stops them when done, pointing the Vite proxy at its backend with `API_PROXY_TARGET` (default `http://localhost:8000`, see `docs/frontend.md` → *Environment*):
+
+  ```bash
+  # backend/ (after `alembic upgrade head` with the same DATABASE_URL)
+  DATABASE_URL=sqlite:///<scratchpad>/qa.db uv run fastapi dev app/main.py --port 8001
+  # frontend/
+  API_PROXY_TARGET=http://localhost:8001 npm run dev -- --port 5174 --strictPort
+  ```

@@ -15,6 +15,7 @@ Run from `frontend/`:
 ```bash
 npm install
 npm run dev                           # :5173, proxies /api → :8000
+API_PROXY_TARGET=http://localhost:8001 npm run dev -- --port 5174 --strictPort   # proxy /api to another backend
 npm run gen:api                       # regenerate src/api/schema.d.ts from ../openapi.json
 npm run lint && npm run format:check && npm run typecheck && npm test && npm run build
 ```
@@ -35,6 +36,7 @@ The last line is the full check set: run it before saying a frontend task is don
 ## Environment
 
 - Local Node is 25, CI uses Node 24; avoid APIs only available in Node 25.
+- `API_PROXY_TARGET` (read by `vite.config.ts`, default `http://localhost:8000`) sets where the dev server proxies `/api`. It has no `VITE_` prefix on purpose, so it is never exposed to the client bundle. QA uses it to run its own backend on a free port (see `AGENTS.md` → *Environment*).
 
 ## Current state
 

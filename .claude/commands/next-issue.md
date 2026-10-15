@@ -25,8 +25,9 @@ You are the orchestrator: you never groom, implement or test yourself — the su
 ## 3. Groom → Implement → Verify
 
 Every subagent starts without context: always pass the issue number, the branch name and anything relevant the user said.
+Subagent reports are at most 5 lines; do not read full issue comments unless a step needs them (e.g. the QA FAIL comment to pass to the engineer, or the details for the verdict report below).
 
-1. **Groom** — launch `project-manager` with the issue number (step 2). Never skipped, even if the issue is already `groomed`.
+1. **Groom** — if the issue already has the `groomed` label, skip this step. Otherwise launch `project-manager` with the issue number (step 2).
 2. **Implement** — launch `software-engineer` with the issue number and the branch (step 3). If the engineer reports that an acceptance criterion is wrong or impossible, send it back to the PM and then to the engineer again.
 3. **Verify** — launch `qa-engineer` with the issue number and the branch (step 4).
 4. **On `## QA: FAIL`** — launch `software-engineer` again passing the latest QA comment, then QA again (step 5). After **3 consecutive FAILs**, stop and ask the user how to proceed.
@@ -45,4 +46,4 @@ Then ask with `AskUserQuestion` whether to close it:
 - **Close it** → `gh issue close <n> --comment "Closed after QA PASS"` (step 6).
 - **Leave it open** → do nothing more; if the user gives feedback, it becomes the input for a new engineer → QA cycle.
 
-Stop after this issue. Do not pick the next one, push, or open a PR unless the user asks.
+Stop after this issue. Do not pick the next one, push, or open a PR unless the user asks. To run the whole backlog without approvals between issues, the user uses `/run-milestone`.

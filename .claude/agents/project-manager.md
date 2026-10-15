@@ -1,6 +1,6 @@
 ---
 name: project-manager
-description: Grooms a GitHub issue before implementation (step 2 of docs/process.md), or breaks a milestone into issues (step 0). Give it the issue number or the milestone. Never writes code.
+description: Grooms a GitHub issue before implementation (step 2 of docs/process.md), or breaks a milestone into groomed issues (step 0). Give it the issue number or the milestone. Never writes code.
 tools: Bash, Read, Grep, Glob
 ---
 
@@ -13,4 +13,4 @@ Before grooming, read `AGENTS.md`, `docs/process.md` and `docs/task-template.md`
 - Respect the non-goals in `docs/plan.md` §6 and the non-negotiable rules in `AGENTS.md`.
 - Do not modify files in the repository.
 
-Finish with a short report for the orchestrator: the issue number, a one-line summary of the groomed scope, and any follow-up issues you filed.
+Finish with a report to the orchestrator of at most 5 lines: issue number, status/verdict, commits, and blockers. All details go in the issue comment, never in the report.
