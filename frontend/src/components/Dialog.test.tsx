@@ -1,7 +1,9 @@
-import { fireEvent, render, screen } from '@testing-library/react'
+import { act, fireEvent, render, screen, waitFor } from '@testing-library/react'
 import { useState } from 'react'
 import { describe, expect, it, vi } from 'vitest'
 import { Dialog } from './Dialog.tsx'
+
+let failSave: () => void = () => {}
 
 function SavingDialog({ onClose }: { onClose: () => void }) {
   const [state, setState] = useState<'idle' | 'saving' | 'error'>('idle')
@@ -13,7 +15,7 @@ function SavingDialog({ onClose }: { onClose: () => void }) {
         disabled={state === 'saving'}
         onClick={() => {
           setState('saving')
-          setTimeout(() => setState('error'), 20)
+          failSave = () => setState('error')
         }}
       >
         Save
@@ -28,9 +30,8 @@ describe('Dialog focus while saving', () => {
     render(<SavingDialog onClose={() => {}} />)
     screen.getByRole('button', { name: 'Save' }).focus()
     fireEvent.click(screen.getByRole('button', { name: 'Save' }))
-    await screen.findByRole('button', { name: 'Save' })
     expect(screen.getByRole('button', { name: 'Save' })).toBeDisabled()
-    expect(screen.getByRole('dialog')).toHaveFocus()
+    await waitFor(() => expect(screen.getByRole('dialog')).toHaveFocus())
   })
 
   it('closes on Escape right after an API error, without pressing Tab first', async () => {
@@ -38,6 +39,7 @@ describe('Dialog focus while saving', () => {
     render(<SavingDialog onClose={onClose} />)
     screen.getByRole('button', { name: 'Save' }).focus()
     fireEvent.click(screen.getByRole('button', { name: 'Save' }))
+    act(() => failSave())
     await screen.findByRole('alert')
     const dialog = screen.getByRole('dialog')
     expect(dialog.contains(document.activeElement)).toBe(true)
