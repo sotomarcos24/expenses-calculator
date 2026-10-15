@@ -22,6 +22,10 @@ let width = MOBILE_WIDTH
 let entries: Entry[] = []
 
 function evaluate(query: string, viewport: number) {
+  // Not width-based (Recharts asks for it): no user preference in tests.
+  if (/^\(\s*prefers-reduced-motion:\s*reduce\s*\)$/.test(query.trim())) {
+    return false
+  }
   const match = /^\(\s*(min|max)-width:\s*([\d.]+)(px|rem)\s*\)$/.exec(query.trim())
   if (!match) {
     throw new Error(`Unsupported media query in tests: ${query}`)
