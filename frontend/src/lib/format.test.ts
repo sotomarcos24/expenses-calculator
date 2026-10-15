@@ -4,7 +4,10 @@ import {
   formatCurrency,
   formatDate,
   formatPercent,
+  decimalSign,
   formatSignedAmount,
+  formatSignedCurrency,
+  formatSignedPercent,
 } from './format.ts'
 
 describe('formatCurrency', () => {
@@ -58,5 +61,55 @@ describe('formatCategoryLabel', () => {
     expect(formatCategoryLabel({ category_name: 'Food', subcategory_name: 'Groceries' })).toBe(
       'Food › Groceries',
     )
+  })
+})
+
+describe('decimalSign', () => {
+  it('reads the sign of a decimal string', () => {
+    expect(decimalSign('150.00')).toBe(1)
+    expect(decimalSign('-50.00')).toBe(-1)
+    expect(decimalSign('0.00')).toBe(0)
+    expect(decimalSign('-0.00')).toBe(0)
+    expect(decimalSign('0.0001')).toBe(1)
+  })
+})
+
+describe('formatSignedCurrency', () => {
+  it('prefixes gains with a plus sign', () => {
+    expect(formatSignedCurrency('150.00')).toBe('+$150.00')
+  })
+
+  it('prefixes losses with a single minus sign (U+2212)', () => {
+    expect(formatSignedCurrency('-50.00')).toBe('−$50.00')
+    expect(formatSignedCurrency('-50.00')).not.toContain('-')
+  })
+
+  it('shows zero without a sign', () => {
+    expect(formatSignedCurrency('0.00')).toBe('$0.00')
+    expect(formatSignedCurrency('-0.00')).toBe('$0.00')
+  })
+
+  it('formats large amounts with grouping', () => {
+    expect(formatSignedCurrency('-1234567.89')).toBe('−$1,234,567.89')
+  })
+})
+
+describe('formatSignedPercent', () => {
+  it('formats positive ratios with a plus sign and one decimal', () => {
+    expect(formatSignedPercent('0.1500')).toBe('+15.0%')
+    expect(formatSignedPercent('0.0667')).toBe('+6.7%')
+  })
+
+  it('formats negative ratios with a single minus sign (U+2212)', () => {
+    expect(formatSignedPercent('-0.1000')).toBe('−10.0%')
+    expect(formatSignedPercent('-0.1000')).not.toContain('-')
+  })
+
+  it('shows zero without a sign', () => {
+    expect(formatSignedPercent('0.0000')).toBe('0.0%')
+  })
+
+  it('shows a dash for null', () => {
+    expect(formatSignedPercent(null)).toBe('—')
   })
 })
