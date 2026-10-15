@@ -199,6 +199,23 @@ export interface paths {
     patch: operations['update_investment_api_investments__investment_id__patch']
     trace?: never
   }
+  '/api/dashboard': {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    /** Get Dashboard */
+    get: operations['get_dashboard_api_dashboard_get']
+    put?: never
+    post?: never
+    delete?: never
+    options?: never
+    head?: never
+    patch?: never
+    trace?: never
+  }
 }
 export type webhooks = Record<string, never>
 export interface components {
@@ -226,6 +243,17 @@ export interface components {
       /** Parent Id */
       parent_id: number | null
     }
+    /** CategoryTotal */
+    CategoryTotal: {
+      /** Category Id */
+      category_id: number
+      /** Name */
+      name: string
+      /** Total */
+      total: string
+      /** Subcategories */
+      subcategories: components['schemas']['SubcategoryTotal'][]
+    }
     /** CategoryTreeNode */
     CategoryTreeNode: {
       /** Id */
@@ -245,6 +273,33 @@ export interface components {
     CategoryUpdate: {
       /** Name */
       name: string
+    }
+    /** Dashboard */
+    Dashboard: {
+      /** Income Total */
+      income_total: string
+      /** Expense Total */
+      expense_total: string
+      /** Savings */
+      savings: string
+      /** Savings Rate */
+      savings_rate: string | null
+      /** Expenses By Category */
+      expenses_by_category: components['schemas']['CategoryTotal'][]
+      investments: components['schemas']['DashboardInvestments']
+    }
+    /** DashboardInvestments */
+    DashboardInvestments: {
+      /** Total Invested */
+      total_invested: string
+      /** Current Value */
+      current_value: string
+      /** Gain */
+      gain: string
+      /** Gain Pct */
+      gain_pct: string | null
+      /** By Type */
+      by_type: components['schemas']['TypeValue'][]
     }
     /** HTTPValidationError */
     HTTPValidationError: {
@@ -378,6 +433,15 @@ export interface components {
       /** Password */
       password: string
     }
+    /** SubcategoryTotal */
+    SubcategoryTotal: {
+      /** Id */
+      id: number | null
+      /** Name */
+      name: string
+      /** Total */
+      total: string
+    }
     /** TransactionCreate */
     TransactionCreate: {
       type: components['schemas']['CategoryKind']
@@ -467,6 +531,12 @@ export interface components {
       subcategory_id?: number | null
       /** Note */
       note?: string | null
+    }
+    /** TypeValue */
+    TypeValue: {
+      type: components['schemas']['InvestmentType']
+      /** Current Value */
+      current_value: string
     }
     /** UserRead */
     UserRead: {
@@ -1102,6 +1172,40 @@ export interface operations {
         }
         content: {
           'application/json': components['schemas']['InvestmentRead']
+        }
+      }
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['HTTPValidationError']
+        }
+      }
+    }
+  }
+  get_dashboard_api_dashboard_get: {
+    parameters: {
+      query: {
+        from: string
+        to: string
+      }
+      header?: never
+      path?: never
+      cookie?: {
+        access_token?: string | null
+      }
+    }
+    requestBody?: never
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['Dashboard']
         }
       }
       /** @description Validation Error */

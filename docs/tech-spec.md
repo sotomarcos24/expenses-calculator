@@ -261,12 +261,16 @@ All five need the cookie (**401** `"Not authenticated"`); `POST`/`PATCH`/`DELETE
 
 | Method | Path | Description |
 | --- | --- | --- |
-| GET | `/dashboard?from=&to=` | see below |
+| GET | `/dashboard?from=&to=` | **200** + `Dashboard`; **401**, **422** |
+
+`from` and `to` are **required** ISO dates, inclusive on both ends (`from == to` is one day). Missing or invalid is **422**; `from` after `to` is **422** `"'from' must be on or before 'to'"`. Money is a string with 2 decimals, rates are fraction strings with 4 decimals.
 
 Response:
-- `income_total`, `expense_total`, `savings` (= income − expense), `savings_rate` (= savings / income, `null` if income is 0)
-- `expenses_by_category`: `[{category_id, name, total, subcategories: [{id, name, total}]}]`. Expenses without a subcategory are grouped under `"(none)"`. The frontend uses this for the pie chart drill-down without a second request.
-- `investments`: `{total_invested, current_value, gain, gain_pct, by_type: [{type, current_value}]}`
+- `income_total`, `expense_total`, `savings` (= income − expense, may be negative), `savings_rate` (= savings / income, 4 decimals half up, `null` if income is 0)
+- `expenses_by_category`: `[{category_id, name, total, subcategories: [{id, name, total}]}]`, only categories with expenses in the period, sorted by `total` desc then `name` (subcategories likewise). Expenses without a subcategory are one entry `{id: null, name: "(none)", total}` inside that category's `subcategories`. Subcategory totals add up to the category `total`, and category totals to `expense_total`. The frontend uses this for the pie chart drill-down without a second request.
+- `investments`: `{total_invested, current_value, gain, gain_pct, by_type: [{type, current_value}]}`: a snapshot of **all** the user's investments, independent of `from`/`to`, with the same totals as `GET /investments`. `by_type` has one entry per type held, sorted by `current_value` desc then `type`; with no investments the money fields are `"0.00"`, `gain_pct` is `null` and `by_type` is `[]`.
+
+Logic in `app/services/dashboard.py` (`build_dashboard`, `compute_savings_rate`), aggregated in SQL with `GROUP BY`.
 
 The frontend computes the period (current month by default, current year, or custom range) and sends `from` and `to`.
 
