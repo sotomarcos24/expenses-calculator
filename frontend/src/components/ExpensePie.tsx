@@ -26,10 +26,11 @@ export function PieWithList({ slices, onSelect, label }: SlicesProps) {
   return (
     <div className="flex flex-col items-center gap-6 md:flex-row md:items-start">
       <div aria-hidden="true" className="shrink-0">
-        <PieChart width={CHART_SIZE} height={CHART_SIZE}>
+        <PieChart width={CHART_SIZE} height={CHART_SIZE} accessibilityLayer={false}>
           <Pie
             data={slices.map((slice) => ({ name: slice.name, value: Number(slice.total) }))}
             dataKey="value"
+            rootTabIndex={-1}
             nameKey="name"
             innerRadius={50}
             outerRadius={110}

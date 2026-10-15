@@ -1,4 +1,4 @@
-import { useId, useState, type ReactNode } from 'react'
+import { useEffect, useId, useRef, useState, type ReactNode } from 'react'
 import type { CategoryKind, CategoryRead, CategoryTreeNode } from '../api/types.ts'
 import {
   deleteConfirmationText,
@@ -148,6 +148,20 @@ export function CategoryTree({
     })
 
   const ownEditor = editor?.kind === kind ? editor : null
+  const addButtonRef = useRef<HTMLButtonElement>(null)
+  const wasEditing = useRef(false)
+  // When this tree's editor closes while focus was lost with it (the form unmounted), hand focus
+  // to "Add category" instead of letting it drop to the document body.
+  useEffect(() => {
+    const open = ownEditor !== null
+    if (wasEditing.current && !open) {
+      const active = document.activeElement
+      if (!active || active === document.body) {
+        addButtonRef.current?.focus()
+      }
+    }
+    wasEditing.current = open
+  }, [ownEditor])
   const close = () => onEditorChange(null)
 
   const isEditing = (type: CategoryEditor['type'], id: number) =>
@@ -294,6 +308,7 @@ export function CategoryTree({
           />
         ) : (
           <Button
+            ref={addButtonRef}
             variant="secondary"
             size="sm"
             onClick={() => onEditorChange({ type: 'add', kind, parentId: null })}

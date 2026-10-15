@@ -36,7 +36,11 @@ export function ScenarioChart({ rows, xLabel, label }: Props) {
     <div className="mb-6">
       <div aria-hidden="true" className="h-80 w-full">
         <ResponsiveContainer width="100%" height="100%">
-          <LineChart data={rows} margin={{ top: 8, right: 16, bottom: 20, left: 8 }}>
+          <LineChart
+            accessibilityLayer={false}
+            data={rows}
+            margin={{ top: 8, right: 16, bottom: 20, left: 8 }}
+          >
             <CartesianGrid stroke="var(--color-border)" strokeDasharray="3 3" />
             <XAxis
               dataKey="x"

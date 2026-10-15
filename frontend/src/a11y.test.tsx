@@ -289,6 +289,22 @@ describe('keyboard', () => {
   })
 })
 
+describe('focus after the inline category form', () => {
+  it('moves to Add category when the form is cancelled', async () => {
+    mockApi()
+    renderApp('/categories')
+    await screen.findByRole('heading', { level: 1, name: 'Categories' })
+    fireEvent.click((await screen.findAllByRole('button', { name: 'Add category' }))[0])
+    const input = await screen.findByRole('textbox')
+    fireEvent.keyDown(input, { key: 'Escape' })
+    await waitFor(() =>
+      expect(document.activeElement).toBe(
+        screen.getAllByRole('button', { name: 'Add category' })[0],
+      ),
+    )
+  })
+})
+
 describe('charts have text alternatives', () => {
   it('the expense and investment pies list names and amounts', async () => {
     mockApi()
@@ -298,6 +314,18 @@ describe('charts have text alternatives', () => {
     expect(expenses).toHaveTextContent('$500.00')
     const investments = screen.getByRole('list', { name: /Investments by type/i })
     expect(investments).toHaveTextContent('$1,150.00')
+  })
+
+  it('the pie has no focusable element inside its aria-hidden wrapper', async () => {
+    mockApi()
+    renderApp('/')
+    await screen.findByRole('list', { name: 'Expenses by category' })
+    const hidden = document.querySelectorAll('[aria-hidden="true"]')
+    const svgs = document.querySelectorAll('.recharts-surface')
+    expect(svgs.length).toBeGreaterThan(0)
+    for (const el of hidden) {
+      expect(el.querySelectorAll('[tabindex]:not([tabindex="-1"])')).toHaveLength(0)
+    }
   })
 
   it('the simulator chart has a table with every plotted value', async () => {
@@ -314,5 +342,8 @@ describe('charts have text alternatives', () => {
         .map((h) => h.textContent),
     ).toEqual(['Year', 'Pessimistic', 'Base', 'Optimistic'])
     expect(table).toHaveTextContent('$16,288.95')
+    for (const el of document.querySelectorAll('[aria-hidden="true"]')) {
+      expect(el.querySelectorAll('[tabindex]:not([tabindex="-1"])')).toHaveLength(0)
+    }
   })
 })
