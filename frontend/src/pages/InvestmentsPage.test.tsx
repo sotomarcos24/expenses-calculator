@@ -130,6 +130,7 @@ describe('InvestmentsPage', () => {
       'Current value',
       'Gain/loss',
       'Last update',
+      'Actions',
     ])
   })
 

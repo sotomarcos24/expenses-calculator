@@ -1,6 +1,7 @@
 import type { InvestmentRead } from '../api/types.ts'
 import { formatCurrency, formatDate } from '../lib/format.ts'
 import { investmentTypeLabel } from '../lib/investmentTypes.ts'
+import { Button } from './Button.tsx'
 import { GainLoss } from './GainLoss.tsx'
 
 const HEADER_CLASS = 'px-3 py-2 text-left font-medium text-muted'
@@ -9,10 +10,12 @@ const MONEY_CELL_CLASS = `${CELL_CLASS} text-right whitespace-nowrap tabular-num
 
 type InvestmentTableProps = {
   investments: InvestmentRead[]
+  /** Opens the edit dialog of a row. */
+  onEdit: (investment: InvestmentRead) => void
 }
 
-/** Investments table, in the order returned by the API (never re-sorted). Read-only. */
-export function InvestmentTable({ investments }: InvestmentTableProps) {
+/** Investments table, in the order returned by the API (never re-sorted), with row actions (Edit). */
+export function InvestmentTable({ investments, onEdit }: InvestmentTableProps) {
   return (
     <div className="overflow-x-auto rounded-xl border border-border">
       <table aria-label="Investments" className="min-w-full text-sm">
@@ -39,6 +42,9 @@ export function InvestmentTable({ investments }: InvestmentTableProps) {
             <th scope="col" className={HEADER_CLASS}>
               Last update
             </th>
+            <th scope="col" className={`${HEADER_CLASS} text-right`}>
+              Actions
+            </th>
           </tr>
         </thead>
         <tbody>
@@ -60,6 +66,18 @@ export function InvestmentTable({ investments }: InvestmentTableProps) {
               </td>
               <td className={`${CELL_CLASS} whitespace-nowrap text-foreground`}>
                 {formatDate(investment.value_updated_at)}
+              </td>
+              <td className={`${CELL_CLASS} text-right whitespace-nowrap`}>
+                <div className="flex justify-end gap-2">
+                  <Button
+                    variant="secondary"
+                    size="sm"
+                    aria-label={`Edit ${investment.name}`}
+                    onClick={() => onEdit(investment)}
+                  >
+                    Edit
+                  </Button>
+                </div>
               </td>
             </tr>
           ))}
