@@ -1,10 +1,10 @@
 ---
-description: Pick the next open issue of the current milestone and run it through groom → implement → QA, then ask the user before closing
+description: Pick the next open issue of the current milestone and run it through implement → QA (the issue is already planned), then ask the user before closing
 argument-hint: "[issue number, optional]"
 allowed-tools: Bash, Read, Agent, AskUserQuestion
 ---
 
-Run **one issue** through steps 1–5 of `docs/process.md`, then hand the closing decision to the user.
+Run **one issue** through steps 1, 3, 4 and 5 of `docs/process.md` (the PM does not take part: the issue already is the plan), then hand the closing decision to the user.
 You are the orchestrator: you never groom, implement or test yourself — the subagents do.
 
 ## 1. Pick the issue
@@ -13,6 +13,7 @@ You are the orchestrator: you never groom, implement or test yourself — the su
 - Otherwise:
   - The current milestone is the first one in the status table of `docs/milestones.md` that is not ✅ Done (skip `M9` unless the user asked for it).
   - `gh issue list --label m<N> --state open` and take the **lowest issue number** whose dependencies ("Depends on #X" in the body) are all closed.
+  - Take only issues that have the `groomed` label. If the candidate lacks it, stop and tell the user (do **not** launch the PM).
   - If the milestone has no issues at all, stop and suggest `/plan-milestone`. If all are closed, stop and tell the user the milestone is ready for wrap-up (step 8).
 - Tell the user (in Spanish) which issue you picked and why, then continue without waiting.
 
@@ -22,15 +23,14 @@ You are the orchestrator: you never groom, implement or test yourself — the su
 - If the branch does not exist yet (first issue of the milestone): create it from an up-to-date `main` and run the full checks of both projects (`docs/backend.md`, `docs/frontend.md`) to confirm the baseline is green. If the baseline is red, stop and tell the user.
 - If the working tree is dirty or you are on another branch with unrelated work, stop and ask the user.
 
-## 3. Groom → Implement → Verify
+## 3. Implement → Verify
 
 Every subagent starts without context: always pass the issue number, the branch name and anything relevant the user said.
 Subagent reports are at most 5 lines; do not read full issue comments unless a step needs them (e.g. the QA FAIL comment to pass to the engineer, or the details for the verdict report below).
 
-1. **Groom** — if the issue already has the `groomed` label, skip this step. Otherwise launch `project-manager` with the issue number (step 2).
-2. **Implement** — launch `software-engineer` with the issue number and the branch (step 3). If the engineer reports that an acceptance criterion is wrong or impossible, send it back to the PM and then to the engineer again.
-3. **Verify** — launch `qa-engineer` with the issue number and the branch (step 4).
-4. **On `## QA: FAIL`** — launch `software-engineer` again passing the latest QA comment, then QA again (step 5). After **3 consecutive FAILs**, stop and ask the user how to proceed.
+1. **Implement** — launch `software-engineer` with the issue number and the branch (step 3). Only if the engineer reports that an acceptance criterion is wrong or impossible, launch `project-manager` for that issue alone (the one exception) and then the engineer again.
+2. **Verify** — launch `qa-engineer` with the issue number and the branch (step 4).
+3. **On `## QA: FAIL`** — launch `software-engineer` again passing the latest QA comment, then QA again (step 5). After **3 consecutive FAILs**, stop and ask the user how to proceed.
 
 ## 4. Verdict — the user decides
 

@@ -28,7 +28,7 @@
 | 3 | Categories | Default categories + management UI | 2 | ✅ Done |
 | 4 | Transactions | Income/expense CRUD, filters, gross/net salary | 3 | ✅ Done |
 | 5 | Investments | Portfolio CRUD and gain/loss | 2 | ✅ Done |
-| 6 | Dashboard | Period summary and charts | 4, 5 | ⬜ Pending |
+| 6 | Dashboard | Period summary and charts | 4, 5 | ✅ Done |
 | 7 | Simulator | Modes A/B/C with three scenarios | 4, 5 | ⬜ Pending |
 | 8 | Polish and deployment | Production-ready MVP online | 1–7 | ⬜ Pending |
 | 9 | Nice-to-haves | Recurring transactions, CSV export, i18n | 8 | ⬜ Optional |
@@ -177,7 +177,7 @@
 
 ---
 
-## M6 — Dashboard
+## M6 — Dashboard ✅
 
 **Goal:** a one-screen overview of the selected period (§4.7, tech-spec §6 Dashboard).
 
@@ -196,11 +196,11 @@
 
 #### Acceptance criteria
 
-- [ ] Totals match the transactions recorded in the period (boundaries inclusive).
-- [ ] Savings rate = savings / income; "—" when there is no income.
-- [ ] Drill-down shows subcategory totals that add up to the category total.
-- [ ] The investment figures match the Investments page.
-- [ ] A new user with no data sees a meaningful empty state, not errors.
+- [x] Totals match the transactions recorded in the period (boundaries inclusive).
+- [x] Savings rate = savings / income; "—" when there is no income.
+- [x] Drill-down shows subcategory totals that add up to the category total.
+- [x] The investment figures match the Investments page.
+- [x] A new user with no data sees a meaningful empty state, not errors.
 
 **Tests:** aggregation with known fixtures (several months, categories, a period edge); savings rate with zero income; ownership (another user's data never counted); drill-down component.
 

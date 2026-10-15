@@ -1,10 +1,10 @@
 ---
-description: Run every open issue of the current milestone through groom → implement → QA → close, without asking between issues
+description: Run every open issue of the current milestone through implement → QA → close, without asking between issues
 argument-hint: "[milestone number, optional]"
 allowed-tools: Bash, Read, Agent, AskUserQuestion
 ---
 
-Run **steps 1–7** of `docs/process.md` for every open issue of the current milestone, one after another, without asking the user between issues.
+Run **steps 1 and 3–7** of `docs/process.md` (no grooming: `/plan-milestone` already planned every issue) for every open issue of the current milestone, one after another, without asking the user between issues.
 You are the orchestrator: you never groom, implement or test yourself — the subagents do.
 
 ## 1. Milestone and branch
@@ -17,15 +17,14 @@ You are the orchestrator: you never groom, implement or test yourself — the su
 
 ## 2. Loop over the issues
 
-Pick the open issue with the **lowest number** whose dependencies ("Depends on #X" in the body) are all closed. If open issues remain but none has its dependencies closed, stop and tell the user.
+Pick the open issue with the **lowest number** whose dependencies ("Depends on #X" in the body) are all closed. If open issues remain but none has its dependencies closed, stop and tell the user. If the picked issue lacks the `groomed` label, stop and tell the user; never launch the PM to groom it.
 
 For that issue (every subagent starts without context: always pass the issue number, the branch name and anything relevant the user said):
 
-1. **Groom** — skip if the issue has the `groomed` label; otherwise launch `project-manager` (step 2).
-2. **Implement** — launch `software-engineer` with the issue number and the branch (step 3). If the engineer reports that an acceptance criterion is wrong or impossible, send it back to the PM and then to the engineer again.
-3. **Verify** — launch `qa-engineer` with the issue number and the branch (step 4).
-4. **On `## QA: FAIL`** — read that QA comment, launch `software-engineer` again passing it, then QA again (step 5). After **3 consecutive FAILs** on the same issue, stop the whole run and ask the user how to proceed.
-5. **On `## QA: PASS`** — close it: `gh issue close <n> --comment "Closed after QA PASS"` (step 6). Tell the user in one line (issue, commits, number of QA cycles) and pick the next issue.
+1. **Implement** — launch `software-engineer` with the issue number and the branch (step 3). Only if the engineer reports that an acceptance criterion is wrong or impossible, launch `project-manager` for that issue alone (the one exception) and then the engineer again.
+2. **Verify** — launch `qa-engineer` with the issue number and the branch (step 4).
+3. **On `## QA: FAIL`** — read that QA comment, launch `software-engineer` again passing it, then QA again (step 5). After **3 consecutive FAILs** on the same issue, stop the whole run and ask the user how to proceed.
+4. **On `## QA: PASS`** — close it: `gh issue close <n> --comment "Closed after QA PASS"` (step 6). Tell the user in one line (issue, commits, number of QA cycles) and pick the next issue.
 
 Subagent reports are at most 5 lines. Do not read full issue comments unless a step needs them (e.g. the QA FAIL comment for the engineer).
 

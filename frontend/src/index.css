@@ -17,6 +17,15 @@
   --color-gain: #16a34a;
   --color-loss: #dc2626;
 
+  /* Chart categories: shades of blue (tech-spec §8.1), darkest first. */
+  --color-chart-1: #1e3a8a;
+  --color-chart-2: #1d4ed8;
+  --color-chart-3: #2563eb;
+  --color-chart-4: #3b82f6;
+  --color-chart-5: #60a5fa;
+  --color-chart-6: #93c5fd;
+  --color-chart-7: #bfdbfe;
+
   --color-scenario-pessimistic: #93c5fd;
   --color-scenario-base: #2563eb;
   --color-scenario-optimistic: #1e3a8a;

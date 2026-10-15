@@ -43,8 +43,9 @@ Every task follows [`docs/process.md`](docs/process.md). In short:
 
 - The **main session is the orchestrator**. It launches the subagents in `.claude/agents/` — `project-manager`, `software-engineer`, `qa-engineer` — and does **not** groom, implement or test itself.
 - At intake (`/plan-milestone`) the PM creates **and grooms** every issue of the milestone in one pass (2–3 issues, labels `m<N>` + `groomed`).
-- For each open issue of the current milestone: **PM grooms (skipped if already `groomed`) → Engineer implements → QA verifies** → on FAIL back to the engineer with the QA comment, on PASS the orchestrator closes the issue. Repeat until the backlog is empty, then do the milestone wrap-up (`/close-milestone`).
+- For each open issue of the current milestone: **Engineer implements → QA verifies** (the issue already is the plan; the PM does not take part) → on FAIL back to the engineer with the QA comment, on PASS the orchestrator closes the issue. Repeat until the backlog is empty, then do the milestone wrap-up (`/close-milestone`).
 - `/run-milestone` runs the whole backlog without asking between issues and closes each on QA PASS; `/next-issue` runs a single issue and asks before closing. Neither pushes nor opens PRs.
+- The PM only acts at intake (`/plan-milestone`), or to fix one issue when the engineer reports an invalid acceptance criterion. An issue without the `groomed` label stops the loop and the user is asked; the loop never grooms.
 - Never implement an ungroomed issue. The engineer never closes issues. QA never changes code. Only the orchestrator closes an issue, and only after `## QA: PASS`.
 - QA (Sonnet) runs only the tests of the side(s) the issue changed, checks that every acceptance criterion is covered by a test, and opens the browser only for issues that change a page, at desktop width (375px is checked once in M8).
 - Subagents end with a report of at most 5 lines; details live in the issue comments. The orchestrator reads full comments only when a step needs them (e.g. a QA FAIL for the engineer).
@@ -81,7 +82,7 @@ docs/       specs, milestones, process, team roles
 
 ## Current state
 
-- Milestones 1 (scaffolding), 2 (authentication), 3 (categories), 4 (transactions) and 5 (investments) are done. Next: **M6 — Dashboard** (branch `m6-dashboard`, from an up-to-date `main` once the M5 PR is merged). It has no issues yet: `/plan-milestone` has the PM break the M6 section of `docs/milestones.md` into issues (create the `m6` label first).
+- Milestones 1 (scaffolding), 2 (authentication), 3 (categories), 4 (transactions), 5 (investments) and 6 (dashboard) are done. Next: **M7 — Simulator** (branch `m7-simulator`, from an up-to-date `main` once the M6 PR is merged). It has no issues yet: `/plan-milestone` has the PM break the M7 section of `docs/milestones.md` into issues (create the `m7` label first).
 - Open issues outside the current milestone: #9 (return to the requested page after login) and #10 (login rate limiting) are labelled `m8`; #33 (form dialogs lose focus while saving / Escape ignored after an API error, found during M5) has no milestone and needs the user's decision before any work.
 - The API contract is the committed `openapi.json` at the repo root; after any backend route or schema change, re-export it and regenerate the frontend types (see `docs/backend.md` → *Commands*). CI fails if either is stale.
 - Git: `main` tracks `origin` (`github.com/sotomarcos24/expenses-calculator`).

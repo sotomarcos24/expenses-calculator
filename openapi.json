@@ -1076,6 +1076,75 @@
           }
         }
       }
+    },
+    "/api/dashboard": {
+      "get": {
+        "tags": [
+          "dashboard"
+        ],
+        "summary": "Get Dashboard",
+        "operationId": "get_dashboard_api_dashboard_get",
+        "parameters": [
+          {
+            "name": "from",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "date",
+              "title": "From"
+            }
+          },
+          {
+            "name": "to",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "date",
+              "title": "To"
+            }
+          },
+          {
+            "name": "access_token",
+            "in": "cookie",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Access Token"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Dashboard"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
     }
   },
   "components": {
@@ -1153,6 +1222,37 @@
         ],
         "title": "CategoryRead"
       },
+      "CategoryTotal": {
+        "properties": {
+          "category_id": {
+            "type": "integer",
+            "title": "Category Id"
+          },
+          "name": {
+            "type": "string",
+            "title": "Name"
+          },
+          "total": {
+            "type": "string",
+            "title": "Total"
+          },
+          "subcategories": {
+            "items": {
+              "$ref": "#/components/schemas/SubcategoryTotal"
+            },
+            "type": "array",
+            "title": "Subcategories"
+          }
+        },
+        "type": "object",
+        "required": [
+          "category_id",
+          "name",
+          "total",
+          "subcategories"
+        ],
+        "title": "CategoryTotal"
+      },
       "CategoryTreeNode": {
         "properties": {
           "id": {
@@ -1211,6 +1311,96 @@
         ],
         "title": "CategoryUpdate",
         "description": "Rename only: moving a category to another parent or kind is not supported."
+      },
+      "Dashboard": {
+        "properties": {
+          "income_total": {
+            "type": "string",
+            "title": "Income Total"
+          },
+          "expense_total": {
+            "type": "string",
+            "title": "Expense Total"
+          },
+          "savings": {
+            "type": "string",
+            "title": "Savings"
+          },
+          "savings_rate": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Savings Rate"
+          },
+          "expenses_by_category": {
+            "items": {
+              "$ref": "#/components/schemas/CategoryTotal"
+            },
+            "type": "array",
+            "title": "Expenses By Category"
+          },
+          "investments": {
+            "$ref": "#/components/schemas/DashboardInvestments"
+          }
+        },
+        "type": "object",
+        "required": [
+          "income_total",
+          "expense_total",
+          "savings",
+          "savings_rate",
+          "expenses_by_category",
+          "investments"
+        ],
+        "title": "Dashboard"
+      },
+      "DashboardInvestments": {
+        "properties": {
+          "total_invested": {
+            "type": "string",
+            "title": "Total Invested"
+          },
+          "current_value": {
+            "type": "string",
+            "title": "Current Value"
+          },
+          "gain": {
+            "type": "string",
+            "title": "Gain"
+          },
+          "gain_pct": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Gain Pct"
+          },
+          "by_type": {
+            "items": {
+              "$ref": "#/components/schemas/TypeValue"
+            },
+            "type": "array",
+            "title": "By Type"
+          }
+        },
+        "type": "object",
+        "required": [
+          "total_invested",
+          "current_value",
+          "gain",
+          "gain_pct",
+          "by_type"
+        ],
+        "title": "DashboardInvestments"
       },
       "HTTPValidationError": {
         "properties": {
@@ -1555,6 +1745,36 @@
         ],
         "title": "RegisterRequest"
       },
+      "SubcategoryTotal": {
+        "properties": {
+          "id": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Id"
+          },
+          "name": {
+            "type": "string",
+            "title": "Name"
+          },
+          "total": {
+            "type": "string",
+            "title": "Total"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "name",
+          "total"
+        ],
+        "title": "SubcategoryTotal"
+      },
       "TransactionCreate": {
         "properties": {
           "type": {
@@ -1829,6 +2049,23 @@
         "type": "object",
         "title": "TransactionUpdate",
         "description": "Partial update: omitted fields are unchanged, explicit ``null`` clears nullable fields.\n\n``type``, ``date``, ``amount`` and ``category_id`` are not nullable, so an explicit ``null``\nis a 422. Their ``None`` default only means \"not sent\" (it is hidden from the JSON schema),\nand the service reads the sent fields with ``model_dump(exclude_unset=True)``."
+      },
+      "TypeValue": {
+        "properties": {
+          "type": {
+            "$ref": "#/components/schemas/InvestmentType"
+          },
+          "current_value": {
+            "type": "string",
+            "title": "Current Value"
+          }
+        },
+        "type": "object",
+        "required": [
+          "type",
+          "current_value"
+        ],
+        "title": "TypeValue"
       },
       "UserRead": {
         "properties": {
