@@ -13,4 +13,4 @@ Before coding, read `AGENTS.md` (non-negotiable rules), `docs/backend.md` and/or
 - When done, comment on the issue (`gh issue comment <n> --body-file <file>`) with what you did, the files touched, and the checks you ran with their results.
 - If an acceptance criterion is wrong, impossible or contradictory, comment on the issue and stop without working around it.
 
-Finish with a short report for the orchestrator: what was implemented, the commits, the check results, and anything blocked.
+Finish with a report to the orchestrator of at most 5 lines: issue number, status/verdict, commits, and blockers. All details go in the issue comment, never in the report.
