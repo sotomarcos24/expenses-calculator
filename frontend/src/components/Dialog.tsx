@@ -86,11 +86,32 @@ export function Dialog({
     }
     document.addEventListener('focusin', onFocusIn)
 
+    // Disabling the focused control (e.g. Save while a request is pending) drops focus to <body>
+    // without any focus event, so Escape would stop working. Keep focus on the panel instead.
+    const keepFocusInside = () => {
+      const active = document.activeElement
+      if (
+        !(active instanceof HTMLElement) ||
+        !panel.contains(active) ||
+        active.matches(':disabled')
+      ) {
+        panel.focus()
+      }
+    }
+    const observer = new MutationObserver(keepFocusInside)
+    observer.observe(panel, {
+      subtree: true,
+      childList: true,
+      attributes: true,
+      attributeFilter: ['disabled'],
+    })
+
     const { overflow } = document.body.style
     document.body.style.overflow = 'hidden'
 
     return () => {
       document.removeEventListener('focusin', onFocusIn)
+      observer.disconnect()
       document.body.style.overflow = overflow
       // The fallback is read on close on purpose: it is a node outside the dialog (e.g. the
       // "Add transaction" button), still mounted when the dialog goes away.
