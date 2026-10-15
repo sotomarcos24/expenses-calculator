@@ -1145,10 +1145,393 @@
           }
         }
       }
+    },
+    "/api/simulator/defaults": {
+      "get": {
+        "tags": [
+          "simulator"
+        ],
+        "summary": "Get Defaults",
+        "operationId": "get_defaults_api_simulator_defaults_get",
+        "parameters": [
+          {
+            "name": "access_token",
+            "in": "cookie",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Access Token"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SimulatorDefaults"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/simulator/accumulation": {
+      "post": {
+        "tags": [
+          "simulator"
+        ],
+        "summary": "Post Accumulation",
+        "operationId": "post_accumulation_api_simulator_accumulation_post",
+        "parameters": [
+          {
+            "name": "access_token",
+            "in": "cookie",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Access Token"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AccumulationRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AccumulationResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/simulator/goal": {
+      "post": {
+        "tags": [
+          "simulator"
+        ],
+        "summary": "Post Goal",
+        "operationId": "post_goal_api_simulator_goal_post",
+        "parameters": [
+          {
+            "name": "access_token",
+            "in": "cookie",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Access Token"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/GoalRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/GoalResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/simulator/withdrawal": {
+      "post": {
+        "tags": [
+          "simulator"
+        ],
+        "summary": "Post Withdrawal",
+        "operationId": "post_withdrawal_api_simulator_withdrawal_post",
+        "parameters": [
+          {
+            "name": "access_token",
+            "in": "cookie",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Access Token"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/WithdrawalRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WithdrawalResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
     }
   },
   "components": {
     "schemas": {
+      "AccumulationRequest": {
+        "properties": {
+          "starting_amount": {
+            "anyOf": [
+              {
+                "type": "number",
+                "maximum": 1000000000000.0,
+                "minimum": 0.0
+              },
+              {
+                "type": "string"
+              }
+            ],
+            "title": "Starting Amount"
+          },
+          "contribution": {
+            "anyOf": [
+              {
+                "type": "number",
+                "maximum": 1000000000000.0,
+                "minimum": 0.0
+              },
+              {
+                "type": "string"
+              }
+            ],
+            "title": "Contribution"
+          },
+          "frequency": {
+            "$ref": "#/components/schemas/Frequency"
+          },
+          "horizon_years": {
+            "type": "integer",
+            "maximum": 60.0,
+            "minimum": 1.0,
+            "title": "Horizon Years"
+          },
+          "scenarios": {
+            "$ref": "#/components/schemas/ScenarioRatesIn"
+          },
+          "inflation_rate": {
+            "anyOf": [
+              {
+                "type": "number",
+                "maximum": 0.5,
+                "minimum": -0.5
+              },
+              {
+                "type": "string"
+              }
+            ],
+            "title": "Inflation Rate"
+          },
+          "current_age": {
+            "type": "integer",
+            "maximum": 120.0,
+            "minimum": 0.0,
+            "title": "Current Age"
+          },
+          "avg_monthly_expenses": {
+            "anyOf": [
+              {
+                "type": "number",
+                "maximum": 1000000000000.0,
+                "minimum": 0.0
+              },
+              {
+                "type": "string"
+              }
+            ],
+            "title": "Avg Monthly Expenses"
+          }
+        },
+        "type": "object",
+        "required": [
+          "starting_amount",
+          "contribution",
+          "frequency",
+          "horizon_years",
+          "scenarios",
+          "inflation_rate",
+          "current_age",
+          "avg_monthly_expenses"
+        ],
+        "title": "AccumulationRequest"
+      },
+      "AccumulationResponse": {
+        "properties": {
+          "pessimistic": {
+            "$ref": "#/components/schemas/AccumulationScenarioResult"
+          },
+          "base": {
+            "$ref": "#/components/schemas/AccumulationScenarioResult"
+          },
+          "optimistic": {
+            "$ref": "#/components/schemas/AccumulationScenarioResult"
+          }
+        },
+        "type": "object",
+        "required": [
+          "pessimistic",
+          "base",
+          "optimistic"
+        ],
+        "title": "AccumulationResponse"
+      },
+      "AccumulationScenarioResult": {
+        "properties": {
+          "points": {
+            "items": {
+              "$ref": "#/components/schemas/YearPointOut"
+            },
+            "type": "array",
+            "title": "Points"
+          },
+          "years_of_expenses_covered": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Years Of Expenses Covered"
+          }
+        },
+        "type": "object",
+        "required": [
+          "points",
+          "years_of_expenses_covered"
+        ],
+        "title": "AccumulationScenarioResult"
+      },
+      "AgePointOut": {
+        "properties": {
+          "age": {
+            "type": "integer",
+            "title": "Age"
+          },
+          "nominal": {
+            "type": "string",
+            "title": "Nominal"
+          },
+          "real": {
+            "type": "string",
+            "title": "Real"
+          }
+        },
+        "type": "object",
+        "required": [
+          "age",
+          "nominal",
+          "real"
+        ],
+        "title": "AgePointOut"
+      },
       "CategoryCreate": {
         "properties": {
           "name": {
@@ -1401,6 +1784,134 @@
           "by_type"
         ],
         "title": "DashboardInvestments"
+      },
+      "Frequency": {
+        "type": "string",
+        "enum": [
+          "weekly",
+          "monthly",
+          "yearly"
+        ],
+        "title": "Frequency",
+        "description": "Contribution frequency; the value of ``periods_per_year`` is ``n`` in the spec."
+      },
+      "GoalRequest": {
+        "properties": {
+          "starting_amount": {
+            "anyOf": [
+              {
+                "type": "number",
+                "maximum": 1000000000000.0,
+                "minimum": 0.0
+              },
+              {
+                "type": "string"
+              }
+            ],
+            "title": "Starting Amount"
+          },
+          "target_amount": {
+            "anyOf": [
+              {
+                "type": "number",
+                "maximum": 1000000000000.0,
+                "minimum": 0.0
+              },
+              {
+                "type": "string"
+              }
+            ],
+            "title": "Target Amount"
+          },
+          "years": {
+            "type": "integer",
+            "maximum": 60.0,
+            "minimum": 1.0,
+            "title": "Years"
+          },
+          "frequency": {
+            "$ref": "#/components/schemas/Frequency"
+          },
+          "scenarios": {
+            "$ref": "#/components/schemas/ScenarioRatesIn"
+          },
+          "inflation_rate": {
+            "anyOf": [
+              {
+                "type": "number",
+                "maximum": 0.5,
+                "minimum": -0.5
+              },
+              {
+                "type": "string"
+              }
+            ],
+            "title": "Inflation Rate"
+          },
+          "target_is_real": {
+            "type": "boolean",
+            "title": "Target Is Real",
+            "default": true
+          }
+        },
+        "type": "object",
+        "required": [
+          "starting_amount",
+          "target_amount",
+          "years",
+          "frequency",
+          "scenarios",
+          "inflation_rate"
+        ],
+        "title": "GoalRequest"
+      },
+      "GoalResponse": {
+        "properties": {
+          "pessimistic": {
+            "$ref": "#/components/schemas/GoalScenarioResult"
+          },
+          "base": {
+            "$ref": "#/components/schemas/GoalScenarioResult"
+          },
+          "optimistic": {
+            "$ref": "#/components/schemas/GoalScenarioResult"
+          }
+        },
+        "type": "object",
+        "required": [
+          "pessimistic",
+          "base",
+          "optimistic"
+        ],
+        "title": "GoalResponse"
+      },
+      "GoalScenarioResult": {
+        "properties": {
+          "required_contribution": {
+            "type": "string",
+            "title": "Required Contribution"
+          },
+          "total_contributed": {
+            "type": "string",
+            "title": "Total Contributed"
+          },
+          "already_reached": {
+            "type": "boolean",
+            "title": "Already Reached"
+          },
+          "nominal_target": {
+            "type": "string",
+            "title": "Nominal Target"
+          }
+        },
+        "type": "object",
+        "required": [
+          "required_contribution",
+          "total_contributed",
+          "already_reached",
+          "nominal_target"
+        ],
+        "title": "GoalScenarioResult"
       },
       "HTTPValidationError": {
         "properties": {
@@ -1744,6 +2255,106 @@
           "password"
         ],
         "title": "RegisterRequest"
+      },
+      "ScenarioRatesIn": {
+        "properties": {
+          "pessimistic": {
+            "anyOf": [
+              {
+                "type": "number",
+                "maximum": 0.5,
+                "minimum": -0.5
+              },
+              {
+                "type": "string"
+              }
+            ],
+            "title": "Pessimistic"
+          },
+          "base": {
+            "anyOf": [
+              {
+                "type": "number",
+                "maximum": 0.5,
+                "minimum": -0.5
+              },
+              {
+                "type": "string"
+              }
+            ],
+            "title": "Base"
+          },
+          "optimistic": {
+            "anyOf": [
+              {
+                "type": "number",
+                "maximum": 0.5,
+                "minimum": -0.5
+              },
+              {
+                "type": "string"
+              }
+            ],
+            "title": "Optimistic"
+          }
+        },
+        "type": "object",
+        "required": [
+          "pessimistic",
+          "base",
+          "optimistic"
+        ],
+        "title": "ScenarioRatesIn"
+      },
+      "ScenarioRatesOut": {
+        "properties": {
+          "pessimistic": {
+            "type": "string",
+            "title": "Pessimistic"
+          },
+          "base": {
+            "type": "string",
+            "title": "Base"
+          },
+          "optimistic": {
+            "type": "string",
+            "title": "Optimistic"
+          }
+        },
+        "type": "object",
+        "required": [
+          "pessimistic",
+          "base",
+          "optimistic"
+        ],
+        "title": "ScenarioRatesOut"
+      },
+      "SimulatorDefaults": {
+        "properties": {
+          "starting_amount": {
+            "type": "string",
+            "title": "Starting Amount"
+          },
+          "avg_monthly_expenses": {
+            "type": "string",
+            "title": "Avg Monthly Expenses"
+          },
+          "inflation_rate": {
+            "type": "string",
+            "title": "Inflation Rate"
+          },
+          "scenarios": {
+            "$ref": "#/components/schemas/ScenarioRatesOut"
+          }
+        },
+        "type": "object",
+        "required": [
+          "starting_amount",
+          "avg_monthly_expenses",
+          "inflation_rate",
+          "scenarios"
+        ],
+        "title": "SimulatorDefaults"
       },
       "SubcategoryTotal": {
         "properties": {
@@ -2130,6 +2741,256 @@
           "type"
         ],
         "title": "ValidationError"
+      },
+      "WithdrawalMode": {
+        "type": "string",
+        "enum": [
+          "percent",
+          "fixed"
+        ],
+        "title": "WithdrawalMode"
+      },
+      "WithdrawalRequest": {
+        "properties": {
+          "starting_amount": {
+            "anyOf": [
+              {
+                "type": "number",
+                "maximum": 1000000000000.0,
+                "minimum": 0.0
+              },
+              {
+                "type": "string"
+              }
+            ],
+            "title": "Starting Amount"
+          },
+          "contribution": {
+            "anyOf": [
+              {
+                "type": "number",
+                "maximum": 1000000000000.0,
+                "minimum": 0.0
+              },
+              {
+                "type": "string"
+              }
+            ],
+            "title": "Contribution"
+          },
+          "frequency": {
+            "$ref": "#/components/schemas/Frequency"
+          },
+          "scenarios": {
+            "$ref": "#/components/schemas/ScenarioRatesIn"
+          },
+          "inflation_rate": {
+            "anyOf": [
+              {
+                "type": "number",
+                "maximum": 0.5,
+                "minimum": -0.5
+              },
+              {
+                "type": "string"
+              }
+            ],
+            "title": "Inflation Rate"
+          },
+          "current_age": {
+            "type": "integer",
+            "maximum": 120.0,
+            "minimum": 0.0,
+            "title": "Current Age"
+          },
+          "avg_monthly_expenses": {
+            "anyOf": [
+              {
+                "type": "number",
+                "maximum": 1000000000000.0,
+                "minimum": 0.0
+              },
+              {
+                "type": "string"
+              }
+            ],
+            "title": "Avg Monthly Expenses"
+          },
+          "retirement_age": {
+            "type": "integer",
+            "maximum": 120.0,
+            "minimum": 0.0,
+            "title": "Retirement Age"
+          },
+          "end_age": {
+            "type": "integer",
+            "maximum": 120.0,
+            "minimum": 0.0,
+            "title": "End Age",
+            "default": 100
+          },
+          "withdrawal_mode": {
+            "$ref": "#/components/schemas/WithdrawalMode"
+          },
+          "withdrawal_rate": {
+            "anyOf": [
+              {
+                "type": "number",
+                "maximum": 0.5,
+                "minimum": 0.0
+              },
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Withdrawal Rate"
+          },
+          "monthly_withdrawal": {
+            "anyOf": [
+              {
+                "type": "number",
+                "maximum": 1000000000000.0,
+                "minimum": 0.0
+              },
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Monthly Withdrawal"
+          }
+        },
+        "type": "object",
+        "required": [
+          "starting_amount",
+          "contribution",
+          "frequency",
+          "scenarios",
+          "inflation_rate",
+          "current_age",
+          "avg_monthly_expenses",
+          "retirement_age",
+          "withdrawal_mode"
+        ],
+        "title": "WithdrawalRequest"
+      },
+      "WithdrawalResponse": {
+        "properties": {
+          "pessimistic": {
+            "$ref": "#/components/schemas/WithdrawalScenarioResult"
+          },
+          "base": {
+            "$ref": "#/components/schemas/WithdrawalScenarioResult"
+          },
+          "optimistic": {
+            "$ref": "#/components/schemas/WithdrawalScenarioResult"
+          }
+        },
+        "type": "object",
+        "required": [
+          "pessimistic",
+          "base",
+          "optimistic"
+        ],
+        "title": "WithdrawalResponse"
+      },
+      "WithdrawalScenarioResult": {
+        "properties": {
+          "balance_at_retirement_nominal": {
+            "type": "string",
+            "title": "Balance At Retirement Nominal"
+          },
+          "balance_at_retirement_real": {
+            "type": "string",
+            "title": "Balance At Retirement Real"
+          },
+          "monthly_income": {
+            "type": "string",
+            "title": "Monthly Income"
+          },
+          "expenses_coverage_pct": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Expenses Coverage Pct"
+          },
+          "lasts_until_end": {
+            "type": "boolean",
+            "title": "Lasts Until End"
+          },
+          "depletion_age": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Depletion Age"
+          },
+          "series": {
+            "items": {
+              "$ref": "#/components/schemas/AgePointOut"
+            },
+            "type": "array",
+            "title": "Series"
+          }
+        },
+        "type": "object",
+        "required": [
+          "balance_at_retirement_nominal",
+          "balance_at_retirement_real",
+          "monthly_income",
+          "expenses_coverage_pct",
+          "lasts_until_end",
+          "depletion_age",
+          "series"
+        ],
+        "title": "WithdrawalScenarioResult"
+      },
+      "YearPointOut": {
+        "properties": {
+          "year": {
+            "type": "integer",
+            "title": "Year"
+          },
+          "age": {
+            "type": "integer",
+            "title": "Age"
+          },
+          "nominal": {
+            "type": "string",
+            "title": "Nominal"
+          },
+          "real": {
+            "type": "string",
+            "title": "Real"
+          },
+          "total_contributed": {
+            "type": "string",
+            "title": "Total Contributed"
+          }
+        },
+        "type": "object",
+        "required": [
+          "year",
+          "age",
+          "nominal",
+          "real",
+          "total_contributed"
+        ],
+        "title": "YearPointOut"
       }
     }
   }

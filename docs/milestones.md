@@ -29,7 +29,7 @@
 | 4 | Transactions | Income/expense CRUD, filters, gross/net salary | 3 | ✅ Done |
 | 5 | Investments | Portfolio CRUD and gain/loss | 2 | ✅ Done |
 | 6 | Dashboard | Period summary and charts | 4, 5 | ✅ Done |
-| 7 | Simulator | Modes A/B/C with three scenarios | 4, 5 | ⬜ Pending |
+| 7 | Simulator | Modes A/B/C with three scenarios | 4, 5 | ✅ Done |
 | 8 | Polish and deployment | Production-ready MVP online | 1–7 | ⬜ Pending |
 | 9 | Nice-to-haves | Recurring transactions, CSV export, i18n | 8 | ⬜ Optional |
 
@@ -206,7 +206,7 @@
 
 ---
 
-## M7 — Simulator
+## M7 — Simulator ✅
 
 **Goal:** deterministic projections in three modes, with three scenarios and inflation (§4.6, tech-spec §7).
 
@@ -227,13 +227,13 @@
 
 #### Acceptance criteria
 
-- [ ] Every mode returns results for the three scenarios.
-- [ ] Results are identical for identical inputs (deterministic).
-- [ ] Nominal and inflation-adjusted values are both available.
-- [ ] Mode B returns 0 and "already reached" when the starting amount covers the goal.
-- [ ] Mode C reports the depletion age correctly when the money runs out.
-- [ ] Out-of-range inputs return 422 and are shown next to the field.
-- [ ] Defaults are pre-filled from the user's real data.
+- [x] Every mode returns results for the three scenarios.
+- [x] Results are identical for identical inputs (deterministic).
+- [x] Nominal and inflation-adjusted values are both available.
+- [x] Mode B returns 0 and "already reached" when the starting amount covers the goal.
+- [x] Mode C reports the depletion age correctly when the money runs out.
+- [x] Out-of-range inputs return 422 and are shown next to the field.
+- [x] Defaults are pre-filled from the user's real data.
 
 **Tests (100% coverage of `simulator/`):** values checked by hand or in a spreadsheet for: 0% return, 0 contribution, monthly vs weekly vs yearly frequency, a known compound case (e.g. $10,000 at 5% for 10 years, no contributions = $16,288.95), goal already reached, withdrawal that lasts, withdrawal that runs out at a known age, real vs nominal conversion.
 
