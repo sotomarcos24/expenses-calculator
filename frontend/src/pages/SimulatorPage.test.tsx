@@ -459,6 +459,21 @@ describe('SimulatorPage', () => {
     expect(calls).toHaveLength(1)
   })
 
+  it('offers Try again for the defaults and pre-fills the form once the retry succeeds', async () => {
+    let fail = true
+    renderSimulator({
+      defaults: () => (fail ? jsonResponse({ detail: 'boom' }, 500) : jsonResponse(DEFAULTS)),
+    })
+    expect(await screen.findByRole('alert')).toHaveTextContent("Couldn't load your defaults")
+    expect(field('Starting amount ($)').value).toBe('')
+
+    fail = false
+    fireEvent.click(screen.getByRole('button', { name: 'Try again' }))
+    await waitFor(() => expect(field('Starting amount ($)').value).not.toBe(''))
+    expect(screen.queryByRole('alert')).not.toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: 'Try again' })).not.toBeInTheDocument()
+  })
+
   it('shows a loading state while the defaults load', async () => {
     renderSimulator()
     expect(await screen.findByText('Loading your defaults…')).toBeInTheDocument()

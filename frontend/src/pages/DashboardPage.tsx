@@ -55,7 +55,7 @@ export function DashboardPage() {
       <p className="mb-4">
         <Link
           to="/simulator"
-          className="inline-flex items-center rounded-md border border-border bg-surface px-3 py-2 text-sm font-medium text-primary hover:bg-accent focus-visible:outline-2 focus-visible:outline-primary"
+          className="inline-flex min-h-10 items-center rounded-md border border-border bg-surface px-3 py-2 text-sm font-medium text-primary hover:bg-accent focus-visible:outline-2 focus-visible:outline-primary"
         >
           Open the simulator
         </Link>

@@ -36,3 +36,12 @@
 body {
   @apply bg-background font-sans text-foreground antialiased;
 }
+
+/* Touch targets: on phones every button and form control is at least 40px tall (UX pass, M8). */
+@media (max-width: 47.99rem) {
+  button,
+  select,
+  input:not([type='radio']):not([type='checkbox']) {
+    min-height: 2.5rem;
+  }
+}

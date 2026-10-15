@@ -341,6 +341,36 @@ function getCategoriesCount(fetchMock: { mock: { calls: unknown[][] } }) {
   ).length
 }
 
+describe('CategoriesPage — toasts', () => {
+  it('shows a success toast for add, subcategory add, rename and delete, and no toast on failure', async () => {
+    await renderManaged()
+    fireEvent.click(screen.getByRole('button', { name: 'Add subcategory to Food' }))
+    typeAndSubmit('Subcategory name', 'Snacks')
+    expect(await screen.findByText('Subcategory added.')).toBeInTheDocument()
+
+    fireEvent.click(screen.getByRole('button', { name: 'Rename Transport' }))
+    typeAndSubmit('Name', 'Travel')
+    expect(await screen.findByText('Category renamed.')).toBeInTheDocument()
+
+    fireEvent.click(within(section('Expenses')).getByRole('button', { name: 'Add category' }))
+    typeAndSubmit('Category name', 'Pets')
+    expect(await screen.findByText('Category added.')).toBeInTheDocument()
+
+    fireEvent.click(screen.getByRole('button', { name: 'Delete Pets' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Delete' }))
+    expect(await screen.findByText('Category deleted.')).toBeInTheDocument()
+    expect(screen.getByText('Category deleted.').parentElement).toHaveAttribute('role', 'status')
+  })
+
+  it('shows no success toast when a save fails', async () => {
+    await renderManaged(DEFAULT_TREE, () => jsonResponse({ detail: DUPLICATE }, 409))
+    fireEvent.click(within(section('Expenses')).getByRole('button', { name: 'Add category' }))
+    typeAndSubmit('Category name', 'Food')
+    expect(await screen.findByText(DUPLICATE)).toBeInTheDocument()
+    expect(screen.queryByText('Category added.')).not.toBeInTheDocument()
+  })
+})
+
 describe('CategoriesPage — managing categories', () => {
   it('adds a top-level expense category with a trimmed name at the end', async () => {
     const { requests } = await renderManaged()

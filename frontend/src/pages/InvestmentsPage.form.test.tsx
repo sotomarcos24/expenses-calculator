@@ -263,7 +263,7 @@ describe('Add investment', () => {
     save(dialog)
 
     const status = await screen.findByText('Investment saved.')
-    expect(status).toHaveAttribute('role', 'status')
+    expect(status.parentElement).toHaveAttribute('role', 'status')
     expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
     expect(mutationCalls(fetchMock)).toEqual([
       {
@@ -405,16 +405,6 @@ describe('Edit investment', () => {
     await screen.findByText('Investment saved.')
     expect(mutationCalls(fetchMock)[0].body).toMatchObject({ platform: null })
     await waitFor(() => expect(rowOf('ETF World').platform).toHaveTextContent('—'))
-  })
-
-  it('clears the previous message when a dialog opens', async () => {
-    await renderInvestments([ETF_WORLD])
-    const dialog = await openEdit('ETF World')
-    save(dialog)
-    await screen.findByText('Investment saved.')
-
-    await openEdit('ETF World')
-    expect(screen.queryByText('Investment saved.')).not.toBeInTheDocument()
   })
 })
 

@@ -8,6 +8,7 @@ import { InvestmentTable } from '../components/InvestmentTable.tsx'
 import { InvestmentValueDialog } from '../components/InvestmentValueDialog.tsx'
 import { PageHeader } from '../components/PageHeader.tsx'
 import { PortfolioTotalsCard } from '../components/PortfolioTotalsCard.tsx'
+import { useToast } from '../hooks/useToast.ts'
 import { useInvestments } from '../hooks/useInvestments.ts'
 
 function StatusText({ children }: { children: string }) {
@@ -81,15 +82,9 @@ type DialogState =
   | { mode: 'value'; investment: InvestmentRead }
   | { mode: 'delete'; investment: InvestmentRead }
 
-/**
- * Result of the last action, shown above the content: a polite status (`Investment saved.`) or an
- * alert for page-level errors. Opening any dialog clears it.
- */
-type PageMessage = { kind: 'status' | 'alert'; text: string } | null
-
 export function InvestmentsPage() {
   const [dialog, setDialog] = useState<DialogState>({ mode: 'closed' })
-  const [message, setMessage] = useState<PageMessage>(null)
+  const toast = useToast()
   const addButtonRef = useRef<HTMLButtonElement>(null)
   // After a delete or a 404 the row and its buttons are gone: focus goes to "Add investment".
   const focusAddOnClose = useRef(false)
@@ -101,16 +96,13 @@ export function InvestmentsPage() {
     }
   }, [dialog])
 
-  const open = (next: DialogState) => {
-    setMessage(null)
-    setDialog(next)
-  }
+  const open = (next: DialogState) => setDialog(next)
   const close = () => setDialog({ mode: 'closed' })
-  // Closes the dialog with a page message and moves focus to "Add investment" (the row is gone).
-  const closeWith = (next: PageMessage) => {
+  // Closes the dialog, shows a toast and moves focus to "Add investment" (the row is gone).
+  const closeWith = (show: () => void) => {
     focusAddOnClose.current = true
     close()
-    setMessage(next)
+    show()
   }
   const onAdd = () => open({ mode: 'create' })
 
@@ -125,18 +117,6 @@ export function InvestmentsPage() {
           </Button>
         }
       />
-      {/* Always rendered so screen readers announce the confirmation when it appears. */}
-      <p
-        role="status"
-        className={message?.kind === 'status' ? 'mb-4 text-sm text-foreground' : 'sr-only'}
-      >
-        {message?.kind === 'status' ? message.text : ''}
-      </p>
-      {message?.kind === 'alert' && (
-        <div className="mb-4">
-          <FormError message={message.text} />
-        </div>
-      )}
       <InvestmentsContent
         onAdd={onAdd}
         onEdit={(investment) => open({ mode: 'edit', investment })}
@@ -147,8 +127,8 @@ export function InvestmentsPage() {
         <InvestmentDeleteDialog
           investment={dialog.investment}
           onClose={close}
-          onDeleted={() => closeWith({ kind: 'status', text: 'Investment deleted.' })}
-          onNotFound={(text) => closeWith({ kind: 'alert', text })}
+          onDeleted={() => closeWith(() => toast.success('Investment deleted.'))}
+          onNotFound={(text) => closeWith(() => toast.error(text))}
           fallbackFocusRef={addButtonRef}
         />
       )}
@@ -158,9 +138,9 @@ export function InvestmentsPage() {
           onClose={close}
           onSaved={() => {
             close()
-            setMessage({ kind: 'status', text: 'Value updated.' })
+            toast.success('Value updated.')
           }}
-          onNotFound={(text) => closeWith({ kind: 'alert', text })}
+          onNotFound={(text) => closeWith(() => toast.error(text))}
           fallbackFocusRef={addButtonRef}
         />
       )}
@@ -170,7 +150,7 @@ export function InvestmentsPage() {
           onClose={close}
           onSaved={() => {
             close()
-            setMessage({ kind: 'status', text: 'Investment saved.' })
+            toast.success('Investment saved.')
           }}
           fallbackFocusRef={addButtonRef}
         />

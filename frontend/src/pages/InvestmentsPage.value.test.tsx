@@ -231,7 +231,7 @@ describe('saving a new value', () => {
     save(dialog)
 
     const status = await screen.findByText('Value updated.')
-    expect(status).toHaveAttribute('role', 'status')
+    expect(status.parentElement).toHaveAttribute('role', 'status')
     expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
     expect(mutationCalls(fetchMock)).toEqual([
       { method: 'PATCH', path: '/api/investments/7', body: { current_value: '1150' } },
@@ -421,17 +421,6 @@ describe('API errors', () => {
 })
 
 describe('page message', () => {
-  it('opening the dialog clears a previous message', async () => {
-    await renderInvestments([ETF_WORLD])
-    fireEvent.click(screen.getByRole('button', { name: 'Edit ETF World' }))
-    const edit = await screen.findByRole('dialog', { name: 'Edit investment' })
-    save(edit)
-    await screen.findByText('Investment saved.')
-
-    await openValue('ETF World')
-    expect(screen.queryByText('Investment saved.')).not.toBeInTheDocument()
-  })
-
   it('uses only theme colour tokens', async () => {
     await renderInvestments([ETF_WORLD])
     const dialog = await openValue('ETF World')

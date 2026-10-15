@@ -249,7 +249,10 @@ describe('Delete investment', () => {
     const { dialog } = await openDelete('ETF World')
     confirm(dialog)
 
-    expect(await screen.findByText('Investment deleted.')).toHaveAttribute('role', 'status')
+    expect((await screen.findByText('Investment deleted.')).parentElement).toHaveAttribute(
+      'role',
+      'status',
+    )
     expect(screen.queryByRole('alertdialog')).not.toBeInTheDocument()
     expect(rowNames()).toEqual(['Bond'])
     expect(screen.queryByRole('button', { name: 'Delete ETF World' })).not.toBeInTheDocument()
@@ -355,26 +358,7 @@ describe('Delete investment', () => {
 })
 
 describe('page messages', () => {
-  it('clears "Value updated." when the delete dialog opens', async () => {
-    await renderInvestments([BOND, ETF_WORLD])
-    fireEvent.click(screen.getByRole('button', { name: 'Update value of Bond' }))
-    const valueDialog = await screen.findByRole('dialog', { name: 'Update value' })
-    fireEvent.change(within(valueDialog).getByLabelText('New current value'), {
-      target: { value: '600' },
-    })
-    fireEvent.click(within(valueDialog).getByRole('button', { name: 'Save' }))
-    await screen.findByText('Value updated.')
-
-    const { dialog } = await openDelete('ETF World')
-    expect(screen.queryByText('Value updated.')).not.toBeInTheDocument()
-    confirm(dialog)
-
-    await screen.findByText('Investment deleted.')
-    expect(screen.queryByText('Value updated.')).not.toBeInTheDocument()
-    expect(screen.queryByRole('alert')).not.toBeInTheDocument()
-  })
-
-  it('never shows "Investment deleted." together with "Investment not found"', async () => {
+  it('shows an error toast for a 404 and a success toast for the next delete', async () => {
     let missing = true
     const { state } = await renderInvestments([BOND, ETF_WORLD], (id) => {
       if (missing) {
@@ -390,9 +374,7 @@ describe('page messages', () => {
     expect(await screen.findByRole('alert')).toHaveTextContent('Investment not found')
 
     ;({ dialog } = await openDelete('Bond'))
-    expect(screen.queryByText('Investment not found')).not.toBeInTheDocument()
     confirm(dialog)
     await screen.findByText('Investment deleted.')
-    expect(screen.queryByText('Investment not found')).not.toBeInTheDocument()
   })
 })

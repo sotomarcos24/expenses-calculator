@@ -10,6 +10,7 @@ import {
   useDeleteCategory,
   useRenameCategory,
 } from '../hooks/useCategories.ts'
+import { useToast } from '../hooks/useToast.ts'
 import { MD_MEDIA_QUERY, useMediaQuery } from '../hooks/useMediaQuery.ts'
 import { categoryErrorMessage } from '../lib/categoryErrors.ts'
 import type { CategoryEditor } from '../lib/categoryEditor.ts'
@@ -47,6 +48,7 @@ const SECTIONS: {
  * result is applied only if that editor is still the open one.
  */
 function useCategoryEditor() {
+  const toast = useToast()
   const [editor, setEditor] = useState<CategoryEditor | null>(null)
   const create = useCreateCategory()
   const rename = useRenameCategory()
@@ -73,8 +75,10 @@ function useCategoryEditor() {
             ? { name, kind: started.kind }
             : { name, kind: started.kind, parent_id: started.parentId },
         )
+        toast.success(started.parentId === null ? 'Category added.' : 'Subcategory added.')
       } else {
         await rename.mutateAsync({ id: started.id, name })
+        toast.success('Category renamed.')
       }
       settle(started, null)
     } catch (error) {
@@ -89,6 +93,7 @@ function useCategoryEditor() {
     const started = editor
     try {
       await remove.mutateAsync(started.id)
+      toast.success('Category deleted.')
       settle(started, null)
     } catch (error) {
       settle(started, { ...started, type: 'failed', error: categoryErrorMessage(error) })

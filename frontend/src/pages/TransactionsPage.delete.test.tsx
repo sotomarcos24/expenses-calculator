@@ -201,7 +201,10 @@ describe('Delete transaction', () => {
     const { dialog } = await openDelete(GROCERIES_DELETE)
     confirm(dialog)
 
-    expect(await screen.findByText('Transaction deleted.')).toHaveAttribute('role', 'status')
+    expect((await screen.findByText('Transaction deleted.')).parentElement).toHaveAttribute(
+      'role',
+      'status',
+    )
     expect(screen.queryByRole('alertdialog')).not.toBeInTheDocument()
     expect(screen.queryByRole('button', { name: GROCERIES_DELETE })).not.toBeInTheDocument()
     expect(rows()).toHaveLength(1)
@@ -299,27 +302,7 @@ describe('Delete transaction', () => {
 })
 
 describe('page messages', () => {
-  it('replaces "Transaction deleted." when another action starts or a filter changes', async () => {
-    await renderTransactions()
-    let { dialog } = await openDelete(GROCERIES_DELETE)
-    confirm(dialog)
-    await screen.findByText('Transaction deleted.')
-
-    // Opening another action clears it.
-    ;({ dialog } = await openDelete('Delete Salary, Oct 14, 2026, +$2,400.00'))
-    expect(screen.queryByText('Transaction deleted.')).not.toBeInTheDocument()
-    fireEvent.click(within(dialog).getByRole('button', { name: 'Cancel' }))
-
-    ;({ dialog } = await openDelete('Delete Salary, Oct 14, 2026, +$2,400.00'))
-    confirm(dialog)
-    await screen.findByText('Transaction deleted.')
-
-    // A filter change clears it too.
-    fireEvent.change(screen.getByLabelText('Period'), { target: { value: 'all-time' } })
-    expect(screen.queryByText('Transaction deleted.')).not.toBeInTheDocument()
-  })
-
-  it('never shows "Transaction saved." together with a delete message', async () => {
+  it('a 404 delete shows an error toast and no success toast', async () => {
     const { state } = await renderTransactions(undefined, () => {
       state.rows = [SALARY]
       return jsonResponse({ detail: 'Transaction not found' }, 404)
@@ -329,7 +312,6 @@ describe('page messages', () => {
     await screen.findByRole('alert')
 
     fireEvent.click(addButton())
-    expect(screen.queryByRole('alert')).not.toBeInTheDocument()
     const form = await screen.findByRole('dialog', { name: 'Add transaction' })
     await within(form).findByRole('option', { name: 'Food' })
     fireEvent.change(within(form).getByLabelText('Amount'), { target: { value: '5' } })
@@ -337,7 +319,6 @@ describe('page messages', () => {
     fireEvent.click(within(form).getByRole('button', { name: 'Save' }))
 
     await screen.findByText('Transaction saved.')
-    expect(screen.queryByText('Transaction not found')).not.toBeInTheDocument()
     expect(screen.queryByText('Transaction deleted.')).not.toBeInTheDocument()
   })
 })
