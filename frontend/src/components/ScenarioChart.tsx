@@ -27,7 +27,8 @@ type Props = {
 
 /**
  * Three scenario lines over `rows`, coloured with the scenario theme tokens. The SVG is
- * decorative; the legend below names the lines and the cards / tables carry the numbers.
+ * decorative; the legend names the lines (the pessimistic one is dashed, so colour is not the
+ * only cue) and a visually hidden table repeats every plotted value.
  * Chart values are `number`s for drawing only; the displayed numbers come from the API strings.
  */
 export function ScenarioChart({ rows, xLabel, label }: Props) {
@@ -68,6 +69,7 @@ export function ScenarioChart({ rows, xLabel, label }: Props) {
                 type="monotone"
                 stroke={scenario.color}
                 strokeWidth={2}
+                strokeDasharray={scenario.key === 'pessimistic' ? '6 4' : undefined}
                 dot={false}
                 isAnimationActive={false}
               />
@@ -75,6 +77,31 @@ export function ScenarioChart({ rows, xLabel, label }: Props) {
           </LineChart>
         </ResponsiveContainer>
       </div>
+      <table className="sr-only">
+        <caption>Projected values by {xLabel.toLowerCase()}</caption>
+        <thead>
+          <tr>
+            <th scope="col">{xLabel}</th>
+            {SCENARIOS.map((scenario) => (
+              <th key={scenario.key} scope="col">
+                {scenario.label}
+              </th>
+            ))}
+          </tr>
+        </thead>
+        <tbody>
+          {rows.map((row) => (
+            <tr key={row.x}>
+              <th scope="row">{row.x}</th>
+              {SCENARIOS.map((scenario) => (
+                <td key={scenario.key}>
+                  {row[scenario.key] === undefined ? '—' : formatCurrency(row[scenario.key]!)}
+                </td>
+              ))}
+            </tr>
+          ))}
+        </tbody>
+      </table>
       <ul aria-label={label} className="mt-2 flex flex-wrap justify-center gap-x-6 gap-y-1 text-sm">
         {SCENARIOS.map((scenario) => (
           <li key={scenario.key} className="flex items-center gap-2">

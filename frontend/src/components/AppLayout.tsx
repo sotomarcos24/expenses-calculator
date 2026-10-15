@@ -1,3 +1,4 @@
+import type { MouseEvent } from 'react'
 import { NavLink, Outlet } from 'react-router'
 import { useLogout, useMe } from '../hooks/useAuth.ts'
 import { Logo } from './Logo.tsx'
@@ -42,11 +43,31 @@ function UserBox() {
   )
 }
 
+const MAIN_ID = 'main-content'
+
+/** First tab stop: jumps over the navigation to the page content. */
+function SkipLink() {
+  const skip = (event: MouseEvent<HTMLAnchorElement>) => {
+    event.preventDefault()
+    document.getElementById(MAIN_ID)?.focus()
+  }
+  return (
+    <a
+      href={`#${MAIN_ID}`}
+      onClick={skip}
+      className="sr-only rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground focus:not-sr-only focus:fixed focus:top-2 focus:left-2 focus:z-50"
+    >
+      Skip to content
+    </a>
+  )
+}
+
 export function AppLayout() {
   return (
     <ToastProvider>
+      <SkipLink />
       <div className="min-h-dvh md:flex">
-        <aside className="flex flex-col border-b border-border bg-surface md:min-h-dvh md:w-60 md:shrink-0 md:border-r md:border-b-0">
+        <header className="flex flex-col border-b border-border bg-surface md:min-h-dvh md:w-60 md:shrink-0 md:border-r md:border-b-0">
           {/* Mobile: logo and user on one row. Desktop: `contents` lets the user box move to the
             bottom of the sidebar. */}
           <div className="flex items-center justify-between gap-3 px-4 py-4 md:contents">
@@ -65,8 +86,12 @@ export function AppLayout() {
               </NavLink>
             ))}
           </nav>
-        </aside>
-        <main className="mx-auto w-full max-w-6xl min-w-0 flex-1 px-4 py-6 md:px-8 md:py-8">
+        </header>
+        <main
+          id={MAIN_ID}
+          tabIndex={-1}
+          className="mx-auto w-full max-w-6xl min-w-0 flex-1 px-4 py-6 md:px-8 md:py-8"
+        >
           <Outlet />
         </main>
       </div>

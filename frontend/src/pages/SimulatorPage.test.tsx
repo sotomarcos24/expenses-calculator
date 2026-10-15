@@ -214,7 +214,7 @@ describe('SimulatorPage', () => {
         .getAllByRole('listitem')
         .map((item) => item.textContent),
     ).toEqual(['Pessimistic', 'Base', 'Optimistic'])
-    expect(screen.getByRole('table')).toBeInTheDocument()
+    expect(screen.getByRole('table', { name: /Base scenario by year/ })).toBeInTheDocument()
   })
 
   it('toggles nominal / real without a new request', async () => {

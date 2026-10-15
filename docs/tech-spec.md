@@ -363,9 +363,10 @@ Rates must be between −0.5 and 0.5 and horizons between 1 and 60 years. Withdr
 - White and blue palette, defined once as Tailwind / shadcn theme tokens (CSS variables) so no component hard-codes colors:
   - background `#FFFFFF`, surfaces `#F5F8FF`, borders `#DCE5F5`
   - primary blue `#1D4ED8` (buttons, links, active nav), hover `#1E40AF`, light accent `#DBEAFE`
-  - text `#0F172A`, muted text `#64748B`
+  - text `#0F172A`, muted text `#586A82` (was `#64748B`: 4.48:1 on surfaces, below WCAG AA)
+  - input / select borders `#7B8BA5` (>= 3:1), gain green `#15803D` (was `#16A34A`, 3.3:1 on white), loss red `#DC2626`
 - Charts use shades of blue for categories, plus green / red only to mark gains and losses.
-- The three simulator scenarios: pessimistic `#93C5FD`, base `#2563EB`, optimistic `#1E3A8A`.
+- The three simulator scenarios: pessimistic `#3B82F6` (was `#93C5FD`, 1.8:1 on white; drawn dashed), base `#2563EB`, optimistic `#1E3A8A`.
 
 ## 9. Testing strategy
 

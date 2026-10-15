@@ -5,6 +5,8 @@
   --color-background: #ffffff;
   --color-surface: #f5f8ff;
   --color-border: #dce5f5;
+  /* Borders of inputs, selects and textareas: >= 3:1 against white and surface (WCAG 1.4.11). */
+  --color-control-border: #7b8ba5;
 
   --color-primary: #1d4ed8;
   --color-primary-hover: #1e40af;
@@ -12,9 +14,9 @@
   --color-accent: #dbeafe;
 
   --color-foreground: #0f172a;
-  --color-muted: #64748b;
+  --color-muted: #586a82;
 
-  --color-gain: #16a34a;
+  --color-gain: #15803d;
   --color-loss: #dc2626;
 
   /* Chart categories: shades of blue (tech-spec §8.1), darkest first. */
@@ -26,7 +28,7 @@
   --color-chart-6: #93c5fd;
   --color-chart-7: #bfdbfe;
 
-  --color-scenario-pessimistic: #93c5fd;
+  --color-scenario-pessimistic: #3b82f6;
   --color-scenario-base: #2563eb;
   --color-scenario-optimistic: #1e3a8a;
 
@@ -44,4 +46,30 @@ body {
   input:not([type='radio']):not([type='checkbox']) {
     min-height: 2.5rem;
   }
+}
+
+/* Accessibility (M8, #45). These rules are unlayered on purpose: they win over the utility classes
+   (`outline-none`, `border-border`) that individual components still carry. */
+
+/* Visible keyboard focus on every interactive element. */
+:focus-visible {
+  outline: 2px solid var(--color-primary);
+  outline-offset: 2px;
+}
+
+/* Elements focused only from code (dialog panel, main after the skip link) show no ring. */
+[tabindex='-1']:focus-visible {
+  outline: none;
+}
+
+/* Form controls: border with >= 3:1 contrast (invalid ones keep their red border). */
+input:not([type='radio']):not([type='checkbox']):not([aria-invalid='true']),
+select:not([aria-invalid='true']),
+textarea:not([aria-invalid='true']) {
+  border-color: var(--color-control-border);
+}
+
+::placeholder {
+  color: var(--color-muted);
+  opacity: 1;
 }
