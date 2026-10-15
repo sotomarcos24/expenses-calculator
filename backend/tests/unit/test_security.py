@@ -9,6 +9,7 @@ from jwt.warnings import InsecureKeyLengthWarning
 
 from app.config import get_settings
 from app.security import (
+    JWT_LEEWAY,
     create_access_token,
     decode_access_token,
     hash_password,
@@ -79,6 +80,35 @@ def test_token_round_trip_and_expiry_window() -> None:
 def test_expired_token_is_rejected() -> None:
     now = datetime.now(UTC)
     token = _encode({"sub": "42", "iat": now - timedelta(days=2), "exp": now - timedelta(days=1)})
+
+    assert decode_access_token(token) is None
+
+
+def test_leeway_is_positive_and_at_most_five_seconds() -> None:
+    assert timedelta(0) < JWT_LEEWAY <= timedelta(seconds=5)
+
+
+@pytest.mark.parametrize("skew_seconds", [1, 2])
+def test_token_issued_slightly_in_the_future_is_accepted(skew_seconds: int) -> None:
+    # Small clock skew between issuing and decoding must not invalidate a fresh token.
+    now = datetime.now(UTC)
+    iat = now + timedelta(seconds=skew_seconds)
+    token = _encode({"sub": "42", "iat": iat, "exp": now + timedelta(days=1)})
+
+    assert decode_access_token(token) == 42
+
+
+def test_token_issued_far_in_the_future_is_rejected() -> None:
+    now = datetime.now(UTC)
+    token = _encode({"sub": "42", "iat": now + timedelta(hours=1), "exp": now + timedelta(days=1)})
+
+    assert decode_access_token(token) is None
+
+
+def test_token_expired_beyond_the_leeway_is_rejected() -> None:
+    now = datetime.now(UTC)
+    exp = now - JWT_LEEWAY - timedelta(seconds=60)
+    token = _encode({"sub": "42", "iat": now - timedelta(days=1), "exp": exp})
 
     assert decode_access_token(token) is None
 

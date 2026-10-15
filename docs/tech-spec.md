@@ -141,7 +141,7 @@ Gain/loss (`current_value − amount_invested`) and gain % (`gain / amount_inves
 ## 5. Authentication and authorization
 
 - **Register:** `POST /api/auth/register` validates the email (stored lowercase, so `A@B.com` = `a@b.com`) and a password of 8 to 128 characters (422 outside that range; the upper bound protects Argon2), hashes it with Argon2, creates the user, seeds the default categories (plan.md §4.2) in the same DB transaction, and logs the user in. If seeding fails, nothing is committed.
-- **Login:** verifies the hash and issues a JWT (`sub` = user id, `exp` = `ACCESS_TOKEN_DAYS`, default 7 days) signed with HS256 using `JWT_SECRET`.
+- **Login:** verifies the hash and issues a JWT (`sub` = user id, `exp` = `ACCESS_TOKEN_DAYS`, default 7 days) signed with HS256 using `JWT_SECRET`. Tokens are decoded with a 5-second leeway for clock skew (applies to both `iat` and `exp`).
 - **Cookie:** `access_token`, `HttpOnly`, `SameSite=Lax`, `Secure` in production (`COOKIE_SECURE`), `Path=/api`, `Max-Age` = `ACCESS_TOKEN_DAYS`. The token is never readable from JavaScript, so it is not exposed to XSS.
 - **Logout:** clears the cookie.
 - **Same origin:** in development Vite proxies `/api` to FastAPI. In production the backend serves the built frontend, or both sit behind the same domain. This avoids CORS and third-party cookie issues.

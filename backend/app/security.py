@@ -15,6 +15,8 @@ from app.db import DbSession
 from app.models import User
 
 JWT_ALGORITHM = "HS256"
+# Tolerance for small clock skew when decoding (PyJWT applies it to both ``iat`` and ``exp``).
+JWT_LEEWAY = timedelta(seconds=5)
 ACCESS_TOKEN_COOKIE = "access_token"
 COOKIE_PATH = "/api"
 
@@ -61,6 +63,9 @@ def decode_access_token(token: str) -> int | None:
     and has a ``sub`` claim that is an integer string. Any other token (other algorithm,
     ``alg: none``, bad signature, expired, missing/non-integer ``sub``, not a JWT) yields
     ``None``; this function never raises.
+
+    Decoding uses a ``JWT_LEEWAY`` (5 s) tolerance for clock skew, so a freshly issued token
+    whose ``iat`` is slightly in the future is accepted; the same tolerance applies to ``exp``.
     """
     try:
         payload = jwt.decode(
@@ -68,6 +73,7 @@ def decode_access_token(token: str) -> int | None:
             get_settings().jwt_secret,
             algorithms=[JWT_ALGORITHM],
             options={"require": ["sub", "exp", "iat"]},
+            leeway=JWT_LEEWAY,
         )
     except jwt.InvalidTokenError:
         return None
