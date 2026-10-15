@@ -152,6 +152,6 @@ The MVP is built in milestones, each with its own acceptance criteria — see [`
 | 4 | Transactions | ✅ Done |
 | 5 | Investments | ✅ Done |
 | 6 | Dashboard | ✅ Done |
-| 7 | Simulator | ⬜ Pending |
+| 7 | Simulator | ✅ Done |
 | 8 | Polish and deployment | ⬜ Pending |
 | 9 | Nice-to-haves (§5) | ⬜ Optional |
