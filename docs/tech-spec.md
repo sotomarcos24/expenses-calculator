@@ -388,14 +388,14 @@ Rates must be between −0.5 and 0.5 and horizons between 1 and 60 years. Withdr
 | --- | --- | --- |
 | Simulator | pytest | known values calculated by hand / in a spreadsheet: zero rate, zero contribution, a goal already reached, depletion at an exact age, weekly vs monthly vs yearly frequency |
 | Services | pytest | dashboard aggregations, salary deduction rate, average expenses, default category seeding |
-| API | pytest + httpx `TestClient`, temporary SQLite | happy paths, 422 validation, 401 without a cookie, **404 when accessing another user's data**, 409 when deleting a category in use |
+| API | pytest + httpx `TestClient`, in-memory SQLite (and Postgres in the `backend-postgres` CI job when `DATABASE_URL` points at it) | happy paths, 422 validation, 401 without a cookie, **404 when accessing another user's data**, 409 when deleting a category in use |
 | Frontend | Vitest + RTL | formatting helpers, form validation, drill-down component |
 
 Target: 100% coverage of `simulator/` and ≥ 80% of the backend. CI (GitHub Actions, `.github/workflows/ci.yml`) runs `ruff`, `mypy`, `pytest`, `oxlint`, `prettier`, `tsc`, `vitest` and the production build on every push and PR. From milestone 2 it also fails if the committed `openapi.json` or the generated frontend API types differ from what the current backend produces.
 
 ## 10. Configuration and local development
 
-Backend environment variables: `DATABASE_URL` (default `sqlite:///./dev.db`), `JWT_SECRET` (the development default is at least 32 bytes, as PyJWT recommends for HS256; rejecting the default in production is part of milestone 8), `COOKIE_SECURE` (default `false` locally), `ACCESS_TOKEN_DAYS` (default 7), `RATE_LIMIT_LOGIN_ATTEMPTS` (10), `RATE_LIMIT_REGISTER_ATTEMPTS` (5), `RATE_LIMIT_WINDOW_SECONDS` (60), `TRUSTED_PROXY_COUNT` (0; set to the number of reverse proxies in production, see §5).
+Backend environment variables: `DATABASE_URL` (default `sqlite:///./dev.db`), `ENVIRONMENT` (`development` default, or `production`: startup fails with a clear error if `JWT_SECRET` is the development default or shorter than 32 characters, or if `COOKIE_SECURE` is false), `FRONTEND_DIST_DIR` (default `../frontend/dist`, `/app/frontend/dist` in the Docker image; when the directory contains `index.html` the API serves it, otherwise nothing is mounted), `JWT_SECRET` (the development default is at least 32 bytes, as PyJWT recommends for HS256), `COOKIE_SECURE` (default `false` locally, must be `true` in production), `PORT` (read only by the Docker entrypoint, default 8000),  `ACCESS_TOKEN_DAYS` (default 7), `RATE_LIMIT_LOGIN_ATTEMPTS` (10), `RATE_LIMIT_REGISTER_ATTEMPTS` (5), `RATE_LIMIT_WINDOW_SECONDS` (60), `TRUSTED_PROXY_COUNT` (0; set to the number of reverse proxies in production, see §5).
 
 ```text
 backend:   uv sync && uv run alembic upgrade head && uv run fastapi dev app/main.py   # :8000
@@ -407,6 +407,8 @@ types:     npm run gen:api   # from frontend/: openapi-typescript (pinned, via n
 ## 11. Deployment (after the MVP works locally)
 
 A single service: a multi-stage Dockerfile builds the frontend, and FastAPI serves `frontend/dist` as static files plus `/api`. Managed Postgres. Candidates on free tiers: Render or Fly.io (Postgres from Neon or the provider itself). Migrations run on deploy (`alembic upgrade head`).
+
+Implemented in milestone 8 (issue #46): `Dockerfile` at the repo root (stage 1 Node 24 builds `frontend/dist`; stage 2 Python 3.12 slim installs the backend with `uv sync --locked --no-dev`, copies the built frontend to `/app/frontend/dist`, runs as a non-root user, has a `HEALTHCHECK` on `/api/health`). `backend/docker-entrypoint.sh` runs `alembic upgrade head` and then `uvicorn` on `$PORT`. `app/frontend.py` serves the built files with an `index.html` fallback for non-`/api` paths (`/assets/*` with a one-year immutable `Cache-Control`, everything else `no-cache`); unknown `/api/*` paths keep the JSON 404. The Postgres driver is `psycopg[binary]` (`DATABASE_URL=postgresql+psycopg://...`). CI adds a `backend-postgres` job (`postgres:17` service, `alembic upgrade head`, `alembic check`, the whole pytest suite) and a `docker` job (builds the image and smoke-tests `/api/health`, `/` and `/investments` against a throwaway Postgres container).
 
 ## 12. Implementation milestones
 

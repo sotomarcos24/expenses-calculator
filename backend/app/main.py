@@ -1,6 +1,9 @@
+from pathlib import Path
+
 from fastapi import FastAPI
 
 from app.config import get_settings
+from app.frontend import mount_frontend
 from app.middleware import RequireJsonContentTypeMiddleware
 from app.ratelimit import RateLimiter
 from app.routers import (
@@ -31,6 +34,7 @@ def create_app() -> FastAPI:
     app.include_router(investments.router, prefix="/api")
     app.include_router(dashboard.router, prefix="/api")
     app.include_router(simulator.router, prefix="/api")
+    mount_frontend(app, Path(get_settings().frontend_dist_dir))
     return app
 
 

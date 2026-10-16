@@ -1,9 +1,11 @@
+import os
 from collections.abc import Callable, Iterator
 from dataclasses import dataclass
 
 import pytest
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
+from sqlalchemy import Engine
 from sqlalchemy.orm import Session, sessionmaker
 from sqlalchemy.pool import StaticPool
 
@@ -37,9 +39,42 @@ def _rate_limits_off(monkeypatch: pytest.MonkeyPatch) -> Iterator[None]:
     get_settings.cache_clear()
 
 
+def _postgres_url() -> str | None:
+    """`DATABASE_URL` from the process environment when it points at Postgres (CI job)."""
+    url = os.environ.get("DATABASE_URL", "")
+    return url if url.startswith("postgresql") else None
+
+
+@pytest.fixture(scope="session")
+def postgres_engine() -> Iterator[Engine | None]:
+    url = _postgres_url()
+    if url is None:
+        yield None
+        return
+    engine = make_engine(url)
+    # No-op when `alembic upgrade head` already created the schema (as in CI).
+    Base.metadata.create_all(engine)
+    yield engine
+    engine.dispose()
+
+
 @pytest.fixture
-def db_session() -> Iterator[Session]:
-    # Fresh in-memory database per test; StaticPool keeps a single shared connection.
+def db_session(postgres_engine: Engine | None) -> Iterator[Session]:
+    if postgres_engine is not None:
+        # Postgres: everything runs in one outer transaction that is rolled back after the
+        # test; session commits/rollbacks only release savepoints, so tests stay isolated.
+        with postgres_engine.connect() as connection:
+            transaction = connection.begin()
+            with Session(
+                bind=connection,
+                autoflush=False,
+                expire_on_commit=False,
+                join_transaction_mode="create_savepoint",
+            ) as session:
+                yield session
+            transaction.rollback()
+        return
+    # SQLite: fresh in-memory database per test; StaticPool keeps a single shared connection.
     engine = make_engine("sqlite://", poolclass=StaticPool)
     Base.metadata.create_all(engine)
     session_factory = sessionmaker(bind=engine, autoflush=False, expire_on_commit=False)
