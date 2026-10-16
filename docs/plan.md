@@ -43,13 +43,14 @@ Acceptance criteria:
   - **Income:** Salary, Rental income, Dividends, Other income.
 - A user can add, rename and delete their own categories and subcategories.
 - A category that has transactions cannot be deleted without reassigning or deleting them first.
-- From the Categories page the user can record an expense or income directly on a subcategory (or on a category that has no subcategories); the transaction dialog opens with type, category and subcategory preset and locked. Every category and subcategory row shows its total for a selectable period (default: current month), and a category's total is the sum of its subcategories plus its own direct transactions. Real transactions only, no budgets.
+- From the Categories page the user sets a **fixed monthly amount** (net, with an optional note) on a subcategory, or on a category that has no subcategories (e.g. Rent, Salary). It models a typical month, has no date and applies to every month; setting it again edits it. The dialog asks only for amount and note. Every row shows its monthly amount, and a category's amount is the sum of its subcategories plus its own. These amounts are not transactions and never appear in the Transactions list. *(Planned in M9; today the page records dated transactions.)*
 
 ### 4.3 Transactions (income and expenses)
 
 **User story:** As a user, I want to record income and expenses manually so that I have a complete picture of my cash flow.
 
 Acceptance criteria:
+- Transactions are for **unplanned, one-off** income and expenses (e.g. a medical bill); recurring monthly figures such as rent or salary are the fixed monthly amounts of §4.2. Dashboard and simulator add both.
 - A transaction has: type (income/expense), date, amount ($), category, subcategory, optional note.
 - A user can create, edit, delete and list transactions, filtered by period and category.
 - Amounts must be positive; the type determines the sign.
@@ -155,4 +156,5 @@ The MVP is built in milestones, each with its own acceptance criteria — see [`
 | 6 | Dashboard | ✅ Done |
 | 7 | Simulator | ✅ Done |
 | 8 | Polish and deployment | 🟡 Polish done; deployment pending (#46, #47) |
-| 9 | Nice-to-haves (§5) | ⬜ Optional |
+| 9 | Refinement | ⬜ Planned |
+| 10 | Nice-to-haves (§5) | ⬜ Optional |

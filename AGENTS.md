@@ -83,7 +83,7 @@ docs/       specs, milestones, process, team roles
 ## Current state
 
 - Milestones 1 (scaffolding), 2 (authentication), 3 (categories), 4 (transactions), 5 (investments), 6 (dashboard) and 7 (simulator) are done. **M8 — Polish and deployment** is partially done: the polish part (#44 UX, #45 accessibility, #10 rate limiting, #9 post-login redirect, #48/#49 category totals, #33 dialog focus) is merged into `main`; the deployment part is **pending** and its acceptance criteria stay unticked in `docs/milestones.md` (see its *Progress notes*).
-- Open issues: #46 (production serving, Dockerfile, Postgres + Docker CI jobs; needs the user to approve the `psycopg[binary]` dependency) and #47 (deploy to a free tier, README production steps, no-secrets check; needs the user to create the provider account and paste secrets; depends on #46). Both are labelled `m8` and `groomed`. Work them from a new branch off `main` (e.g. `m8-deploy`) with `/next-issue`; when both pass QA, run `/close-milestone` to mark M8 ✅. M9 (nice-to-haves) is optional and follows.
+- Open issues: #46 (production serving, Dockerfile, Postgres + Docker CI jobs; needs the user to approve the `psycopg[binary]` dependency) and #47 (deploy to a free tier, README production steps, no-secrets check; needs the user to create the provider account and paste secrets; depends on #46). Both are labelled `m8` and `groomed`. Work them from a new branch off `main` (e.g. `m8-deploy`) with `/next-issue`; when both pass QA, run `/close-milestone` to mark M8 ✅. M9 (refinement: pie colours, fixed monthly category amounts apart from transactions; planned, starts after the deployment) and M10 (nice-to-haves, optional) follow.
 - The API contract is the committed `openapi.json` at the repo root; after any backend route or schema change, re-export it and regenerate the frontend types (see `docs/backend.md` → *Commands*). CI fails if either is stale.
 - Git: `main` tracks `origin` (`github.com/sotomarcos24/expenses-calculator`).
 
@@ -98,7 +98,7 @@ docs/       specs, milestones, process, team roles
 
 ## Environment
 
-- Development happens on Linux (WSL2). Docker is **not** installed locally; the Dockerfile planned for milestone 8 can only be verified in CI or on the hosting provider.
+- Development happens on Linux (WSL2). Docker is available in WSL (Docker Desktop with WSL integration; check with `docker --version`), so the Dockerfile planned for milestone 8 can be built and run locally as well as in CI.
 - To check the app end to end, start the backend and the frontend dev servers and use `http://localhost:5173`; `/api/health` must answer through the proxy. Use a throwaway SQLite DB and register a **new** user (see `docs/backend.md` → *Known caveats*).
 - There is no browser in WSL. For scripted browser checks QA installs Playwright + headless Chromium in the session scratchpad (Chromium is cached in `~/.cache/ms-playwright`); it is **not** a project dependency, never add it to `package.json` without asking. Stop any servers you start.
 - QA never uses a dev server it did not start (port 8000 belongs to the user). It starts its own backend and frontend on free ports and stops them when done, pointing the Vite proxy at its backend with `API_PROXY_TARGET` (default `http://localhost:8000`, see `docs/frontend.md` → *Environment*):

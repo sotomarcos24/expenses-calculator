@@ -10,7 +10,7 @@ You are the orchestrator: you do not write issues yourself — the `project-mana
 ## 1. Pick the milestone
 
 - If an argument was given (`$ARGUMENTS`), use milestone `M$ARGUMENTS`.
-- Otherwise read the status table in `docs/milestones.md` and take the **first milestone that is not ✅ Done** (skip `M9` unless the user asked for it; it is optional).
+- Otherwise read the status table in `docs/milestones.md` and take the **first milestone that is not ✅ Done** (skip `M10` unless the user asked for it; it is optional).
 - Check that every milestone it *depends on* (column "Depends on") is ✅ Done. If not, stop and tell the user.
 
 ## 2. Check it has not been planned already

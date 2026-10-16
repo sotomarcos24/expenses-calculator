@@ -119,6 +119,19 @@ All tables have `id` (integer PK), `created_at` and `updated_at`. Every user-own
 - The `category_id` / `subcategory_id` FKs are `NO ACTION` (no `ON DELETE`), not `RESTRICT` and not `CASCADE`. A category (or subcategory) used by a transaction cannot be deleted: the service answers **409** first (`category_ids_in_use()`), and the FK is the safety net. Deleting a user cascades to both `categories` and `transactions` in one statement; with `NO ACTION` the FK check runs at the end of the statement, after both cascades, so it succeeds on SQLite and Postgres (with `RESTRICT`, Postgres checks immediately and the result could depend on cascade order). There is no ORM back-reference from `Category` to its transactions, so the ORM never nulls `category_id` on delete.
 - **Salary (§4.4):** a salary is an income transaction with `gross_amount` set. Effective deduction rate = `(gross − net) / gross`, computed and returned by the API (not stored). Totals and simulations always use `amount` (net).
 
+### `category_amounts` (planned, M9)
+
+| Column | Type | Notes |
+| --- | --- | --- |
+| user_id | FK | |
+| category_id | FK → categories | top-level; its `kind` gives income or expense |
+| subcategory_id | FK → categories, nullable | child of `category_id` |
+| amount | numeric(12,2) | `> 0`, net, valid for every month |
+| note | varchar(500), nullable | |
+
+- One row per (`user_id`, `category_id`, `subcategory_id`): unique, with a partial unique index for the NULL subcategory case (as `categories` does). A second create for the same row updates it.
+- Dashboard, `/categories/totals`, the delete guard and `avg_monthly_expenses` add these amounts to the transactions; the exact months-in-period rule and the endpoints are specified by the M9 issues and written here when implemented.
+
 ### `investments`
 
 | Column | Type | Notes |
@@ -407,7 +420,8 @@ Detailed scope, acceptance criteria and status of each milestone: [`milestones.m
 6. **Dashboard:** aggregations endpoint + charts.
 7. **Simulator:** pure module + tests first, then endpoints, then UI.
 8. **Polish and deployment.**
-9. Nice-to-haves from plan.md §5, in order.
+9. **Refinement:** pie colours; `category_amounts` (fixed monthly amounts) and its integration in dashboard, category totals and simulator; Categories UI.
+10. Nice-to-haves from plan.md §5, in order.
 
 ## 13. Open points
 

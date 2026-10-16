@@ -31,7 +31,8 @@
 | 6 | Dashboard | Period summary and charts | 4, 5 | ✅ Done |
 | 7 | Simulator | Modes A/B/C with three scenarios | 4, 5 | ✅ Done |
 | 8 | Polish and deployment | Production-ready MVP online | 1–7 | 🟡 Polish done; deployment pending (#46, #47) |
-| 9 | Nice-to-haves | Recurring transactions, CSV export, i18n | 8 | ⬜ Optional |
+| 9 | Refinement | Pie colours, fixed monthly category amounts apart from transactions | 8 | ⬜ Planned (starts after the deployment) |
+| 10 | Nice-to-haves | Recurring transactions, CSV export, i18n | 9 | ⬜ Optional |
 
 ---
 
@@ -263,13 +264,43 @@
 #### Progress notes
 
 - **Done (polish, merged to `main`):** UX pass (#44), accessibility pass (#45), login rate limiting (#10), return to the requested page after login (#9), `GET /categories/totals` (#48), add-transaction and period totals on `/categories` (#49), and the shared `Dialog` focus fix (#33, no milestone).
-- **Pending (deployment, deliberately left open):** #46 (FastAPI serves `frontend/dist`, `ENVIRONMENT=production` settings guard, multi-stage Dockerfile, `backend-postgres` and `docker` CI jobs, needs the `psycopg[binary]` driver approved by the user) and #47 (Render/Fly.io deploy config, README "Production" section, no-secrets check, production smoke test; needs the user to create the provider account and paste secrets). #47 depends on #46.
+- **Pending (deployment, deliberately left open):** #46 (FastAPI serves `frontend/dist`, `ENVIRONMENT=production` settings guard, multi-stage Dockerfile, `backend-postgres` and `docker` CI jobs, `psycopg[binary]` driver approved by the user) and #47 (Render/Fly.io deploy config, README "Production" section, no-secrets check, production smoke test; needs the user to create the provider account and paste secrets). #47 depends on #46.
 - **Next:** do #46, then #47 with `/next-issue` on a new branch from `main`. Milestone is complete (✅) only when all four acceptance criteria above are ticked; then remove these notes.
-- Docker is not installed locally, so the Dockerfile is verifiable only in CI.
+- Docker is available locally (Docker Desktop with WSL integration), so the Dockerfile can be built and smoke-tested locally as well as in CI.
+- **Decisions (user):** `psycopg[binary]` is approved as the Postgres driver; the provider for #47 is Render (Neon as fallback if the free Postgres expiry is a problem).
 
 ---
 
-## M9 — Nice-to-haves (optional, in this order, §5)
+
+## M9 — Refinement
+
+**Goal:** fix the problems found while using the app: the pies render black, and category amounts are recorded as dated transactions when they should be a fixed monthly figure kept apart from one-off transactions (plan §4.2, §4.3).
+
+> Order of work: pie colours (independent), then the backend for monthly amounts, then the Categories UI.
+
+#### Scope
+
+- **Pie colours (frontend):** the `--color-chart-1..7` tokens are declared in a Tailwind 4 `@theme` block and are not emitted in the built CSS because only JS references them, so `fill="var(--color-chart-N)"` resolves to nothing and slices are black. Make the tokens always available. The same component draws the investments-by-type pie.
+- **Monthly amounts (backend):** new `category_amounts` table: one fixed amount (net, `> 0`) plus optional note per category or subcategory of the current user, valid for every month and with no date (adding again for the same row edits it). CRUD endpoints with ownership checks (another user's data is a 404). They count in the dashboard totals and pie (amount × months in the period, rule defined in tech-spec), in `/categories/totals`, in the category delete guard (409) and in the simulator's average monthly expenses. They never appear in `/transactions`.
+- **Categories UI (frontend):** the add action on a category row opens a dialog with **Amount and Note only** (type and category come from the row). Rows show the monthly amount, with edit and delete; the period selector and the per-period transaction totals (#48/#49) leave this page. The Transactions page is unchanged and is for unplanned one-off income and expenses.
+- No data migration: transactions already recorded stay as transactions. Default categories need no change (they are seeded at registration).
+
+#### Acceptance criteria
+
+- [ ] Every pie slice (dashboard expenses, investments by type) has a distinct colour and the legend swatches match, in the built app and in the dev server.
+- [ ] A user can create, edit and delete one monthly amount per category or subcategory; a second create on the same row updates it.
+- [ ] Amounts are `Decimal`/decimal strings and must be positive; a category or subcategory of another user is a 404 and every new endpoint has an isolation test.
+- [ ] The dashboard income, expense, savings and pie include the monthly amounts × months in the period plus the transactions of the period; known-value tests cover month, year and custom periods.
+- [ ] `/simulator/defaults` average monthly expenses include the monthly expense amounts.
+- [ ] A category with monthly amounts cannot be deleted without removing them (409).
+- [ ] The Categories dialog asks only Amount and Note, and monthly amounts never show up on the Transactions page.
+- [ ] `openapi.json` and the frontend types are regenerated; specs (plan §4.2/§4.3, tech-spec data model, API, dashboard, simulator) are updated.
+
+**Tests:** service tests with fixtures for the months-in-period rule; API tests for CRUD, validation and isolation; dashboard and simulator totals with known values; component tests for the dialog and the Categories rows; a pie test checking the slices get distinct fills.
+
+---
+
+## M10 — Nice-to-haves (optional, in this order, §5)
 
 1. **Recurring transactions:** template with frequency and start/end dates; generated entries appear automatically (idempotent generation when the user opens the app or on a schedule).
 2. **CSV export:** download transactions for the selected filters.
