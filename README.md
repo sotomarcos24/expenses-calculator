@@ -46,6 +46,19 @@ cd frontend && npm run lint && npm run format:check && npm run typecheck && npm 
 (cd frontend && npm run gen:api)
 ```
 
+### Run with Docker Compose (local)
+
+`docker-compose.yml` runs the production-like image (root `Dockerfile`) with Postgres 17, for local use only:
+
+```bash
+docker compose up --build        # then open http://localhost:8000
+APP_PORT=8010 docker compose up --build   # use another host port (http://localhost:8010)
+docker compose down              # stop, keep the data (named volume pgdata)
+docker compose down -v           # stop and delete the DB volume (full reset)
+```
+
+The app waits for the `db` healthcheck, then the entrypoint applies migrations. The DB port is not published. Compose serves plain `http://localhost`, so it sets `ENVIRONMENT=development` and `COOKIE_SECURE=false`: with `ENVIRONMENT=production` the app refuses to start without `COOKIE_SECURE=true` and a strong `JWT_SECRET`, and a `Secure` cookie would not be accepted over http, so login would not work. The credentials and the `dev-only` `JWT_SECRET` in the file are throwaway examples for local use only; this file is not the production deployment (see Production below).
+
 ## Production
 
 The app ships as one Docker image (root `Dockerfile`): FastAPI serves `/api` and the built frontend from the same origin, and the entrypoint runs `alembic upgrade head` before starting `uvicorn`, so migrations run on every deploy. The chosen host is [Render](https://render.com) (free web service + free Postgres), described by the `render.yaml` Blueprint. Public URL: _to be recorded here after the first deploy_.
