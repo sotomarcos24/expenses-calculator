@@ -133,11 +133,9 @@ def test_each_type_round_trips_as_lowercase_value(
     investment = add_investment(db_session, user, type=type_)
 
     loaded = reload(db_session, investment)
-    stored = (
-        db_session.connection()
-        .exec_driver_sql("SELECT type FROM investments WHERE id = ?", (investment.id,))
-        .scalar_one()
-    )
+    stored = db_session.execute(
+        text("SELECT type FROM investments WHERE id = :id"), {"id": investment.id}
+    ).scalar_one()
 
     assert loaded.type is type_
     assert stored == type_.value

@@ -27,6 +27,13 @@ jobs:
             exit 1
           fi
 
+  no-secrets:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Check tracked files for secrets
+        run: python3 backend/scripts/check_no_secrets.py
+
   frontend:
     runs-on: ubuntu-latest
     defaults:
@@ -52,3 +59,65 @@ jobs:
             echo "::error file=frontend/src/api/schema.d.ts::src/api/schema.d.ts is out of date with openapi.json. Run 'npm run gen:api' in frontend/ and commit the result."
             exit 1
           fi
+
+  backend-postgres:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: backend
+    services:
+      postgres:
+        image: postgres:17
+        env:
+          # Throwaway database of this job only; not a secret.
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: personaldolar
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+    env:
+      DATABASE_URL: postgresql+psycopg://postgres:postgres@localhost:5432/personaldolar
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v6
+      - run: uv sync --locked
+      - run: uv run alembic upgrade head
+      - run: uv run alembic check
+      - run: uv run pytest
+
+  docker:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - run: docker build -t personaldolar:ci .
+      - name: Smoke test the image against Postgres
+        run: |
+          docker network create ci-net
+          # Throwaway database of this job only; not a secret.
+          docker run -d --name ci-db --network ci-net \
+            -e POSTGRES_PASSWORD=postgres -e POSTGRES_DB=personaldolar postgres:17
+          for _ in $(seq 1 30); do
+            docker exec ci-db pg_isready -U postgres && break
+            sleep 2
+          done
+          docker run -d --name ci-app --network ci-net -p 8000:8000 \
+            -e ENVIRONMENT=production -e COOKIE_SECURE=true \
+            -e JWT_SECRET=ci-only-throwaway-secret-0123456789abcdef \
+            -e DATABASE_URL=postgresql+psycopg://postgres:postgres@ci-db:5432/personaldolar \
+            personaldolar:ci
+          for _ in $(seq 1 30); do
+            curl -fsS http://localhost:8000/api/health && break
+            sleep 2
+          done
+          curl -fsS http://localhost:8000/api/health | grep '"status":"ok"'
+          curl -fsS http://localhost:8000/ | grep -i '<!doctype html>'
+          curl -fsS http://localhost:8000/investments | grep -i '<!doctype html>'
+          test "$(curl -s -o /dev/null -w '%{http_code}' http://localhost:8000/api/does-not-exist)" = 404
+      - name: Container logs
+        if: always()
+        run: docker logs ci-app || true

@@ -119,6 +119,19 @@ All tables have `id` (integer PK), `created_at` and `updated_at`. Every user-own
 - The `category_id` / `subcategory_id` FKs are `NO ACTION` (no `ON DELETE`), not `RESTRICT` and not `CASCADE`. A category (or subcategory) used by a transaction cannot be deleted: the service answers **409** first (`category_ids_in_use()`), and the FK is the safety net. Deleting a user cascades to both `categories` and `transactions` in one statement; with `NO ACTION` the FK check runs at the end of the statement, after both cascades, so it succeeds on SQLite and Postgres (with `RESTRICT`, Postgres checks immediately and the result could depend on cascade order). There is no ORM back-reference from `Category` to its transactions, so the ORM never nulls `category_id` on delete.
 - **Salary (§4.4):** a salary is an income transaction with `gross_amount` set. Effective deduction rate = `(gross − net) / gross`, computed and returned by the API (not stored). Totals and simulations always use `amount` (net).
 
+### `category_amounts` (planned, M9)
+
+| Column | Type | Notes |
+| --- | --- | --- |
+| user_id | FK | |
+| category_id | FK → categories | top-level; its `kind` gives income or expense |
+| subcategory_id | FK → categories, nullable | child of `category_id` |
+| amount | numeric(12,2) | `> 0`, net, valid for every month |
+| note | varchar(500), nullable | |
+
+- One row per (`user_id`, `category_id`, `subcategory_id`): unique, with a partial unique index for the NULL subcategory case (as `categories` does). A second create for the same row updates it.
+- Dashboard, `/categories/totals`, the delete guard and `avg_monthly_expenses` add these amounts to the transactions; the exact months-in-period rule and the endpoints are specified by the M9 issues and written here when implemented.
+
 ### `investments`
 
 | Column | Type | Notes |
@@ -375,14 +388,14 @@ Rates must be between −0.5 and 0.5 and horizons between 1 and 60 years. Withdr
 | --- | --- | --- |
 | Simulator | pytest | known values calculated by hand / in a spreadsheet: zero rate, zero contribution, a goal already reached, depletion at an exact age, weekly vs monthly vs yearly frequency |
 | Services | pytest | dashboard aggregations, salary deduction rate, average expenses, default category seeding |
-| API | pytest + httpx `TestClient`, temporary SQLite | happy paths, 422 validation, 401 without a cookie, **404 when accessing another user's data**, 409 when deleting a category in use |
+| API | pytest + httpx `TestClient`, in-memory SQLite (and Postgres in the `backend-postgres` CI job when `DATABASE_URL` points at it) | happy paths, 422 validation, 401 without a cookie, **404 when accessing another user's data**, 409 when deleting a category in use |
 | Frontend | Vitest + RTL | formatting helpers, form validation, drill-down component |
 
 Target: 100% coverage of `simulator/` and ≥ 80% of the backend. CI (GitHub Actions, `.github/workflows/ci.yml`) runs `ruff`, `mypy`, `pytest`, `oxlint`, `prettier`, `tsc`, `vitest` and the production build on every push and PR. From milestone 2 it also fails if the committed `openapi.json` or the generated frontend API types differ from what the current backend produces.
 
 ## 10. Configuration and local development
 
-Backend environment variables: `DATABASE_URL` (default `sqlite:///./dev.db`), `JWT_SECRET` (the development default is at least 32 bytes, as PyJWT recommends for HS256; rejecting the default in production is part of milestone 8), `COOKIE_SECURE` (default `false` locally), `ACCESS_TOKEN_DAYS` (default 7), `RATE_LIMIT_LOGIN_ATTEMPTS` (10), `RATE_LIMIT_REGISTER_ATTEMPTS` (5), `RATE_LIMIT_WINDOW_SECONDS` (60), `TRUSTED_PROXY_COUNT` (0; set to the number of reverse proxies in production, see §5).
+Backend environment variables: `DATABASE_URL` (default `sqlite:///./dev.db`), `ENVIRONMENT` (`development` default, or `production`: startup fails with a clear error if `JWT_SECRET` is the development default or shorter than 32 characters, or if `COOKIE_SECURE` is false), `FRONTEND_DIST_DIR` (default `../frontend/dist`, `/app/frontend/dist` in the Docker image; when the directory contains `index.html` the API serves it, otherwise nothing is mounted), `JWT_SECRET` (the development default is at least 32 bytes, as PyJWT recommends for HS256), `COOKIE_SECURE` (default `false` locally, must be `true` in production), `PORT` (read only by the Docker entrypoint, default 8000),  `ACCESS_TOKEN_DAYS` (default 7), `RATE_LIMIT_LOGIN_ATTEMPTS` (10), `RATE_LIMIT_REGISTER_ATTEMPTS` (5), `RATE_LIMIT_WINDOW_SECONDS` (60), `TRUSTED_PROXY_COUNT` (0; set to the number of reverse proxies in production, see §5).
 
 ```text
 backend:   uv sync && uv run alembic upgrade head && uv run fastapi dev app/main.py   # :8000
@@ -393,7 +406,11 @@ types:     npm run gen:api   # from frontend/: openapi-typescript (pinned, via n
 
 ## 11. Deployment (after the MVP works locally)
 
-A single service: a multi-stage Dockerfile builds the frontend, and FastAPI serves `frontend/dist` as static files plus `/api`. Managed Postgres. Candidates on free tiers: Render or Fly.io (Postgres from Neon or the provider itself). Migrations run on deploy (`alembic upgrade head`).
+A single service: a multi-stage Dockerfile builds the frontend, and FastAPI serves `frontend/dist` as static files plus `/api`. Managed Postgres. Provider chosen: **Render** (free Docker web service + free Postgres, `render.yaml` Blueprint at the repo root); Neon is the fallback Postgres if Render's free database expiry is a problem; Fly.io was not chosen (needs a card). Migrations run on deploy (`alembic upgrade head`).
+
+Implemented in milestone 8 (issue #46): `Dockerfile` at the repo root (stage 1 Node 24 builds `frontend/dist`; stage 2 Python 3.12 slim installs the backend with `uv sync --locked --no-dev`, copies the built frontend to `/app/frontend/dist`, runs as a non-root user, has a `HEALTHCHECK` on `/api/health`). `backend/docker-entrypoint.sh` runs `alembic upgrade head` and then `uvicorn` on `$PORT`. `app/frontend.py` serves the built files with an `index.html` fallback for non-`/api` paths (`/assets/*` with a one-year immutable `Cache-Control`, everything else `no-cache`); unknown `/api/*` paths keep the JSON 404. The Postgres driver is `psycopg[binary]` (`DATABASE_URL=postgresql+psycopg://...`). CI adds a `backend-postgres` job (`postgres:17` service, `alembic upgrade head`, `alembic check`, the whole pytest suite) and a `docker` job (builds the image and smoke-tests `/api/health`, `/` and `/investments` against a throwaway Postgres container).
+
+Implemented in milestone 8 (issue #47, repo side): `render.yaml` (one `runtime: docker` web service on the free plan with `healthCheckPath: /api/health`, one instance, `ENVIRONMENT=production`, `COOKIE_SECURE=true`, `TRUSTED_PROXY_COUNT=1`, `JWT_SECRET` generated by Render and kept in its secret store, `DATABASE_URL` wired from the `personaldolar-db` Postgres 17 free database). `app/db.py::normalize_database_url` rewrites `postgres://` and `postgresql://` to `postgresql+psycopg://` (used by the engine and by Alembic). `backend/scripts/check_no_secrets.py` (stdlib only, CI job `no-secrets`) fails on tracked `.env` / `*.db` / key files, private keys, token-like strings, database URLs with real credentials and literal `JWT_SECRET` values. Free-tier limits (to confirm against Render's current terms): the web service spins down after about 15 minutes idle (cold start of about a minute); the free Postgres expires after about 30 days (plus a grace period) and has no backups, so back up with `pg_dump` or move to Neon. The provider account, secrets and production smoke test are done by the user (README "Production").
 
 ## 12. Implementation milestones
 
@@ -407,7 +424,8 @@ Detailed scope, acceptance criteria and status of each milestone: [`milestones.m
 6. **Dashboard:** aggregations endpoint + charts.
 7. **Simulator:** pure module + tests first, then endpoints, then UI.
 8. **Polish and deployment.**
-9. Nice-to-haves from plan.md §5, in order.
+9. **Refinement:** pie colours; `category_amounts` (fixed monthly amounts) and its integration in dashboard, category totals and simulator; Categories UI.
+10. Nice-to-haves from plan.md §5, in order.
 
 ## 13. Open points
 

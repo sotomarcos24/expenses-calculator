@@ -11,7 +11,7 @@ You are the orchestrator: you never groom, implement or test yourself — the su
 
 - If an argument was given (`$ARGUMENTS`), use issue `#$ARGUMENTS` (check it is open and has an `m<N>` label).
 - Otherwise:
-  - The current milestone is the first one in the status table of `docs/milestones.md` that is not ✅ Done (skip `M9` unless the user asked for it).
+  - The current milestone is the first one in the status table of `docs/milestones.md` that is not ✅ Done (skip `M10` unless the user asked for it).
   - `gh issue list --label m<N> --state open` and take the **lowest issue number** whose dependencies ("Depends on #X" in the body) are all closed.
   - Take only issues that have the `groomed` label. If the candidate lacks it, stop and tell the user (do **not** launch the PM).
   - If the milestone has no issues at all, stop and suggest `/plan-milestone`. If all are closed, stop and tell the user the milestone is ready for wrap-up (step 8).

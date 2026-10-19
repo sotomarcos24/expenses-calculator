@@ -9,7 +9,21 @@ from sqlalchemy.orm import Session, sessionmaker
 from app.config import get_settings
 
 
+def normalize_database_url(url: str) -> str:
+    """Make a provider-style Postgres URL use the installed psycopg (v3) driver.
+
+    Managed Postgres hands out ``postgres://`` or ``postgresql://``; SQLAlchemy would
+    map the latter to psycopg2, which is not installed. URLs that already name a driver
+    (``postgresql+psycopg://``) and non-Postgres URLs are returned unchanged.
+    """
+    for prefix in ("postgres://", "postgresql://"):
+        if url.startswith(prefix):
+            return "postgresql+psycopg://" + url[len(prefix) :]
+    return url
+
+
 def make_engine(url: str, **engine_options: Any) -> Engine:
+    url = normalize_database_url(url)
     connect_args: dict[str, Any] = {}
     if url.startswith("sqlite"):
         connect_args["check_same_thread"] = False

@@ -41,7 +41,7 @@ The last line is the full check set: run it before saying a backend task is done
 
 ## Tests
 
-- `tests/unit` for pure logic and services, `tests/api` for endpoints using the `client` / `db_session` fixtures in `tests/conftest.py` (in-memory SQLite per test).
+- `tests/unit` for pure logic and services, `tests/api` for endpoints using the `client` / `db_session` fixtures in `tests/conftest.py` (in-memory SQLite per test; when the process environment has `DATABASE_URL=postgresql+...` the same `db_session` fixture uses that Postgres database instead, wrapping each test in a rolled-back transaction, so the same tests run on both backends).
 - Authenticated tests use the shared fixtures in `tests/conftest.py` (`auth_client`, `make_auth_client`, `two_users`), so ownership (404) tests are one-liners. Reuse them instead of re-implementing login in each test.
 - Mutating requests (`POST`/`PUT`/`PATCH`/`DELETE`) in tests must send `Content-Type: application/json` — `json=` sets it, body-less calls pass `headers=JSON_HEADERS` — otherwise the guard answers 415.
 
@@ -49,6 +49,9 @@ The last line is the full check set: run it before saying a backend task is done
 
 - Python 3.12 managed by `uv`; never `pip install` into the system Python.
 - Works without a `.env` (defaults in `app/config.py` use `sqlite:///./dev.db`); copy `.env.example` to change settings. `.env.example` lists every variable.
+- Production settings: `ENVIRONMENT=production` makes startup fail if `JWT_SECRET` is the dev default or shorter than 32 characters, or `COOKIE_SECURE` is false (`app/config.py`). `FRONTEND_DIST_DIR` (default `../frontend/dist`) is served by `app/frontend.py` when it contains `index.html` (SPA fallback; `/api/*` unaffected); with `frontend/dist` built locally the dev server on :8000 therefore also serves the app.
+- Postgres: driver `psycopg[binary]`, `DATABASE_URL=postgresql+psycopg://user:pass@host:5432/db`. To run the suite on Postgres locally: start a throwaway `postgres:17` container, `export DATABASE_URL=...`, `uv run alembic upgrade head && uv run alembic check && uv run pytest`, then remove the container. Keep tests dialect-neutral (no `?` placeholders in raw SQL; use `text()` with named parameters).
+- Docker: `docker build -t personaldolar .` from the repo root; the entrypoint (`docker-entrypoint.sh`) runs the migrations and serves on `$PORT` (default 8000). CI jobs `backend-postgres` and `docker` cover Postgres and the image. `app/db.py::normalize_database_url` turns `postgres://` / `postgresql://` into `postgresql+psycopg://` (engine and Alembic). `scripts/check_no_secrets.py` (stdlib; CI job `no-secrets`, run from the repo with `python3 backend/scripts/check_no_secrets.py`) fails on tracked secrets. `render.yaml` at the repo root is the Render Blueprint (see README *Production*).
 
 ## Current state
 
