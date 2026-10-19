@@ -39,3 +39,12 @@ def test_tracked_env_and_db_files_are_flagged() -> None:
     assert check_file("backend/.env")
     assert check_file("backend/dev.db")
     assert check_file("backend/.env.example") == []
+
+
+def test_script_passes_on_the_repository_tree() -> None:
+    import subprocess
+    import sys
+
+    script = Path(__file__).resolve().parents[2] / "scripts" / "check_no_secrets.py"
+    result = subprocess.run([sys.executable, str(script)], capture_output=True, text=True)
+    assert result.returncode == 0, result.stderr
