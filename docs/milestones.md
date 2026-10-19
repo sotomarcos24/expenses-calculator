@@ -267,8 +267,10 @@
 - **Done (#46, closed, on branch `m8-deploy`, not pushed):** FastAPI serves `frontend/dist` with SPA fallback, `ENVIRONMENT=production` settings guard, multi-stage non-root Dockerfile with entrypoint running `alembic upgrade head`, `psycopg[binary]`, `backend-postgres` and `docker` CI jobs.
 - **Done (#47 repo side, on `m8-deploy`, not pushed):** `DATABASE_URL` normalisation in `app/db.py` with tests, `render.yaml` Blueprint, `backend/scripts/check_no_secrets.py` + `no-secrets` CI job (git history reviewed: clean; `.env` and `*.db` untracked), README "Production" section with the smoke-test checklist, tech-spec §11.
 - **Pending (#47, needs the user):** create the Render account, apply the Blueprint, record the public URL, run the production smoke test, confirm the rate limit behind the proxy. Then tick the first two criteria above (and the no-secrets one once the `no-secrets` job is green on GitHub).
-- **Next:** QA #47 (repo side); push the branch and open the PR (ask the user) so CI runs the Postgres and Docker jobs and Render can deploy. Milestone is complete (✅) only when all four acceptance criteria above are ticked; then remove these notes.
-- Docker is available locally (Docker Desktop with WSL integration), so the Dockerfile can be built and smoke-tested locally as well as in CI.
+- **QA:** #47 repo side passed QA (one FAIL fixed: the no-secrets script flagged test URLs; commits `0370f60`, `d866e2b`). The issue stays open until the production criteria are met.
+- **Next:** push the branch and open the PR (ask the user) so CI runs the Postgres and Docker jobs and Render can deploy. Milestone is complete (✅) only when all four acceptance criteria above are ticked; then remove these notes.
+- Docker: it was available earlier, but in the last session `docker` was **not** found in this WSL distro (Docker Desktop integration off), so the image was not rebuilt against Postgres after #47; the CI `docker` job or a local run must cover it.
+- The free-tier limits written in the README/tech-spec §11 (cold start, free Postgres expiry, no backups) are **unverified**; confirm them against Render's current terms.
 - **Decisions (user):** `psycopg[binary]` is approved as the Postgres driver; the provider for #47 is Render (Neon as fallback if the free Postgres expiry is a problem).
 
 ---
