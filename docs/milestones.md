@@ -258,14 +258,15 @@
 
 - [ ] The app is reachable at a public HTTPS URL. *(pending, #47)*
 - [ ] Full flow works in production: sign up → categories → transactions → investments → dashboard → simulator. *(pending, #47)*
-- [ ] Tests pass against both SQLite and Postgres. *(pending, #46)*
+- [x] Tests pass against both SQLite and Postgres. *(#46; run by hand on SQLite and Postgres 17, the `backend-postgres` CI job still has to run on GitHub)*
 - [ ] No secrets in the repo. *(pending, #47: no-secrets CI check and history review)*
 
 #### Progress notes
 
 - **Done (polish, merged to `main`):** UX pass (#44), accessibility pass (#45), login rate limiting (#10), return to the requested page after login (#9), `GET /categories/totals` (#48), add-transaction and period totals on `/categories` (#49), and the shared `Dialog` focus fix (#33, no milestone).
-- **Pending (deployment, deliberately left open):** #46 (FastAPI serves `frontend/dist`, `ENVIRONMENT=production` settings guard, multi-stage Dockerfile, `backend-postgres` and `docker` CI jobs, `psycopg[binary]` driver approved by the user) and #47 (Render/Fly.io deploy config, README "Production" section, no-secrets check, production smoke test; needs the user to create the provider account and paste secrets). #47 depends on #46.
-- **Next:** do #46, then #47 with `/next-issue` on a new branch from `main`. Milestone is complete (✅) only when all four acceptance criteria above are ticked; then remove these notes.
+- **Done (#46, closed, on branch `m8-deploy`, not pushed):** FastAPI serves `frontend/dist` with SPA fallback, `ENVIRONMENT=production` settings guard, multi-stage non-root Dockerfile with entrypoint running `alembic upgrade head`, `psycopg[binary]`, `backend-postgres` and `docker` CI jobs.
+- **Pending (#47):** `DATABASE_URL` normalisation (`postgres://` → `postgresql+psycopg://`) in `app/db.py` with a test, `render.yaml` Blueprint (Docker web service + Postgres, generated `JWT_SECRET`, `ENVIRONMENT=production`, `COOKIE_SECURE=true`, `TRUSTED_PROXY_COUNT=1`, health check `/api/health`, one instance), no-secrets script + CI step and git-history review, README "Production" section, tech-spec §11 (provider and free-tier limits). The provider account, repo connection, secrets and the production smoke test need the user.
+- **Next:** `/next-issue` on #47 from `m8-deploy`; push the branch and open the PR (ask the user) so CI runs the Postgres and Docker jobs and Render can deploy. Milestone is complete (✅) only when all four acceptance criteria above are ticked; then remove these notes.
 - Docker is available locally (Docker Desktop with WSL integration), so the Dockerfile can be built and smoke-tested locally as well as in CI.
 - **Decisions (user):** `psycopg[binary]` is approved as the Postgres driver; the provider for #47 is Render (Neon as fallback if the free Postgres expiry is a problem).
 
