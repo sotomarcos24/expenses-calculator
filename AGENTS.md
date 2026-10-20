@@ -23,6 +23,7 @@ Read **only when the task needs it**:
 | [`docs/frontend.md`](docs/frontend.md) | Touching `frontend/`: commands, conventions, tests, current state, caveats |
 | [`docs/plan.md`](docs/plan.md) | Product questions: features, user stories, non-goals (§6) |
 | [`docs/tech-spec.md`](docs/tech-spec.md) | Technical design: data model, auth, API, simulator formulas |
+| [`docs/security.md`](docs/security.md) | Security questions: index of the audits, Semgrep findings, agent capability table, AI/data policy |
 | [`docs/task-template.md`](docs/task-template.md), [`docs/team/`](docs/team/) | Grooming issues / acting as one of the subagent roles |
 
 - Only work on the milestone in progress unless told otherwise.
