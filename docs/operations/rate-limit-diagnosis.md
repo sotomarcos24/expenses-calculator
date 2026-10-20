@@ -42,4 +42,4 @@ The value depends on the number of hops in front of the app. If Render or Cloudf
 ## Verification
 
 - Automated: backend tests pass, including the regression tests above.
-- Production check: 10 wrong logins returning 401 followed by a 429 on the 11th. **PENDING**: the user runs it after the deploy with `TRUSTED_PROXY_COUNT=3`.
+- Production check, run by the user on 2026-10-20 against the deployed commit `6b4b8f0` (the `deploy` job on `main` was green and `/api/health` reported that commit) with `TRUSTED_PROXY_COUNT=3`: 12 wrong logins in a row from one machine returned **401 for attempts 1-10 and 429 for attempts 11-12**. This is the expected behaviour (limit of 10 per 60 s) and confirms the fix.
