@@ -57,7 +57,7 @@ docker compose down              # stop, keep the data (named volume pgdata)
 docker compose down -v           # stop and delete the DB volume (full reset)
 ```
 
-The app waits for the `db` healthcheck, then the entrypoint applies migrations. The DB port is not published. Compose serves plain `http://localhost`, so it sets `ENVIRONMENT=development` and `COOKIE_SECURE=false`: with `ENVIRONMENT=production` the app refuses to start without `COOKIE_SECURE=true` and a strong `JWT_SECRET`, and a `Secure` cookie would not be accepted over http, so login would not work. The credentials and the `dev-only` `JWT_SECRET` in the file are throwaway examples for local use only; this file is not the production deployment (see Production below).
+The app waits for the `db` healthcheck, then the entrypoint applies migrations. The DB port is not published, and the app port is bound to `127.0.0.1` only (not reachable from other machines on the network, because the file uses a public dev `JWT_SECRET`). Compose serves plain `http://localhost`, so it sets `ENVIRONMENT=development` and `COOKIE_SECURE=false`: with `ENVIRONMENT=production` the app refuses to start without `COOKIE_SECURE=true` and a strong `JWT_SECRET`, and a `Secure` cookie would not be accepted over http, so login would not work. The credentials and the `dev-only` `JWT_SECRET` in the file are throwaway examples for local use only; this file is not the production deployment (see Production below).
 
 ## Production
 
