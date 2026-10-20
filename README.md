@@ -101,9 +101,9 @@ Do not scale beyond one instance: the login rate limiter keeps its counters in p
 The `deploy` job of `.github/workflows/ci.yml` runs only on pushes to `main`, and only after `backend`, `frontend`, `backend-postgres`, `docker` and `no-secrets` are all green (it never runs on pull requests). Any test job added later must be added to its `needs` list. The job:
 
 1. calls the Render **deploy hook** (`curl --fail -X POST`), and
-2. polls `<RENDER_PUBLIC_URL>/api/health` (after a 30 s head start, every 15 s) until it returns HTTP 200, failing after about 10 minutes.
+2. polls `<RENDER_PUBLIC_URL>/api/health` (after a 30 s head start, every 15 s) until it returns HTTP 200 **and** its `commit` equals the pushed commit SHA (`github.sha`), failing after about 10 minutes.
 
-Caveat: right after the hook is called the old instance may still answer 200 on `/api/health`, so a green job means "the service is up", not strictly "the new version is up". Check the Render dashboard if in doubt. Deploys are serialised (one at a time) and a running deploy is never cancelled. Rollback stays manual (see above).
+`/api/health` reports the commit the service is running (`{"status":"ok","database":"ok","commit":"<sha>"}`), read from Render's default environment variable `RENDER_GIT_COMMIT` ([Render docs](https://render.com/docs/environment-variables)); it is `unknown` when the variable is unset or blank (local runs). Render keeps serving the old version while the new one builds, so the job ignores 200 answers with another commit: green means the pushed commit is live. To see what is live, run `curl <RENDER_PUBLIC_URL>/api/health`. If the deploy fails the job times out red. Deploys are serialised (one at a time) and a running deploy is never cancelled. Rollback stays manual (see above).
 
 Setup (you, not the CI):
 

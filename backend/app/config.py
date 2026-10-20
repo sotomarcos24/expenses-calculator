@@ -28,6 +28,8 @@ class Settings(BaseSettings):
     rate_limit_window_seconds: int = 60
     # Number of trusted reverse proxies in front of the app (0 = use the socket IP).
     trusted_proxy_count: int = 0
+    # Commit SHA of the running deploy; set by Render (RENDER_GIT_COMMIT), empty elsewhere.
+    render_git_commit: str = ""
 
     @model_validator(mode="after")
     def _check_production(self) -> Self:

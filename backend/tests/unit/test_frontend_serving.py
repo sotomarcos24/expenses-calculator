@@ -64,7 +64,8 @@ def test_head_request_is_allowed(monkeypatch: pytest.MonkeyPatch, dist_dir: Path
 def test_api_health_still_json(monkeypatch: pytest.MonkeyPatch, dist_dir: Path) -> None:
     response = make_client(monkeypatch, dist_dir).get("/api/health")
     assert response.status_code == 200
-    assert response.json() == {"status": "ok", "database": "ok"}
+    assert response.json()["status"] == "ok"
+    assert response.json()["database"] == "ok"
 
 
 @pytest.mark.parametrize("path", ["/api/does-not-exist", "/api", "/api/"])

@@ -2041,12 +2041,17 @@
           "database": {
             "type": "string",
             "title": "Database"
+          },
+          "commit": {
+            "type": "string",
+            "title": "Commit"
           }
         },
         "type": "object",
         "required": [
           "status",
-          "database"
+          "database",
+          "commit"
         ],
         "title": "HealthOut"
       },

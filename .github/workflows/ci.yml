@@ -146,6 +146,7 @@ jobs:
       - name: Wait for healthy deploy
         env:
           RENDER_PUBLIC_URL: ${{ vars.RENDER_PUBLIC_URL }}
+          EXPECTED_COMMIT: ${{ github.sha }}
           # Overridable only to simulate the failure branch locally.
           HEALTH_TIMEOUT_SECONDS: "600"
           HEALTH_INTERVAL_SECONDS: "15"
@@ -156,19 +157,30 @@ jobs:
             exit 1
           fi
           url="${RENDER_PUBLIC_URL%/}/api/health"
-          # The old instance may still answer 200 right after the hook is called,
-          # so give Render a head start before the first check.
+          # The old instance keeps serving while the new one builds, so a 200 is not enough:
+          # wait until /api/health reports the commit that was pushed.
+          # Give Render a head start before the first check.
           sleep "$HEALTH_INITIAL_WAIT_SECONDS"
           deadline=$(( $(date +%s) + HEALTH_TIMEOUT_SECONDS ))
           status=000
+          last_commit=""
           while [ "$(date +%s)" -lt "$deadline" ]; do
-            status=$(curl --silent --max-time 20 -o /dev/null -w '%{http_code}' "$url" || true)
-            echo "GET $url -> $status"
+            body=$(mktemp)
+            status=$(curl --silent --max-time 20 -o "$body" -w '%{http_code}' "$url" || true)
+            commit=""
             if [ "$status" = "200" ]; then
-              echo "Deploy is healthy."
+              commit=$(jq -r '.commit // empty' "$body" 2>/dev/null || true)
+            fi
+            rm -f "$body"
+            if [ -n "$commit" ]; then
+              last_commit="$commit"
+            fi
+            echo "GET $url -> $status, commit=${commit:-n/a} (expected $EXPECTED_COMMIT)"
+            if [ "$status" = "200" ] && [ "$commit" = "$EXPECTED_COMMIT" ]; then
+              echo "Deploy is live on commit $EXPECTED_COMMIT."
               exit 0
             fi
             sleep "$HEALTH_INTERVAL_SECONDS"
           done
-          echo "::error::$url was not healthy within ${HEALTH_TIMEOUT_SECONDS}s (last HTTP status: $status). Check the deploy in the Render dashboard."
+          echo "::error::$url did not report commit $EXPECTED_COMMIT within ${HEALTH_TIMEOUT_SECONDS}s (last HTTP status: $status, last commit seen: ${last_commit:-none}). Check the deploy in the Render dashboard."
           exit 1

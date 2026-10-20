@@ -49,7 +49,7 @@
 
 #### Acceptance criteria
 
-- [x] `GET /api/health` returns `{"status":"ok","database":"ok"}`, also through the Vite proxy.
+- [x] `GET /api/health` returns `{"status":"ok","database":"ok"}` (since #57 also `"commit"`), also through the Vite proxy.
 - [x] All routes render inside the layout; the active section is highlighted.
 - [x] All checks pass locally.
 
@@ -252,7 +252,7 @@
 - Postgres: run all migrations and the test suite against Postgres once (CI job with a Postgres service).
 - Deploy to a free tier (Render or Fly.io) with managed Postgres; `COOKIE_SECURE=true`, strong `JWT_SECRET`, migrations on deploy.
 - README: production configuration and deploy steps.
-- Continuous deployment (#55, label `human`): a `deploy` job in `ci.yml` runs only on pushes to `main` after every test job passes, calls the Render deploy hook (GitHub secret `RENDER_DEPLOY_HOOK`) and polls `/api/health` until 200.
+- Continuous deployment (#55, label `human`): a `deploy` job in `ci.yml` runs only on pushes to `main` after every test job passes, calls the Render deploy hook (GitHub secret `RENDER_DEPLOY_HOOK`) and polls `/api/health` until it answers 200 with the pushed commit (#57; `/api/health` reports `RENDER_GIT_COMMIT`).
 - Local stack (#56): `docker-compose.yml` with the app and Postgres 17, started with `docker compose up --build`.
 - Spec extension (#48, #49, outside the original scope): record transactions from the Categories page on subcategories, with period totals per subcategory and per category (see `docs/plan.md` §4.2). Backend `GET /categories/totals` (#48); frontend (#49): add-transaction buttons, period selector and totals on `/categories`.
 
