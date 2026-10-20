@@ -32,7 +32,7 @@
 | 7 | Simulator | Modes A/B/C with three scenarios | 4, 5 | ✅ Done |
 | 8 | Polish and deployment | Production-ready MVP online | 1–7 | ✅ Done |
 | 9 | Security | Semgrep scan, PR audit, agent security notes, AI/data policy, audit fixes | 8 | ✅ Done (human decisions pending in #69) |
-| 10 | Refinement | Pie colours, fixed monthly category amounts apart from transactions | 9 | ⬜ Planned (issues #51–#53 groomed) |
+| 10 | Refinement | Pie colours, fixed monthly category amounts apart from transactions | 9 | ✅ Done |
 | 11 | Nice-to-haves | Recurring transactions, CSV export, i18n | 10 | ⬜ Optional |
 
 ---
@@ -294,7 +294,7 @@
 
 ---
 
-## M10 — Refinement
+## M10 — Refinement ✅
 
 **Goal:** fix the problems found while using the app: the pies render black, and category amounts are recorded as dated transactions when they should be a fixed monthly figure kept apart from one-off transactions (plan §4.2, §4.3).
 
@@ -309,14 +309,14 @@
 
 #### Acceptance criteria
 
-- [ ] Every pie slice (dashboard expenses, investments by type) has a distinct colour and the legend swatches match, in the built app and in the dev server.
-- [ ] A user can create, edit and delete one monthly amount per category or subcategory; a second create on the same row updates it.
-- [ ] Amounts are `Decimal`/decimal strings and must be positive; a category or subcategory of another user is a 404 and every new endpoint has an isolation test.
-- [ ] The dashboard income, expense, savings and pie include the monthly amounts × months in the period plus the transactions of the period; known-value tests cover month, year and custom periods.
-- [ ] `/simulator/defaults` average monthly expenses include the monthly expense amounts.
-- [ ] A category with monthly amounts cannot be deleted without removing them (409).
-- [ ] The Categories dialog asks only Amount and Note, and monthly amounts never show up on the Transactions page.
-- [ ] `openapi.json` and the frontend types are regenerated; specs (plan §4.2/§4.3, tech-spec data model, API, dashboard, simulator) are updated.
+- [x] Every pie slice (dashboard expenses, investments by type) has a distinct colour and the legend swatches match, in the built app and in the dev server. *(#51: `@theme static` in `src/index.css`, `ExpensePie.colors.test.tsx`)*
+- [x] A user can create, edit and delete one monthly amount per category or subcategory; a second create on the same row updates it. *(#52 API, #53 UI: `test_put_creates_then_updates_and_delete`, `CategoriesPage.amounts.test.tsx`)*
+- [x] Amounts are `Decimal`/decimal strings and must be positive; a category or subcategory of another user is a 404 and every new endpoint has an isolation test. *(#52: `test_invalid_amount_is_422`, `test_ownership`, `test_requires_auth`)*
+- [x] The dashboard income, expense, savings and pie include the monthly amounts × months in the period plus the transactions of the period; known-value tests cover month, year and custom periods. *(#52: `test_dashboard_month_year_and_custom`, `tests/unit/test_periods.py`)*
+- [x] `/simulator/defaults` average monthly expenses include the monthly expense amounts. *(#52: `test_defaults_add_monthly_expense_amounts`)*
+- [x] A category with monthly amounts cannot be deleted without removing them (409). *(#52: `test_delete_guard_and_user_cascade`; #53 shows the 409 on the row)*
+- [x] The Categories dialog asks only Amount and Note, and monthly amounts never show up on the Transactions page. *(#53: `CategoryAmountDialog`, `CategoriesPage.amounts.test.tsx`; #52: `test_amounts_never_appear_in_transactions`)*
+- [x] `openapi.json` and the frontend types are regenerated; specs (plan §4.2/§4.3, tech-spec data model, API, dashboard, simulator) are updated. *(#52, #53; plan §4.2/§4.3 and tech-spec §4 data model, §6 API and dashboard, §7 simulator updated)*
 
 **Tests:** service tests with fixtures for the months-in-period rule; API tests for CRUD, validation and isolation; dashboard and simulator totals with known values; component tests for the dialog and the Categories rows; a pie test checking the slices get distinct fills.
 
