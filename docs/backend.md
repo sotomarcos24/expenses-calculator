@@ -79,6 +79,7 @@ The last line is the full check set: run it before saying a backend task is done
 ## Known caveats
 
 - An existing local `dev.db` may be behind the latest migration: run `uv run alembic upgrade head` after pulling. Accounts registered before M3 have **no** default categories (there is no data migration, by user decision); register a new user to get them.
+- Rate limiter behind Cloudflare + Render needs `TRUSTED_PROXY_COUNT=3`: see `docs/operations/rate-limit-diagnosis.md`.
 - For manual checks that must not touch `dev.db`, point the app at a throwaway database, e.g. `DATABASE_URL=sqlite:///<scratchpad>/check.db uv run alembic upgrade head` and the same variable for `uv run fastapi dev app/main.py`.
 
 - Tests use `httpx2` (the Starlette test client deprecates `httpx`).

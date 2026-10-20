@@ -161,19 +161,49 @@ def test_other_endpoints_are_not_limited(limited_client: TestClient) -> None:
     assert user.email
 
 
-def test_temp_debug_log_has_ips_only(app: FastAPI, caplog: pytest.LogCaptureFixture) -> None:
-    # TEMPORARY (#59): remove together with the log line in app/ratelimit.py.
-    _configure(app, trusted_proxy_count=1)
-    with TestClient(app) as client, caplog.at_level("INFO", logger="uvicorn.error"):
-        _login(
-            client,
-            "secret-user@example.com",
-            "s3cret-password",
-            headers={"X-Forwarded-For": "9.9.9.9, 1.2.3.4"},
-        )
-    text = "\n".join(r.getMessage() for r in caplog.records if "#59" in r.getMessage())
-    assert "scope=login" in text
-    assert "'9.9.9.9, 1.2.3.4'" in text
-    assert "chosen_ip=1.2.3.4" in text
-    assert "secret-user" not in text
-    assert "s3cret" not in text
+# Real production format behind Cloudflare + Render: "<client>, <Cloudflare>, <Render LB>".
+# Cloudflare changes almost every request and the Render LB alternates among a few addresses.
+_LB_IPS = ["10.25.239.2", "10.24.86.133", "10.27.144.40"]
+
+
+def _prod_xff(client_ip: str, i: int) -> str:
+    return f"{client_ip}, 172.69.{i}.{i + 10}, {_LB_IPS[i % 3]}"
+
+
+def _configure_prod(app: FastAPI, trusted_proxy_count: int) -> None:
+    app.state.rate_limiter = RateLimiter(FakeClock())
+    settings = Settings(rate_limit_login_attempts=10, trusted_proxy_count=trusted_proxy_count)
+    app.dependency_overrides[get_settings] = lambda: settings
+
+
+def test_three_hop_chain_limits_real_client_despite_varying_proxies(app: FastAPI) -> None:
+    _configure_prod(app, trusted_proxy_count=3)
+    with TestClient(app) as c:
+        for i in range(10):
+            xff = {"X-Forwarded-For": _prod_xff("203.0.113.7", i)}
+            assert _login(c, "x@example.com", "x", headers=xff) == 401
+        xff = {"X-Forwarded-For": _prod_xff("203.0.113.7", 10)}
+        assert _login(c, "x@example.com", "x", headers=xff) == 429
+        # A different real client is not blocked.
+        other = {"X-Forwarded-For": _prod_xff("203.0.113.8", 11)}
+        assert _login(c, "x@example.com", "x", headers=other) == 401
+
+
+def test_three_hop_chain_fake_left_entry_does_not_evade_limit(app: FastAPI) -> None:
+    _configure_prod(app, trusted_proxy_count=3)
+    with TestClient(app) as c:
+        for i in range(10):
+            xff = {"X-Forwarded-For": "6.6.6.6, " + _prod_xff("203.0.113.7", i)}
+            assert _login(c, "x@example.com", "x", headers=xff) == 401
+        # Rotating the forged prefix does not help either.
+        xff = {"X-Forwarded-For": "7.7.7.7, " + _prod_xff("203.0.113.7", 10)}
+        assert _login(c, "x@example.com", "x", headers=xff) == 429
+
+
+def test_count_one_with_three_hop_chain_never_limits(app: FastAPI) -> None:
+    # The old production bug: counting only the Render LB entry, which alternates.
+    _configure_prod(app, trusted_proxy_count=1)
+    with TestClient(app) as c:
+        for i in range(12):
+            xff = {"X-Forwarded-For": _prod_xff("203.0.113.7", i)}
+            assert _login(c, "x@example.com", "x", headers=xff) == 401
