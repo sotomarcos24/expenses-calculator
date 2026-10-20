@@ -159,3 +159,21 @@ def test_other_endpoints_are_not_limited(limited_client: TestClient) -> None:
     for _ in range(6):
         assert limited_client.post("/api/auth/logout", headers=JSON_HEADERS).status_code == 204
     assert user.email
+
+
+def test_temp_debug_log_has_ips_only(app: FastAPI, caplog: pytest.LogCaptureFixture) -> None:
+    # TEMPORARY (#59): remove together with the log line in app/ratelimit.py.
+    _configure(app, trusted_proxy_count=1)
+    with TestClient(app) as client, caplog.at_level("INFO", logger="uvicorn.error"):
+        _login(
+            client,
+            "secret-user@example.com",
+            "s3cret-password",
+            headers={"X-Forwarded-For": "9.9.9.9, 1.2.3.4"},
+        )
+    text = "\n".join(r.getMessage() for r in caplog.records if "#59" in r.getMessage())
+    assert "scope=login" in text
+    assert "'9.9.9.9, 1.2.3.4'" in text
+    assert "chosen_ip=1.2.3.4" in text
+    assert "secret-user" not in text
+    assert "s3cret" not in text
