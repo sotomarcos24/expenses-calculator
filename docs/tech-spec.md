@@ -119,7 +119,7 @@ All tables have `id` (integer PK), `created_at` and `updated_at`. Every user-own
 - The `category_id` / `subcategory_id` FKs are `NO ACTION` (no `ON DELETE`), not `RESTRICT` and not `CASCADE`. A category (or subcategory) used by a transaction cannot be deleted: the service answers **409** first (`category_ids_in_use()`), and the FK is the safety net. Deleting a user cascades to both `categories` and `transactions` in one statement; with `NO ACTION` the FK check runs at the end of the statement, after both cascades, so it succeeds on SQLite and Postgres (with `RESTRICT`, Postgres checks immediately and the result could depend on cascade order). There is no ORM back-reference from `Category` to its transactions, so the ORM never nulls `category_id` on delete.
 - **Salary (§4.4):** a salary is an income transaction with `gross_amount` set. Effective deduction rate = `(gross − net) / gross`, computed and returned by the API (not stored). Totals and simulations always use `amount` (net).
 
-### `category_amounts` (planned, M9)
+### `category_amounts` (planned, M10)
 
 | Column | Type | Notes |
 | --- | --- | --- |

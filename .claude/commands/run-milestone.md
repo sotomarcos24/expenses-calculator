@@ -9,7 +9,7 @@ You are the orchestrator: you never groom, implement or test yourself — the su
 
 ## 1. Milestone and branch
 
-- Milestone: `M$ARGUMENTS` if an argument was given; otherwise the first milestone in the status table of `docs/milestones.md` that is not ✅ Done (skip `M10` unless the user asked for it).
+- Milestone: `M$ARGUMENTS` if an argument was given; otherwise the first milestone in the status table of `docs/milestones.md` that is not ✅ Done (skip `M11` unless the user asked for it).
 - `gh issue list --label m<N> --state open`. If the milestone has no issues at all, stop and suggest `/plan-milestone`. If all are closed, go to step 4 below.
 - The work happens on the milestone branch `m<N>-<slug>` (see `AGENTS.md` → *Workflow*). If it does not exist yet, create it from an up-to-date `main` and run the full checks of both projects (`docs/backend.md`, `docs/frontend.md`) to confirm the baseline is green; if red, stop and tell the user.
 - If the working tree is dirty or you are on another branch with unrelated work, stop and ask the user.

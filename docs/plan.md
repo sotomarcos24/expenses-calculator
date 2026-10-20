@@ -43,7 +43,7 @@ Acceptance criteria:
   - **Income:** Salary, Rental income, Dividends, Other income.
 - A user can add, rename and delete their own categories and subcategories.
 - A category that has transactions cannot be deleted without reassigning or deleting them first.
-- From the Categories page the user sets a **fixed monthly amount** (net, with an optional note) on a subcategory, or on a category that has no subcategories (e.g. Rent, Salary). It models a typical month, has no date and applies to every month; setting it again edits it. The dialog asks only for amount and note. Every row shows its monthly amount, and a category's amount is the sum of its subcategories plus its own. These amounts are not transactions and never appear in the Transactions list. *(Planned in M9; today the page records dated transactions.)*
+- From the Categories page the user sets a **fixed monthly amount** (net, with an optional note) on a subcategory, or on a category that has no subcategories (e.g. Rent, Salary). It models a typical month, has no date and applies to every month; setting it again edits it. The dialog asks only for amount and note. Every row shows its monthly amount, and a category's amount is the sum of its subcategories plus its own. These amounts are not transactions and never appear in the Transactions list. *(Planned in M10; today the page records dated transactions.)*
 
 ### 4.3 Transactions (income and expenses)
 
@@ -156,5 +156,6 @@ The MVP is built in milestones, each with its own acceptance criteria — see [`
 | 6 | Dashboard | ✅ Done |
 | 7 | Simulator | ✅ Done |
 | 8 | Polish and deployment | ✅ Done |
-| 9 | Refinement | ⬜ Planned |
-| 10 | Nice-to-haves (§5) | ⬜ Optional |
+| 9 | Security | 🟡 In progress |
+| 10 | Refinement | ⬜ Planned |
+| 11 | Nice-to-haves (§5) | ⬜ Optional |
