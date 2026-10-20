@@ -93,8 +93,27 @@ Do not scale beyond one instance: the login rate limiter keeps its counters in p
 ### Migrations, redeploy and rollback
 
 - Migrations: the container entrypoint runs `alembic upgrade head` on every start, so each deploy brings the schema to head before serving.
-- Redeploy: push to the deployed branch (auto-deploy is off in the Blueprint, so use **Manual Deploy** in the Render dashboard) or restart the service.
+- Redeploy: a push to `main` deploys automatically once all tests pass (see Continuous deployment below; auto-deploy is off in the Blueprint, the deploy hook is the only trigger). If CD fails or is not set up, use **Manual Deploy** in the Render dashboard, or restart the service.
 - Roll back code: in the Render dashboard open **Events/Deploys**, pick an earlier successful deploy and choose **Rollback**. Migrations are not reverted automatically; if a bad migration was applied, run `alembic downgrade <revision>` against the database (Render **Shell** on the service, or `psql` / a local `DATABASE_URL`) before or after rolling back.
+
+### Continuous deployment
+
+The `deploy` job of `.github/workflows/ci.yml` runs only on pushes to `main`, and only after `backend`, `frontend`, `backend-postgres`, `docker` and `no-secrets` are all green (it never runs on pull requests). Any test job added later must be added to its `needs` list. The job:
+
+1. calls the Render **deploy hook** (`curl --fail -X POST`), and
+2. polls `<RENDER_PUBLIC_URL>/api/health` (after a 30 s head start, every 15 s) until it returns HTTP 200, failing after about 10 minutes.
+
+Caveat: right after the hook is called the old instance may still answer 200 on `/api/health`, so a green job means "the service is up", not strictly "the new version is up". Check the Render dashboard if in doubt. Deploys are serialised (one at a time) and a running deploy is never cancelled. Rollback stays manual (see above).
+
+Setup (you, not the CI):
+
+1. Render dashboard: `personaldolar` service > **Settings > Deploy Hook**, copy the URL.
+2. GitHub: **Settings > Secrets and variables > Actions > Secrets** > new secret `RENDER_DEPLOY_HOOK` = that URL. The URL grants deploy rights: never put it in the repo, an issue or a chat.
+3. Same page, **Variables** tab > new variable `RENDER_PUBLIC_URL` = the service URL (`https://<name>.onrender.com`; a trailing slash is tolerated). It is not a secret.
+4. After the first push to `main`, check that the `deploy` job is green.
+5. Rotating the hook (e.g. if it leaked): regenerate it in Render and update the secret.
+
+If the secret or the variable is missing the job fails with an `::error::` message that does not print any secret.
 
 ### Free-tier limits and backups
 
