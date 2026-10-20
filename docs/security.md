@@ -16,4 +16,4 @@ The non-negotiable rules in [`AGENTS.md`](../AGENTS.md) define the controls that
 
 ## Pending human decisions
 
-The audit and Semgrep reports have a **Human decision** column, filled only by the user. All rows are `pending` today: those in the Semgrep report and in the PR audit. The capability table lists proposals (hardening the `.env*` rule, narrowing tool access, token scope, removing unused plugins) that also wait for the user's decision; no settings were changed.
+The audit and Semgrep reports have a **Human decision** column, filled only by the user. All rows are `pending` today: those in the Semgrep report and in the PR audit. Filling them is tracked in issue #69 (M9 was closed with this left to the user). The capability table lists proposals (hardening the `.env*` rule, narrowing tool access, token scope, removing unused plugins) that also wait for the user's decision; no settings were changed.

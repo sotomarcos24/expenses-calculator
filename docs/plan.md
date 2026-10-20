@@ -156,6 +156,6 @@ The MVP is built in milestones, each with its own acceptance criteria — see [`
 | 6 | Dashboard | ✅ Done |
 | 7 | Simulator | ✅ Done |
 | 8 | Polish and deployment | ✅ Done |
-| 9 | Security | 🟡 In progress |
+| 9 | Security | ✅ Done (human decisions pending in #69) |
 | 10 | Refinement | ⬜ Planned |
 | 11 | Nice-to-haves (§5) | ⬜ Optional |
