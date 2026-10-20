@@ -84,6 +84,11 @@ def delete_category(category_id: int, user: CurrentUser, db: DbSession) -> None:
         service.delete_category(db, user.id, category_id)
     except service.CategoryNotFoundError:
         raise NOT_FOUND from None
+    except service.CategoryHasAmountsError:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail="Category has monthly amounts; remove them first",
+        ) from None
     except service.CategoryInUseError:
         raise HTTPException(
             status_code=status.HTTP_409_CONFLICT,

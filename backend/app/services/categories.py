@@ -8,9 +8,10 @@ from sqlalchemy import Numeric, exists, func, or_, select, type_coerce
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session, selectinload
 
-from app.models import Category, CategoryKind, Transaction, User
+from app.models import Category, CategoryAmount, CategoryKind, Transaction, User
 from app.schemas.categories import CategoryTotals, SubcategoryTotals
 from app.schemas.money import CENT
+from app.services.periods import period_amounts
 
 # Default categories from plan.md §4.2, in display order: (kind, name, subcategory names).
 # Inserted in this exact order, so ordering by id reproduces it.
@@ -40,7 +41,11 @@ class DuplicateCategoryNameError(Exception):
 
 
 class CategoryInUseError(Exception):
-    """The category or one of its subcategories has transactions."""
+    """The category or one of its subcategories has transactions or monthly amounts."""
+
+
+class CategoryHasAmountsError(CategoryInUseError):
+    """The category or one of its subcategories has monthly amounts."""
 
 
 def seed_default_categories(db: Session, user: User) -> None:
@@ -78,7 +83,8 @@ def category_totals(
 ) -> list[CategoryTotals]:
     """Period sums for every category and subcategory of the user (``0.00`` when empty).
 
-    A category total adds its direct transactions (no subcategory) and its subcategories'.
+    A category total adds its direct transactions (no subcategory) and its subcategories', plus
+    the monthly amounts times the months in the period (own and subcategories').
     """
     rows = db.execute(
         select(
@@ -102,6 +108,11 @@ def category_totals(
         category_sums[category_id] = category_sums.get(category_id, zero) + amount
         if subcategory_id is not None:
             sub_sums[subcategory_id] = amount
+    for category_id, subcategory_id, amount in period_amounts(db, user_id, date_from, date_to):
+        amount = amount.quantize(CENT)
+        category_sums[category_id] = category_sums.get(category_id, zero) + amount
+        if subcategory_id is not None:
+            sub_sums[subcategory_id] = sub_sums.get(subcategory_id, zero) + amount
     return [
         CategoryTotals(
             category_id=category.id,
@@ -203,6 +214,25 @@ def category_ids_in_use(db: Session, user_id: int, category_ids: Sequence[int]) 
     return bool(db.scalar(query))
 
 
+def category_ids_have_amounts(db: Session, user_id: int, category_ids: Sequence[int]) -> bool:
+    """Whether any of the user's monthly amounts references one of these categories."""
+    if not category_ids:
+        return False
+    return bool(
+        db.scalar(
+            select(
+                exists().where(
+                    CategoryAmount.user_id == user_id,
+                    or_(
+                        CategoryAmount.category_id.in_(category_ids),
+                        CategoryAmount.subcategory_id.in_(category_ids),
+                    ),
+                )
+            )
+        )
+    )
+
+
 def delete_category(db: Session, user_id: int, category_id: int) -> None:
     """Delete the category and its subcategories, unless any of them has transactions.
 
@@ -213,6 +243,8 @@ def delete_category(db: Session, user_id: int, category_id: int) -> None:
     ids = [category.id, *(sub.id for sub in category.subcategories)]
     if category_ids_in_use(db, user_id, ids):
         raise CategoryInUseError
+    if category_ids_have_amounts(db, user_id, ids):
+        raise CategoryHasAmountsError
     if category.parent is not None:
         # Keep an already loaded parent collection in sync (expire_on_commit is off).
         category.parent.subcategories.remove(category)

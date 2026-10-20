@@ -9,6 +9,7 @@ from app.ratelimit import RateLimiter
 from app.routers import (
     auth,
     categories,
+    category_amounts,
     dashboard,
     health,
     investments,
@@ -30,6 +31,7 @@ def create_app() -> FastAPI:
     app.include_router(health.router, prefix="/api")
     app.include_router(auth.router, prefix="/api")
     app.include_router(categories.router, prefix="/api")
+    app.include_router(category_amounts.router, prefix="/api")
     app.include_router(transactions.router, prefix="/api")
     app.include_router(investments.router, prefix="/api")
     app.include_router(dashboard.router, prefix="/api")
