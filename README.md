@@ -73,7 +73,7 @@ Never commit values for these; set them in the provider's dashboard or secret st
 | `DATABASE_URL` | Managed Postgres. `postgres://` and `postgresql://` are accepted and rewritten to the `psycopg` driver | `postgresql://user:password@host:5432/db` |
 | `JWT_SECRET` | Signs the auth cookie; at least 32 characters, never the development default | output of `openssl rand -hex 32` |
 | `COOKIE_SECURE` | Must be `true` (cookie only over HTTPS) | `true` |
-| `TRUSTED_PROXY_COUNT` | Reverse proxies in front of the app, so the rate limiter sees the real client IP | `1` on Render |
+| `TRUSTED_PROXY_COUNT` | Reverse proxies in front of the app, so the rate limiter sees the real client IP | `3` on Render (Cloudflare + Render load balancer, see [`docs/operations/rate-limit-diagnosis.md`](docs/operations/rate-limit-diagnosis.md)) |
 | `PORT` | Port the container listens on (Render sets it) | `8000` |
 
 Optional: `ACCESS_TOKEN_DAYS`, `RATE_LIMIT_LOGIN_ATTEMPTS`, `RATE_LIMIT_REGISTER_ATTEMPTS`, `RATE_LIMIT_WINDOW_SECONDS` (see `docs/tech-spec.md` §10). Generate a secret with `openssl rand -hex 32`.
@@ -88,7 +88,7 @@ The steps that need your account are manual:
 4. Wait for the first build (it builds the Dockerfile, a few minutes). Open the service URL (`https://<name>.onrender.com`); `GET /api/health` must return `{"status":"ok"}`.
 5. Record the URL in this README and run the smoke test below.
 
-Do not scale beyond one instance: the login rate limiter keeps its counters in process memory.
+Do not scale beyond one instance: the login rate limiter keeps its counters in process memory. `TRUSTED_PROXY_COUNT` is `3` on Render because the request arrives as `X-Forwarded-For: <client>, <Cloudflare>, <Render load balancer>`; if the number of hops changes, adjust it (see `docs/operations/rate-limit-diagnosis.md`).
 
 ### Migrations, redeploy and rollback
 

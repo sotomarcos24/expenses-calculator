@@ -19,7 +19,7 @@ services:
       - key: COOKIE_SECURE
         value: "true"
       - key: TRUSTED_PROXY_COUNT
-        value: "1"
+        value: "3"
       - key: JWT_SECRET
         generateValue: true
       - key: DATABASE_URL
