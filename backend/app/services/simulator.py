@@ -19,6 +19,7 @@ from app.schemas.simulator import (
     WithdrawalRequest,
     WithdrawalResponse,
 )
+from app.services.periods import monthly_amounts
 from app.simulator import accumulate, required_contribution, withdraw
 from app.simulator.models import (
     AccumulationInput,
@@ -40,7 +41,19 @@ def _month_start(day: date, months_back: int) -> date:
 
 
 def average_monthly_expenses(db: Session, user_id: int, today: date) -> Decimal:
-    """Net expenses of the 12 full months before ``today``'s month ÷ months with an expense."""
+    """Transaction average plus the monthly expense amounts.
+
+    The average is the net expenses of the 12 full months before ``today``'s month ÷ months with
+    an expense; the user's monthly expense amounts are added in full (not averaged).
+    """
+    fixed = sum(
+        (amount for _, _, amount in monthly_amounts(db, user_id, CategoryKind.EXPENSE)),
+        Decimal(0),
+    ).quantize(CENT)
+    return _transactions_average(db, user_id, today) + fixed
+
+
+def _transactions_average(db: Session, user_id: int, today: date) -> Decimal:
     start = _month_start(today, MONTHS_WINDOW)
     end = _month_start(today, 0)
     rows = db.execute(

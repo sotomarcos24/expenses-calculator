@@ -162,6 +162,30 @@ def test_defaults_with_investments_and_expenses(auth_client: AuthenticatedClient
 
 
 @pytest.mark.usefixtures("frozen_today")
+def test_defaults_add_monthly_expense_amounts(auth_client: AuthenticatedClient) -> None:
+    client = auth_client.client
+    categories = {
+        (kind, c["name"]): c["id"]
+        for kind in ("expense", "income")
+        for c in client.get("/api/categories", params={"kind": kind}).json()
+    }
+
+    def amount(kind: str, name: str, value: str) -> None:
+        body = {"category_id": categories[(kind, name)], "amount": value}
+        assert client.put("/api/category-amounts", json=body).status_code == 201
+
+    # Only amounts: equals their sum; the income one is ignored.
+    amount("expense", "Housing", "600")
+    amount("expense", "Food", "150.50")
+    amount("income", "Salary", "3000")
+    assert client.get(f"{BASE}/defaults").json()["avg_monthly_expenses"] == "750.50"
+
+    for day, value in (("2026-01-10", "300"), ("2026-03-10", "600"), ("2026-05-31", "900")):
+        add_expense(client, day, value)
+    assert client.get(f"{BASE}/defaults").json()["avg_monthly_expenses"] == "1350.50"
+
+
+@pytest.mark.usefixtures("frozen_today")
 def test_defaults_ignore_other_users(
     two_users: tuple[AuthenticatedClient, AuthenticatedClient],
 ) -> None:

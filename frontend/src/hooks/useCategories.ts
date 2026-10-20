@@ -2,20 +2,18 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { ApiError, apiFetch } from '../api/client.ts'
 import type {
   CategoryCreate,
-  CategoryTotals,
   CategoryKind,
   CategoryRead,
   CategoryTreeNode,
   CategoryUpdate,
 } from '../api/types.ts'
-import type { DashboardRange } from '../lib/dashboardPeriod.ts'
 
 /** Cache key of the category trees (both kinds). Invalidate it after any category change. */
 export const CATEGORIES_QUERY_KEY = ['categories'] as const
 
 /**
- * Prefix of every category-totals query key (each period). Invalidate it after any transaction or
- * category change.
+ * Prefix of every category-totals query key. Invalidate it after any transaction, category or
+ * monthly amount change.
  */
 export const CATEGORY_TOTALS_QUERY_KEY = ['category-totals'] as const
 
@@ -39,19 +37,6 @@ export function useCategories() {
     expenses: categoriesOfKind(categories, 'expense'),
     income: categoriesOfKind(categories, 'income'),
   }
-}
-
-/**
- * Period totals per category and subcategory (`GET /api/categories/totals`) for `range`; `null`
- * disables the request (invalid custom range). Amounts are decimal strings.
- */
-export function useCategoryTotals(range: DashboardRange | null) {
-  return useQuery({
-    queryKey: [...CATEGORY_TOTALS_QUERY_KEY, range?.from, range?.to],
-    queryFn: () =>
-      apiFetch<CategoryTotals[]>(`/categories/totals?from=${range!.from}&to=${range!.to}`),
-    enabled: range !== null,
-  })
 }
 
 /**

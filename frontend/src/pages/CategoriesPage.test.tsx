@@ -44,11 +44,7 @@ const DEFAULT_INCOME = tree('income', [
 const DEFAULT_TREE = [...DEFAULT_EXPENSES, ...DEFAULT_INCOME]
 
 function categoriesCalls(fetchMock: { mock: { calls: unknown[][] } }) {
-  return fetchMock.mock.calls.filter(
-    ([path]) =>
-      String(path).startsWith('/api/categories') &&
-      !String(path).startsWith('/api/categories/totals'),
-  )
+  return fetchMock.mock.calls.filter(([path]) => String(path).startsWith('/api/categories'))
 }
 
 function answer(body: CategoryTreeNode[]): Handler {
@@ -56,7 +52,7 @@ function answer(body: CategoryTreeNode[]): Handler {
     if (path === '/api/categories') {
       return jsonResponse(body)
     }
-    if (path.startsWith('/api/categories/totals')) {
+    if (path === '/api/category-amounts') {
       return jsonResponse([])
     }
     throw new Error(`Unexpected request: ${path}`)
@@ -209,7 +205,7 @@ describe('CategoriesPage', () => {
   it('shows an error with "Try again" and renders the tree once a retry succeeds', async () => {
     let fail = true
     const { fetchMock } = await renderCategories((path) => {
-      if (path.startsWith('/api/categories/totals')) {
+      if (path === '/api/category-amounts') {
         return jsonResponse([])
       }
       if (path !== '/api/categories') {
@@ -260,6 +256,9 @@ function fakeServer(
   const handler: Handler = (path, init) => {
     const method = (init.method ?? 'GET').toUpperCase()
     const body = init.body ? JSON.parse(String(init.body)) : undefined
+    if (path === '/api/category-amounts') {
+      return jsonResponse([])
+    }
     if (!path.startsWith('/api/categories')) {
       throw new Error(`Unexpected request: ${path}`)
     }

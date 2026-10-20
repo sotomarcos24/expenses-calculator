@@ -142,6 +142,41 @@ export interface paths {
     patch: operations['rename_category_api_categories__category_id__patch']
     trace?: never
   }
+  '/api/category-amounts': {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    /** List Category Amounts */
+    get: operations['list_category_amounts_api_category_amounts_get']
+    /** Put Category Amount */
+    put: operations['put_category_amount_api_category_amounts_put']
+    post?: never
+    delete?: never
+    options?: never
+    head?: never
+    patch?: never
+    trace?: never
+  }
+  '/api/category-amounts/{amount_id}': {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    get?: never
+    put?: never
+    post?: never
+    /** Delete Category Amount */
+    delete: operations['delete_category_amount_api_category_amounts__amount_id__delete']
+    options?: never
+    head?: never
+    patch?: never
+    trace?: never
+  }
   '/api/transactions': {
     parameters: {
       query?: never
@@ -343,6 +378,30 @@ export interface components {
       nominal: string
       /** Real */
       real: string
+    }
+    /** CategoryAmountPut */
+    CategoryAmountPut: {
+      /** Category Id */
+      category_id: number
+      /** Subcategory Id */
+      subcategory_id?: number | null
+      /** Amount */
+      amount: number | string
+      /** Note */
+      note?: string | null
+    }
+    /** CategoryAmountRead */
+    CategoryAmountRead: {
+      /** Id */
+      id: number
+      /** Category Id */
+      category_id: number
+      /** Subcategory Id */
+      subcategory_id: number | null
+      /** Amount */
+      amount: string
+      /** Note */
+      note: string | null
     }
     /** CategoryCreate */
     CategoryCreate: {
@@ -1161,6 +1220,112 @@ export interface operations {
         content: {
           'application/json': components['schemas']['CategoryRead']
         }
+      }
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['HTTPValidationError']
+        }
+      }
+    }
+  }
+  list_category_amounts_api_category_amounts_get: {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: {
+        access_token?: string | null
+      }
+    }
+    requestBody?: never
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['CategoryAmountRead'][]
+        }
+      }
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['HTTPValidationError']
+        }
+      }
+    }
+  }
+  put_category_amount_api_category_amounts_put: {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: {
+        access_token?: string | null
+      }
+    }
+    requestBody: {
+      content: {
+        'application/json': components['schemas']['CategoryAmountPut']
+      }
+    }
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['CategoryAmountRead']
+        }
+      }
+      /** @description Created */
+      201: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['CategoryAmountRead']
+        }
+      }
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['HTTPValidationError']
+        }
+      }
+    }
+  }
+  delete_category_amount_api_category_amounts__amount_id__delete: {
+    parameters: {
+      query?: never
+      header?: never
+      path: {
+        amount_id: number
+      }
+      cookie?: {
+        access_token?: string | null
+      }
+    }
+    requestBody?: never
+    responses: {
+      /** @description Successful Response */
+      204: {
+        headers: {
+          [name: string]: unknown
+        }
+        content?: never
       }
       /** @description Validation Error */
       422: {

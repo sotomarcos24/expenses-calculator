@@ -16,6 +16,7 @@ from app.schemas.dashboard import (
 )
 from app.schemas.money import CENT, RATE_STEP
 from app.services.investments import compute_totals
+from app.services.periods import period_amounts
 
 NO_SUBCATEGORY = "(none)"
 
@@ -46,7 +47,15 @@ def _type_totals(db: Session, user_id: int, date_from: date, date_to: date) -> d
         )
         .group_by(Transaction.type)
     ).all()
-    return {str(kind): _money(total) for kind, total in rows}
+    totals = {str(kind): _money(total) for kind, total in rows}
+    for kind in CategoryKind:
+        added = sum(
+            (amount for _, _, amount in period_amounts(db, user_id, date_from, date_to, kind)),
+            Decimal(0),
+        )
+        if added:
+            totals[kind.value] = totals.get(kind.value, Decimal(0).quantize(CENT)) + _money(added)
+    return totals
 
 
 def _expenses_by_category(
@@ -62,9 +71,19 @@ def _expenses_by_category(
         )
         .group_by(Transaction.category_id, Transaction.subcategory_id)
     ).all()
-    if not rows:
+    # Monthly expense amounts count like transactions: a subcategory amount adds to that
+    # subcategory, a category amount to the category's (none) entry.
+    sums: dict[tuple[int, int | None], Decimal] = {}
+    for category_id, subcategory_id, total in rows:
+        sums[(category_id, subcategory_id)] = _money(total)
+    for category_id, subcategory_id, amount in period_amounts(
+        db, user_id, date_from, date_to, CategoryKind.EXPENSE
+    ):
+        key = (category_id, subcategory_id)
+        sums[key] = sums.get(key, Decimal(0)) + _money(amount)
+    if not sums:
         return []
-    ids = {row[0] for row in rows} | {row[1] for row in rows if row[1] is not None}
+    ids = {key[0] for key in sums} | {key[1] for key in sums if key[1] is not None}
     names = dict(
         db.execute(
             select(Category.id, Category.name).where(
@@ -73,10 +92,10 @@ def _expenses_by_category(
         ).all()
     )
     subs: dict[int, list[SubcategoryTotal]] = {}
-    for category_id, subcategory_id, total in rows:
+    for (category_id, subcategory_id), total in sums.items():
         sub_name = NO_SUBCATEGORY if subcategory_id is None else names[subcategory_id]
         subs.setdefault(category_id, []).append(
-            SubcategoryTotal(id=subcategory_id, name=sub_name, total=_money(total))
+            SubcategoryTotal(id=subcategory_id, name=sub_name, total=total)
         )
     result: list[CategoryTotal] = []
     for category_id, sub_list in subs.items():

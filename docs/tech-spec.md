@@ -119,7 +119,7 @@ All tables have `id` (integer PK), `created_at` and `updated_at`. Every user-own
 - The `category_id` / `subcategory_id` FKs are `NO ACTION` (no `ON DELETE`), not `RESTRICT` and not `CASCADE`. A category (or subcategory) used by a transaction cannot be deleted: the service answers **409** first (`category_ids_in_use()`), and the FK is the safety net. Deleting a user cascades to both `categories` and `transactions` in one statement; with `NO ACTION` the FK check runs at the end of the statement, after both cascades, so it succeeds on SQLite and Postgres (with `RESTRICT`, Postgres checks immediately and the result could depend on cascade order). There is no ORM back-reference from `Category` to its transactions, so the ORM never nulls `category_id` on delete.
 - **Salary (§4.4):** a salary is an income transaction with `gross_amount` set. Effective deduction rate = `(gross − net) / gross`, computed and returned by the API (not stored). Totals and simulations always use `amount` (net).
 
-### `category_amounts` (planned, M10)
+### `category_amounts`
 
 | Column | Type | Notes |
 | --- | --- | --- |
@@ -130,7 +130,18 @@ All tables have `id` (integer PK), `created_at` and `updated_at`. Every user-own
 | note | varchar(500), nullable | |
 
 - One row per (`user_id`, `category_id`, `subcategory_id`): unique, with a partial unique index for the NULL subcategory case (as `categories` does). A second create for the same row updates it.
-- Dashboard, `/categories/totals`, the delete guard and `avg_monthly_expenses` add these amounts to the transactions; the exact months-in-period rule and the endpoints are specified by the M10 issues and written here when implemented.
+- Constraints and indexes: CHECK `ck_category_amounts_amount_positive`, unique `uq_category_amounts_user_id` on (`user_id`, `category_id`, `subcategory_id`), partial unique `uq_category_amounts_user_id_category_id_no_subcategory` on (`user_id`, `category_id`) `WHERE subcategory_id IS NULL`, indexes on `user_id`, `category_id`, `subcategory_id`. `user_id` is `ON DELETE CASCADE`; the category FKs are `NO ACTION` like `transactions` (a user delete cascades in one statement; no ORM back-reference from `Category`). Net amounts only: no gross amount, no date; income or expense comes from the category's `kind`.
+- **Months in a period** (`months_in_period()` in `app/services/periods.py`): `(to.year - from.year) * 12 + (to.month - from.month) + 1`, i.e. the calendar months touched by `from..to`, even partially (month preset = 1, year preset in March = 3, `2026-01-31..2026-02-01` = 2, a single day = 1).
+- Dashboard: `income_total` / `expense_total` = transactions in the period + sum(`amount` × months) of the user's income / expense amounts; `expenses_by_category` adds an amount on a subcategory to that subcategory and its category, and an amount on a category to its `(none)` entry. `GET /categories/totals` adds amount × months per subcategory and per category (own + subcategories'). `/simulator/defaults` `avg_monthly_expenses` = the transaction average + the sum of the monthly **expense** amounts, added in full (not averaged). Amounts never appear in `/transactions`.
+- Endpoints (router `app/routers/category_amounts.py`, logic in `app/services/category_amounts.py`; all require auth):
+
+| Method | Path | Behaviour |
+| --- | --- | --- |
+| GET | `/category-amounts` | **200** list `{id, category_id, subcategory_id, amount, note}` of the user's rows, ordered by id |
+| PUT | `/category-amounts` | body `{category_id, subcategory_id?, amount, note?}` (`amount` > 0, ≤ 2 decimals, else **422**); upsert of the (category, subcategory) row: **201** when created, **200** when updated (same id); **404** if `category_id` is not a top-level category of the user (a subcategory or another user's category is 404), or `subcategory_id` is not the user's; **422** if the subcategory is not a child of `category_id` |
+| DELETE | `/category-amounts/{id}` | **204**; **404** for an unknown or another user's id |
+
+- Delete guard: deleting a category or subcategory that has a `category_amounts` row (as `category_id` or `subcategory_id`; for a category also via its subcategories) answers **409** `"Category has monthly amounts; remove them first"` (`category_ids_have_amounts()`); the "has transactions" check runs first.
 
 ### `investments`
 
@@ -183,10 +194,10 @@ Prefix `/api`. JSON in and out. Money fields are serialized as **strings** (`"12
 | Method | Path | Description |
 | --- | --- | --- |
 | GET | `/categories?kind=` | **200** + `list[CategoryTreeNode]`: the user's top-level categories ordered by id, each with its `subcategories` ordered by id. Without `kind` both kinds are returned; `kind` other than `income` / `expense` is **422** |
-| GET | `/categories/totals?from=&to=` | `from` and `to` required dates (inclusive; missing, malformed or `from > to` is **422**) → **200** + `list[CategoryTotals]`: one entry per top-level category of the user (both kinds, ordered by id) `{category_id, total, subcategories: [{id, total}]}`, totals as 2-decimal strings (`"0.00"` when empty). A category total is its direct transactions plus its subcategories' in the period; a subcategory total is its own transactions. Declared before `/categories/{id}` |
+| GET | `/categories/totals?from=&to=` | `from` and `to` required dates (inclusive; missing, malformed or `from > to` is **422**) → **200** + `list[CategoryTotals]`: one entry per top-level category of the user (both kinds, ordered by id) `{category_id, total, subcategories: [{id, total}]}`, totals as 2-decimal strings (`"0.00"` when empty). A category total is its direct transactions plus its subcategories' in the period; a subcategory total is its own transactions; both also include the monthly amounts × months in the period (§4 `category_amounts`). Declared before `/categories/{id}` |
 | POST | `/categories` | `CategoryCreate {name, kind, parent_id?}` → **201** + `CategoryRead`. **404** if `parent_id` does not exist or belongs to another user; **422** if the parent is a subcategory (max two levels) or has a different `kind`; **409** on a duplicate name |
 | PATCH | `/categories/{id}` | `CategoryUpdate {name}` (rename only; any other field is **422**) → **200** + `CategoryRead`; **404**, **409** on a duplicate name |
-| DELETE | `/categories/{id}` | **204**, deletes the category and its subcategories; **404**; **409** `"This category or one of its subcategories has transactions"` and nothing is deleted |
+| DELETE | `/categories/{id}` | **204**, deletes the category and its subcategories; **404**; **409** `"This category or one of its subcategories has transactions"`, or `"Category has monthly amounts; remove them first"` when it or a subcategory has a `category_amounts` row, and nothing is deleted |
 
 `CategoryRead` is `{id, name, kind, parent_id}` (`parent_id` is `null` for a top-level category); `CategoryTreeNode` adds `subcategories: list[CategoryRead]`. Request bodies reject unknown fields (422). `name` is stripped at both ends and must then be 1–100 characters (422 otherwise). A category id that does not exist or belongs to another user is **404** `"Category not found"`.
 
@@ -285,7 +296,7 @@ Response:
 - `expenses_by_category`: `[{category_id, name, total, subcategories: [{id, name, total}]}]`, only categories with expenses in the period, sorted by `total` desc then `name` (subcategories likewise). Expenses without a subcategory are one entry `{id: null, name: "(none)", total}` inside that category's `subcategories`. Subcategory totals add up to the category `total`, and category totals to `expense_total`. The frontend uses this for the pie chart drill-down without a second request.
 - `investments`: `{total_invested, current_value, gain, gain_pct, by_type: [{type, current_value}]}`: a snapshot of **all** the user's investments, independent of `from`/`to`, with the same totals as `GET /investments`. `by_type` has one entry per type held, sorted by `current_value` desc then `type`; with no investments the money fields are `"0.00"`, `gain_pct` is `null` and `by_type` is `[]`.
 
-Logic in `app/services/dashboard.py` (`build_dashboard`, `compute_savings_rate`), aggregated in SQL with `GROUP BY`.
+Logic in `app/services/dashboard.py` (`build_dashboard`, `compute_savings_rate`), aggregated in SQL with `GROUP BY`. Monthly category amounts (§4 `category_amounts`) count in `income_total`, `expense_total` and `expenses_by_category` as amount × months in the period.
 
 The frontend computes the period (current month by default, current year, or custom range) and sends `from` and `to`.
 
@@ -350,7 +361,7 @@ Output per scenario:
 - `lasts_until_end = true/false`, plus `depletion_age` when it does not last
 - yearly series `{age, nominal, real}` for the chart
 
-**`avg_monthly_expenses` default:** the user's total expenses over the last 12 full months ÷ the number of months that have data (at most 12). Returns `0` if there is no data; the frontend then asks the user to enter a value.
+**`avg_monthly_expenses` default:** the user's total expenses over the last 12 full months ÷ the number of months that have data (at most 12). Returns `0` if there is no data; the frontend then asks the user to enter a value. The sum of the user's monthly expense amounts (§4 `category_amounts`) is added in full, so with no transactions it equals just that sum.
 
 ### 7.6 Validation
 
