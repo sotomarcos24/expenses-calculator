@@ -258,12 +258,12 @@
 
 #### Acceptance criteria
 
-- [ ] The app is reachable at a public HTTPS URL. *(pending, #47)*
-- [ ] Full flow works in production: sign up → categories → transactions → investments → dashboard → simulator. *(pending, #47)*
+- [x] The app is reachable at a public HTTPS URL. *(https://personaldolar.onrender.com, #47)*
+- [x] Full flow works in production: sign up → categories → transactions → investments → dashboard → simulator. *(#47, smoke test done by hand)*
 - [x] Tests pass against both SQLite and Postgres. *(#46; run by hand on SQLite and Postgres 17, the `backend-postgres` CI job still has to run on GitHub)*
-- [ ] No secrets in the repo. *(pending, #47: no-secrets CI check and history review)*
-- [ ] A push to `main` deploys to Render automatically only after all tests pass, and the `deploy` job has been green at least once. *(pending, #55)*
-- [ ] `docker compose up --build` starts the app and Postgres 17 locally. *(pending, #56)*
+- [x] No secrets in the repo. *(#47: `no-secrets` CI job green on `main`, history review clean)*
+- [x] A push to `main` deploys to Render automatically only after all tests pass, and the `deploy` job has been green at least once. *(#55; `deploy` green on `main`, `/api/health` reports the pushed commit)*
+- [x] `docker compose up --build` starts the app and Postgres 17 locally. *(#56)*
 
 #### Progress notes
 
