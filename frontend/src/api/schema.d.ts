@@ -489,6 +489,8 @@ export interface components {
       status: string
       /** Database */
       database: string
+      /** Commit */
+      commit: string
     }
     /**
      * InvestmentCreate

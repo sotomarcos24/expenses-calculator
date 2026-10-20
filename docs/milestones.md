@@ -49,7 +49,7 @@
 
 #### Acceptance criteria
 
-- [x] `GET /api/health` returns `{"status":"ok","database":"ok"}`, also through the Vite proxy.
+- [x] `GET /api/health` returns `{"status":"ok","database":"ok"}` (since #57 also `"commit"`), also through the Vite proxy.
 - [x] All routes render inside the layout; the active section is highlighted.
 - [x] All checks pass locally.
 
@@ -252,6 +252,8 @@
 - Postgres: run all migrations and the test suite against Postgres once (CI job with a Postgres service).
 - Deploy to a free tier (Render or Fly.io) with managed Postgres; `COOKIE_SECURE=true`, strong `JWT_SECRET`, migrations on deploy.
 - README: production configuration and deploy steps.
+- Continuous deployment (#55, label `human`): a `deploy` job in `ci.yml` runs only on pushes to `main` after every test job passes, calls the Render deploy hook (GitHub secret `RENDER_DEPLOY_HOOK`) and polls `/api/health` until it answers 200 with the pushed commit (#57; `/api/health` reports `RENDER_GIT_COMMIT`).
+- Local stack (#56): `docker-compose.yml` with the app and Postgres 17, started with `docker compose up --build`.
 - Spec extension (#48, #49, outside the original scope): record transactions from the Categories page on subcategories, with period totals per subcategory and per category (see `docs/plan.md` §4.2). Backend `GET /categories/totals` (#48); frontend (#49): add-transaction buttons, period selector and totals on `/categories`.
 
 #### Acceptance criteria
@@ -260,6 +262,8 @@
 - [ ] Full flow works in production: sign up → categories → transactions → investments → dashboard → simulator. *(pending, #47)*
 - [x] Tests pass against both SQLite and Postgres. *(#46; run by hand on SQLite and Postgres 17, the `backend-postgres` CI job still has to run on GitHub)*
 - [ ] No secrets in the repo. *(pending, #47: no-secrets CI check and history review)*
+- [ ] A push to `main` deploys to Render automatically only after all tests pass, and the `deploy` job has been green at least once. *(pending, #55)*
+- [ ] `docker compose up --build` starts the app and Postgres 17 locally. *(pending, #56)*
 
 #### Progress notes
 
@@ -268,8 +272,10 @@
 - **Done (#47 repo side, merged into `main` via the `m8-deploy` PR):** `DATABASE_URL` normalisation in `app/db.py` with tests, `render.yaml` Blueprint, `backend/scripts/check_no_secrets.py` + `no-secrets` CI job (git history reviewed: clean; `.env` and `*.db` untracked), README "Production" section with the smoke-test checklist, tech-spec §11.
 - **Pending (#47, needs the user):** create the Render account, apply the Blueprint, record the public URL, run the production smoke test, confirm the rate limit behind the proxy. Then tick the first two criteria above (and the no-secrets one once the `no-secrets` job is green on GitHub).
 - **QA:** #47 repo side passed QA (one FAIL fixed: the no-secrets script flagged test URLs; commits `0370f60`, `d866e2b`). The issue stays open until the production criteria are met.
+- **Done (#55 repo side, on `m8-cd-compose`):** `deploy` job in `ci.yml` (push to `main` only, `needs` all five test jobs, Render deploy hook from secret `RENDER_DEPLOY_HOOK`, health polling of variable `RENDER_PUBLIC_URL`), README "Continuous deployment", tech-spec §11. **Pending (user):** create the secret and the variable, then confirm the job is green once on `main`.
+- **Issues (#55 CD deploy job, `human`; #56 docker-compose):** #47 must not be closed until the `deploy` job of #55 has passed green once on `main`. The deploy hook never appears in the repo or in chat.
 - **Next:** the `m8-deploy` PR is merged, so check that the `backend-postgres`, `docker` and `no-secrets` jobs are green on GitHub, then do the Render steps above. Milestone is complete (✅) only when all four acceptance criteria above are ticked; then remove these notes.
-- Docker: it was available earlier, but in the last session `docker` was **not** found in this WSL distro (Docker Desktop integration off), so the image was not rebuilt against Postgres after #47; the CI `docker` job or a local run must cover it.
+- Docker is available in this WSL (Docker Desktop with WSL integration, `docker --version`); #56 is verified locally with `docker compose`.
 - The free-tier limits written in the README/tech-spec §11 (cold start, free Postgres expiry, no backups) are **unverified**; confirm them against Render's current terms.
 - **Decisions (user):** `psycopg[binary]` is approved as the Postgres driver; the provider for #47 is Render (Neon as fallback if the free Postgres expiry is a problem).
 

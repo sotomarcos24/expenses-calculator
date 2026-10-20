@@ -46,6 +46,19 @@ cd frontend && npm run lint && npm run format:check && npm run typecheck && npm 
 (cd frontend && npm run gen:api)
 ```
 
+### Run with Docker Compose (local)
+
+`docker-compose.yml` runs the production-like image (root `Dockerfile`) with Postgres 17, for local use only:
+
+```bash
+docker compose up --build        # then open http://localhost:8000
+APP_PORT=8010 docker compose up --build   # use another host port (http://localhost:8010)
+docker compose down              # stop, keep the data (named volume pgdata)
+docker compose down -v           # stop and delete the DB volume (full reset)
+```
+
+The app waits for the `db` healthcheck, then the entrypoint applies migrations. The DB port is not published. Compose serves plain `http://localhost`, so it sets `ENVIRONMENT=development` and `COOKIE_SECURE=false`: with `ENVIRONMENT=production` the app refuses to start without `COOKIE_SECURE=true` and a strong `JWT_SECRET`, and a `Secure` cookie would not be accepted over http, so login would not work. The credentials and the `dev-only` `JWT_SECRET` in the file are throwaway examples for local use only; this file is not the production deployment (see Production below).
+
 ## Production
 
 The app ships as one Docker image (root `Dockerfile`): FastAPI serves `/api` and the built frontend from the same origin, and the entrypoint runs `alembic upgrade head` before starting `uvicorn`, so migrations run on every deploy. The chosen host is [Render](https://render.com) (free web service + free Postgres), described by the `render.yaml` Blueprint. Public URL: _to be recorded here after the first deploy_.
@@ -80,8 +93,27 @@ Do not scale beyond one instance: the login rate limiter keeps its counters in p
 ### Migrations, redeploy and rollback
 
 - Migrations: the container entrypoint runs `alembic upgrade head` on every start, so each deploy brings the schema to head before serving.
-- Redeploy: push to the deployed branch (auto-deploy is off in the Blueprint, so use **Manual Deploy** in the Render dashboard) or restart the service.
+- Redeploy: a push to `main` deploys automatically once all tests pass (see Continuous deployment below; auto-deploy is off in the Blueprint, the deploy hook is the only trigger). If CD fails or is not set up, use **Manual Deploy** in the Render dashboard, or restart the service.
 - Roll back code: in the Render dashboard open **Events/Deploys**, pick an earlier successful deploy and choose **Rollback**. Migrations are not reverted automatically; if a bad migration was applied, run `alembic downgrade <revision>` against the database (Render **Shell** on the service, or `psql` / a local `DATABASE_URL`) before or after rolling back.
+
+### Continuous deployment
+
+The `deploy` job of `.github/workflows/ci.yml` runs only on pushes to `main`, and only after `backend`, `frontend`, `backend-postgres`, `docker` and `no-secrets` are all green (it never runs on pull requests). Any test job added later must be added to its `needs` list. The job:
+
+1. calls the Render **deploy hook** (`curl --fail -X POST`), and
+2. polls `<RENDER_PUBLIC_URL>/api/health` (after a 30 s head start, every 15 s) until it returns HTTP 200 **and** its `commit` equals the pushed commit SHA (`github.sha`), failing after about 10 minutes.
+
+`/api/health` reports the commit the service is running (`{"status":"ok","database":"ok","commit":"<sha>"}`), read from Render's default environment variable `RENDER_GIT_COMMIT` ([Render docs](https://render.com/docs/environment-variables)); it is `unknown` when the variable is unset or blank (local runs). Render keeps serving the old version while the new one builds, so the job ignores 200 answers with another commit: green means the pushed commit is live. To see what is live, run `curl <RENDER_PUBLIC_URL>/api/health`. If the deploy fails the job times out red. Deploys are serialised (one at a time) and a running deploy is never cancelled. Rollback stays manual (see above).
+
+Setup (you, not the CI):
+
+1. Render dashboard: `personaldolar` service > **Settings > Deploy Hook**, copy the URL.
+2. GitHub: **Settings > Secrets and variables > Actions > Secrets** > new secret `RENDER_DEPLOY_HOOK` = that URL. The URL grants deploy rights: never put it in the repo, an issue or a chat.
+3. Same page, **Variables** tab > new variable `RENDER_PUBLIC_URL` = the service URL (`https://<name>.onrender.com`; a trailing slash is tolerated). It is not a secret.
+4. After the first push to `main`, check that the `deploy` job is green.
+5. Rotating the hook (e.g. if it leaked): regenerate it in Render and update the secret.
+
+If the secret or the variable is missing the job fails with an `::error::` message that does not print any secret.
 
 ### Free-tier limits and backups
 

@@ -121,3 +121,66 @@ jobs:
       - name: Container logs
         if: always()
         run: docker logs ci-app || true
+
+  # Continuous deployment: only on pushes to main, after every test job is green.
+  # Any test job added to this workflow MUST be added to `needs` below.
+  deploy:
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    needs: [backend, frontend, backend-postgres, docker, no-secrets]
+    runs-on: ubuntu-latest
+    # One deploy at a time; a running deploy is never cancelled.
+    concurrency:
+      group: deploy
+      cancel-in-progress: false
+    steps:
+      - name: Trigger deploy
+        env:
+          RENDER_DEPLOY_HOOK: ${{ secrets.RENDER_DEPLOY_HOOK }}
+        run: |
+          if [ -z "$RENDER_DEPLOY_HOOK" ]; then
+            echo "::error::GitHub secret RENDER_DEPLOY_HOOK is not set. See README, Production > Continuous deployment."
+            exit 1
+          fi
+          curl --fail --silent --show-error --max-time 60 -X POST "$RENDER_DEPLOY_HOOK" -o /dev/null
+          echo "Deploy requested."
+      - name: Wait for healthy deploy
+        env:
+          RENDER_PUBLIC_URL: ${{ vars.RENDER_PUBLIC_URL }}
+          EXPECTED_COMMIT: ${{ github.sha }}
+          # Overridable only to simulate the failure branch locally.
+          HEALTH_TIMEOUT_SECONDS: "600"
+          HEALTH_INTERVAL_SECONDS: "15"
+          HEALTH_INITIAL_WAIT_SECONDS: "30"
+        run: |
+          if [ -z "$RENDER_PUBLIC_URL" ]; then
+            echo "::error::GitHub variable RENDER_PUBLIC_URL is not set (e.g. https://<name>.onrender.com). See README, Production > Continuous deployment."
+            exit 1
+          fi
+          url="${RENDER_PUBLIC_URL%/}/api/health"
+          # The old instance keeps serving while the new one builds, so a 200 is not enough:
+          # wait until /api/health reports the commit that was pushed.
+          # Give Render a head start before the first check.
+          sleep "$HEALTH_INITIAL_WAIT_SECONDS"
+          deadline=$(( $(date +%s) + HEALTH_TIMEOUT_SECONDS ))
+          status=000
+          last_commit=""
+          while [ "$(date +%s)" -lt "$deadline" ]; do
+            body=$(mktemp)
+            status=$(curl --silent --max-time 20 -o "$body" -w '%{http_code}' "$url" || true)
+            commit=""
+            if [ "$status" = "200" ]; then
+              commit=$(jq -r '.commit // empty' "$body" 2>/dev/null || true)
+            fi
+            rm -f "$body"
+            if [ -n "$commit" ]; then
+              last_commit="$commit"
+            fi
+            echo "GET $url -> $status, commit=${commit:-n/a} (expected $EXPECTED_COMMIT)"
+            if [ "$status" = "200" ] && [ "$commit" = "$EXPECTED_COMMIT" ]; then
+              echo "Deploy is live on commit $EXPECTED_COMMIT."
+              exit 0
+            fi
+            sleep "$HEALTH_INTERVAL_SECONDS"
+          done
+          echo "::error::$url did not report commit $EXPECTED_COMMIT within ${HEALTH_TIMEOUT_SECONDS}s (last HTTP status: $status, last commit seen: ${last_commit:-none}). Check the deploy in the Render dashboard."
+          exit 1

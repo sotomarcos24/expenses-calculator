@@ -1,0 +1,41 @@
+# Local, production-like run: the app image (root Dockerfile) plus Postgres 17.
+# For local use only. Production is deployed on Render (render.yaml), not with this file.
+# All credentials below are throwaway examples; never reuse them anywhere real.
+services:
+  db:
+    image: postgres:17
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: personaldolar
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    # The DB port is not published; only the app container reaches it.
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d personaldolar"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+    restart: unless-stopped
+
+  app:
+    build: .
+    depends_on:
+      db:
+        condition: service_healthy
+    ports:
+      # Override the host port with APP_PORT, e.g. APP_PORT=8010 docker compose up --build
+      - "${APP_PORT:-8000}:8000"
+    environment:
+      DATABASE_URL: postgresql+psycopg://postgres:postgres@db:5432/personaldolar
+      # Compose serves plain http://localhost. ENVIRONMENT=production would require
+      # COOKIE_SECURE=true (a Secure cookie is not accepted over http, so login would
+      # fail) and a strong non-default JWT_SECRET, so local runs use development mode.
+      ENVIRONMENT: development
+      COOKIE_SECURE: "false"
+      # Dev-only example value. Never reuse it in production (generate one with openssl rand -hex 32).
+      JWT_SECRET: dev-only-compose-secret-not-for-production
+    restart: unless-stopped
+
+volumes:
+  pgdata:
