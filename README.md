@@ -57,7 +57,7 @@ docker compose down              # stop, keep the data (named volume pgdata)
 docker compose down -v           # stop and delete the DB volume (full reset)
 ```
 
-The app waits for the `db` healthcheck, then the entrypoint applies migrations. The DB port is not published. Compose serves plain `http://localhost`, so it sets `ENVIRONMENT=development` and `COOKIE_SECURE=false`: with `ENVIRONMENT=production` the app refuses to start without `COOKIE_SECURE=true` and a strong `JWT_SECRET`, and a `Secure` cookie would not be accepted over http, so login would not work. The credentials and the `dev-only` `JWT_SECRET` in the file are throwaway examples for local use only; this file is not the production deployment (see Production below).
+The app waits for the `db` healthcheck, then the entrypoint applies migrations. The DB port is not published, and the app port is bound to `127.0.0.1` only (not reachable from other machines on the network, because the file uses a public dev `JWT_SECRET`). Compose serves plain `http://localhost`, so it sets `ENVIRONMENT=development` and `COOKIE_SECURE=false`: with `ENVIRONMENT=production` the app refuses to start without `COOKIE_SECURE=true` and a strong `JWT_SECRET`, and a `Secure` cookie would not be accepted over http, so login would not work. The credentials and the `dev-only` `JWT_SECRET` in the file are throwaway examples for local use only; this file is not the production deployment (see Production below).
 
 ## Production
 
@@ -113,14 +113,18 @@ Setup (you, not the CI):
 4. After the first push to `main`, check that the `deploy` job is green.
 5. Rotating the hook (e.g. if it leaked): regenerate it in Render and update the secret.
 
+Known limitation: two merges to `main` in quick succession can make the first `deploy` job fail by timeout. The jobs are serialised, and the first deploy hook may be superseded by the second, so Render never reports the first commit and the job waits in vain for its SHA. The second job still turns green once its own commit is live, so check that one (and `curl <RENDER_PUBLIC_URL>/api/health`) before re-running anything.
+
 If the secret or the variable is missing the job fails with an `::error::` message that does not print any secret.
 
 ### Free-tier limits and backups
 
-Free tiers change; check Render's current terms. At the time of writing:
+Limits of Render's free plan, as listed at <https://render.com/docs/free> (checked on 2026-10-20; free tiers change, so re-check before relying on them):
 
-- The free web service spins down after about 15 minutes without traffic; the next request has a cold start of roughly a minute.
-- The free Postgres expires after a limited period (30 days, plus a short grace period) and then must be recreated or upgraded; data is lost if it is deleted. Free databases have no backups. The fallback is a free [Neon](https://neon.tech) Postgres: create a project, copy its connection string into `DATABASE_URL` on the web service (and drop the `databases` block of `render.yaml`).
+- **Spin-down:** the free web service spins down after 15 minutes without traffic; the next request has a cold start of about a minute.
+- **Instance hours:** 750 free instance hours per month per workspace.
+- **Single instance:** the free web service runs one instance only (no scaling).
+- **Free Postgres:** 1 GB, **no backups**, and it **expires 30 days after creation**; after that there are 14 days of grace before it is deleted with its data. `personaldolar-db` was created on 2026-10-19, so it expires around **2026-11-18** and would be deleted around **2026-12-02** unless it is upgraded or its data moved first. The fallback is a free [Neon](https://neon.tech) Postgres: create a project, copy its connection string into `DATABASE_URL` on the web service (and drop the `databases` block of `render.yaml`).
 - Back up by hand with `pg_dump "$DATABASE_URL" > backup.sql` (use the database's external connection string) and restore with `psql "$DATABASE_URL" < backup.sql`. Keep dumps out of the repository (they contain personal financial data).
 
 ### Smoke test (run once against the public URL, with a throwaway account)

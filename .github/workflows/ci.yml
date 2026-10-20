@@ -5,6 +5,10 @@ on:
     branches: [main]
   pull_request:
 
+# Least privilege: jobs that need more declare it themselves.
+permissions:
+  contents: read
+
 jobs:
   backend:
     runs-on: ubuntu-latest
@@ -122,11 +126,42 @@ jobs:
         if: always()
         run: docker logs ci-app || true
 
+  # Semgrep OSS static analysis. No account, login or token: rules come from the public
+  # registry packs (p/python, p/typescript, p/dockerfile, p/github-actions) and metrics are off.
+  # The image is pinned (never `latest`) and must match the local run documented in
+  # security-audit/semgrep-findings.md. Only severity ERROR fails the job; WARNING/INFO
+  # findings are kept in the uploaded report.
+  semgrep:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    container:
+      image: semgrep/semgrep:1.100.0
+    env:
+      SEMGREP_ARGS: >-
+        --metrics=off
+        --config p/python --config p/typescript --config p/dockerfile --config p/github-actions
+        --exclude node_modules --exclude .venv --exclude package-lock.json --exclude uv.lock
+        --exclude schema.d.ts --exclude openapi.json
+    steps:
+      - uses: actions/checkout@v4
+      - name: Scan and write the report (all severities)
+        run: semgrep scan $SEMGREP_ARGS --json --json-output semgrep-report.json
+      - name: Fail on severity ERROR
+        run: semgrep scan $SEMGREP_ARGS --severity ERROR --error
+      - name: Upload report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: semgrep-report
+          path: semgrep-report.json
+          if-no-files-found: ignore
+
   # Continuous deployment: only on pushes to main, after every test job is green.
   # Any test job added to this workflow MUST be added to `needs` below.
   deploy:
     if: github.event_name == 'push' && github.ref == 'refs/heads/main'
-    needs: [backend, frontend, backend-postgres, docker, no-secrets]
+    needs: [backend, frontend, backend-postgres, docker, no-secrets, semgrep]
     runs-on: ubuntu-latest
     # One deploy at a time; a running deploy is never cancelled.
     concurrency:

@@ -31,8 +31,9 @@
 | 6 | Dashboard | Period summary and charts | 4, 5 | ✅ Done |
 | 7 | Simulator | Modes A/B/C with three scenarios | 4, 5 | ✅ Done |
 | 8 | Polish and deployment | Production-ready MVP online | 1–7 | ✅ Done |
-| 9 | Refinement | Pie colours, fixed monthly category amounts apart from transactions | 8 | ⬜ Planned (issues #51–#53 groomed) |
-| 10 | Nice-to-haves | Recurring transactions, CSV export, i18n | 9 | ⬜ Optional |
+| 9 | Security | Semgrep scan, PR audit, agent security notes, AI/data policy, audit fixes | 8 | ✅ Done (human decisions pending in #69) |
+| 10 | Refinement | Pie colours, fixed monthly category amounts apart from transactions | 9 | ⬜ Planned (issues #51–#53 groomed) |
+| 11 | Nice-to-haves | Recurring transactions, CSV export, i18n | 10 | ⬜ Optional |
 
 ---
 
@@ -268,7 +269,32 @@
 ---
 
 
-## M9 — Refinement
+## M9 — Security and DevOps hardening ✅
+
+**Goal:** make the project's security posture reviewable: a static-analysis scan in CI, an audit of a merged PR, notes on what the AI agents and plugins can do, an AI/data policy, and the fixes the audit found. Everything lives in `security-audit/` and `docs/security.md` (index).
+
+> Order of work: Semgrep (#64), PR audit (#65), agent notes and policy (#66), then the audit fixes (#67, #68).
+
+#### Scope
+
+- **Semgrep OSS in CI** with a findings report (`security-audit/semgrep-findings.md`).
+- **PR audit** with a reusable brief (`security-audit/audit-brief.md`, `security-audit/runs/`).
+- **Agent security notes, AI/data policy and index** (`security-audit/capability-table.md`, `docs/ai-data-policy.md`, `docs/security.md`).
+- **Audit fixes:** least-privilege `permissions` in `ci.yml` (#67) and loopback binding of the `docker-compose` port (#68). Each finding in `security-audit/` links to the issue and the commit that fixes it.
+
+#### Acceptance criteria
+
+- [x] Semgrep runs in CI and its findings are reported (#64).
+- [x] A PR audit with a reusable brief is stored (#65).
+- [x] Capability table, AI/data policy and security index exist and their links resolve (#66).
+- [x] #67 and #68 are fixed, and every audit finding links to its issue and fixing commit. *(F1 → #67 `b3b771a`, F2 → #68 `28d7c19`; F2a and F3 are accepted without a fix)*
+- [ ] The user has filled the **Human decision** column of the Semgrep findings and of the PR audit.
+
+> **Note:** M9 was closed with this last criterion open by the user's decision. Filling the **Human decision** column is a human-only task, tracked in issue **#69** (labels `human`, `documentation`); it does not block M10. Tick it when #69 is closed.
+
+---
+
+## M10 — Refinement
 
 **Goal:** fix the problems found while using the app: the pies render black, and category amounts are recorded as dated transactions when they should be a fixed monthly figure kept apart from one-off transactions (plan §4.2, §4.3).
 
@@ -296,7 +322,7 @@
 
 ---
 
-## M10 — Nice-to-haves (optional, in this order, §5)
+## M11 — Nice-to-haves (optional, in this order, §5)
 
 1. **Recurring transactions:** template with frequency and start/end dates; generated entries appear automatically (idempotent generation when the user opens the app or on a schedule).
 2. **CSV export:** download transactions for the selected filters.

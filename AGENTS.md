@@ -23,6 +23,7 @@ Read **only when the task needs it**:
 | [`docs/frontend.md`](docs/frontend.md) | Touching `frontend/`: commands, conventions, tests, current state, caveats |
 | [`docs/plan.md`](docs/plan.md) | Product questions: features, user stories, non-goals (§6) |
 | [`docs/tech-spec.md`](docs/tech-spec.md) | Technical design: data model, auth, API, simulator formulas |
+| [`docs/security.md`](docs/security.md) | Security questions: index of the audits, Semgrep findings, agent capability table, AI/data policy |
 | [`docs/task-template.md`](docs/task-template.md), [`docs/team/`](docs/team/) | Grooming issues / acting as one of the subagent roles |
 
 - Only work on the milestone in progress unless told otherwise.
@@ -82,8 +83,9 @@ docs/       specs, milestones, process, team roles
 
 ## Current state
 
-- Milestones 1 (scaffolding), 2 (authentication), 3 (categories), 4 (transactions), 5 (investments), 6 (dashboard), 7 (simulator) and 8 (polish and deployment) are done. The app is online at <https://personaldolar.onrender.com> (Render free web service + free Postgres 17, `render.yaml`; every push to `main` deploys through the `deploy` job of `ci.yml` after all test jobs pass; `TRUSTED_PROXY_COUNT=3`, see `docs/operations/rate-limit-diagnosis.md`). The free-tier limits written in the README and tech-spec §11 are still **unverified** against Render's current terms (the free Postgres expires after about 30 days: back up or move to Neon).
-- **Next: M9 — Refinement** (pie colours, fixed monthly category amounts apart from transactions), branch `m9-<slug>` (e.g. `m9-refinement`) from an up-to-date `main`. Its issues already exist and are groomed: **#51** (pie colours), **#52** (monthly amounts: backend, dashboard, totals, simulator) and **#53** (Categories page UI). Start with `/run-milestone` or `/next-issue`. M10 (nice-to-haves, optional) follows.
+- Milestones 1 (scaffolding), 2 (authentication), 3 (categories), 4 (transactions), 5 (investments), 6 (dashboard), 7 (simulator), 8 (polish and deployment) and 9 (security and DevOps hardening) are done. The app is online at <https://personaldolar.onrender.com> (Render free web service + free Postgres 17, `render.yaml`; every push to `main` deploys through the `deploy` job of `ci.yml` after all test jobs pass; `TRUSTED_PROXY_COUNT=3`, see `docs/operations/rate-limit-diagnosis.md`). The free-tier limits in the README and tech-spec §11 were checked against <https://render.com/docs/free> on 2026-10-20: the free Postgres (created 2026-10-19) **expires around 2026-11-18** and is deleted around 2026-12-02, so back it up or move it to Neon before then.
+- **M9 — Security and DevOps hardening** is done (Semgrep CI job, PR audit, agent capability table, AI/data policy, fixes #67 and #68; index in `docs/security.md`). The user still has to fill the **Human decision** column of the Semgrep findings and the PR audit: issue **#69** (labels `human`, `documentation`, not tied to a milestone), human-only, agents must not fill it.
+- **Next: M10 — Refinement** (pie colours, fixed monthly category amounts apart from transactions). Issues **#51**, **#52** and **#53** are already groomed (label `m10`). Create branch `m10-<slug>` (e.g. `m10-refinement`) from an up-to-date `main` after the M9 PR is merged, then run `/run-milestone` or `/next-issue`. M11 (nice-to-haves, optional) comes last.
 - The API contract is the committed `openapi.json` at the repo root; after any backend route or schema change, re-export it and regenerate the frontend types (see `docs/backend.md` → *Commands*). CI fails if either is stale.
 - Git: `main` tracks `origin` (`github.com/sotomarcos24/expenses-calculator`).
 
