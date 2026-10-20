@@ -9,6 +9,8 @@ export type CategoryEditor =
   | { type: 'add'; kind: CategoryKind; parentId: number | null; error?: string }
   | { type: 'rename'; kind: CategoryKind; id: number; name: string; error?: string }
   | { type: 'delete'; kind: CategoryKind; id: number }
+  /** Confirmation to remove the monthly amount `amountId` of the row `id` (category or subcategory). */
+  | { type: 'delete-amount'; kind: CategoryKind; id: number; amountId: number }
   | { type: 'failed'; kind: CategoryKind; id: number; error: string }
 
 /** Text of the delete confirmation, e.g. `Delete "Housing" and its 3 subcategories?`. */

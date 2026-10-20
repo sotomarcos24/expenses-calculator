@@ -59,10 +59,9 @@ const SCENARIO = {
 
 function mockApi() {
   return mockMe(200, (path) => {
-    if (path.startsWith('/api/categories/totals')) {
+    if (path === '/api/category-amounts') {
       return jsonResponse([
-        { category_id: 1, total: '40.00', subcategories: [{ id: 2, total: '40.00' }] },
-        { category_id: 5, total: '0.00', subcategories: [] },
+        { id: 1, category_id: 1, subcategory_id: 2, amount: '40.00', note: null },
       ])
     }
     if (path.startsWith('/api/categories')) return jsonResponse(CATEGORIES)
@@ -204,19 +203,25 @@ describe('every form control has a label', () => {
     expect(unnamed(document.body)).toEqual([])
   })
 
-  it('Categories: the add-transaction buttons and the prefilled dialog', async () => {
+  it('Categories: the monthly amount buttons and dialog', async () => {
     mockApi()
     renderApp('/categories')
     await screen.findByRole('heading', { level: 1, name: 'Categories' })
     fireEvent.click(await screen.findByRole('button', { name: 'Food' }))
-    expect(screen.getByLabelText('Period')).toBeInTheDocument()
-    const add = screen.getByRole('button', { name: 'Add expense to Groceries' })
-    expect(screen.getByRole('button', { name: 'Add income to Salary' })).toBeInTheDocument()
+    expect(screen.queryByLabelText('Period')).not.toBeInTheDocument()
+    expect(await screen.findAllByText('$40.00 / month')).toHaveLength(2)
+    expect(
+      screen.getByRole('button', { name: 'Delete monthly amount of Groceries' }),
+    ).toBeInTheDocument()
+    const add = screen.getByRole('button', { name: 'Add monthly amount to Salary' })
     expect(unnamed(document.body)).toEqual([])
     add.focus()
     fireEvent.click(add)
-    const dialog = await screen.findByRole('dialog', { name: 'Add transaction' })
+    const dialog = await screen.findByRole('dialog', { name: 'Monthly amount for Salary' })
     expect(unnamed(dialog)).toEqual([])
+    for (const label of ['Amount', 'Note (optional)']) {
+      expect(within(dialog).getByLabelText(label)).toBeInTheDocument()
+    }
     fireEvent.keyDown(dialog, { key: 'Escape' })
     await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument())
     expect(add).toHaveFocus()

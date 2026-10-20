@@ -1,5 +1,11 @@
 import { useEffect, useId, useRef, useState, type ReactNode } from 'react'
-import type { CategoryKind, CategoryRead, CategoryTreeNode } from '../api/types.ts'
+import type {
+  CategoryAmountRead,
+  CategoryKind,
+  CategoryRead,
+  CategoryTreeNode,
+} from '../api/types.ts'
+import { categoryMonthlyTotal, findAmount, type AmountTarget } from '../lib/categoryAmounts.ts'
 import {
   deleteConfirmationText,
   editorError,
@@ -28,18 +34,10 @@ type CategoryTreeProps = {
   onSave: (name: string) => void
   /** Confirms the open delete editor. */
   onConfirmDelete: () => void
-  /** Period total (decimal string) by category / subcategory id; `undefined` while not loaded. */
-  totals?: ReadonlyMap<number, string>
-  /** Opens the transaction dialog for a subcategory row, or a category row without children. */
-  onAddTransaction: (target: TransactionTarget) => void
-}
-
-/** Where a transaction added from the tree goes. */
-export type TransactionTarget = {
-  kind: CategoryKind
-  categoryId: number
-  /** `null` for a category without subcategories. */
-  subcategoryId: number | null
+  /** Fixed monthly amounts of the user; empty while not loaded. */
+  amounts: readonly CategoryAmountRead[]
+  /** Opens the monthly amount dialog (add or edit) for a subcategory row or a childless category. */
+  onEditAmount: (target: AmountTarget) => void
 }
 
 function Icon({ children }: { children: ReactNode }) {
@@ -77,6 +75,13 @@ const DOLLAR = (
     clipRule="evenodd"
   />
 )
+const MINUS_CIRCLE = (
+  <path
+    fillRule="evenodd"
+    d="M10 18a8 8 0 1 0 0-16 8 8 0 0 0 0 16ZM6.75 9.25a.75.75 0 0 0 0 1.5h6.5a.75.75 0 0 0 0-1.5h-6.5Z"
+    clipRule="evenodd"
+  />
+)
 const PENCIL = (
   <path d="M13.59 3.59a2 2 0 0 1 2.82 2.82l-8.5 8.5a1 1 0 0 1-.46.26l-3.2.8a.5.5 0 0 1-.61-.6l.8-3.21a1 1 0 0 1 .26-.46l8.89-8.11Z" />
 )
@@ -90,25 +95,58 @@ const TRASH = (
 
 type RowActionsProps = {
   name: string
-  kind: CategoryKind
+  /** Monthly amount of this row: `null` shows Add, an amount shows Edit and Remove. */
+  amount?: CategoryAmountRead | null
   onAdd?: () => void
-  onAddTransaction?: () => void
+  onAddAmount?: () => void
+  onEditAmount?: () => void
+  onDeleteAmount?: () => void
   onRename: () => void
   onDelete: () => void
 }
 
 /** Always-visible icon actions of a row; every accessible name includes the item name. */
-function RowActions({ name, kind, onAdd, onAddTransaction, onRename, onDelete }: RowActionsProps) {
+function RowActions({
+  name,
+  amount,
+  onAdd,
+  onAddAmount,
+  onEditAmount,
+  onDeleteAmount,
+  onRename,
+  onDelete,
+}: RowActionsProps) {
   return (
     <div className="flex shrink-0 items-center">
-      {onAddTransaction && (
+      {onAddAmount && !amount && (
         <Button
           variant="ghost"
           size="icon"
-          aria-label={`Add ${kind} to ${name}`}
-          onClick={onAddTransaction}
+          aria-label={`Add monthly amount to ${name}`}
+          onClick={onAddAmount}
         >
           <Icon>{DOLLAR}</Icon>
+        </Button>
+      )}
+      {onEditAmount && amount && (
+        <Button
+          variant="ghost"
+          size="icon"
+          aria-label={`Edit monthly amount of ${name}`}
+          onClick={onEditAmount}
+        >
+          <Icon>{DOLLAR}</Icon>
+        </Button>
+      )}
+      {onDeleteAmount && amount && (
+        <Button
+          variant="ghost"
+          size="icon"
+          aria-label={`Delete monthly amount of ${name}`}
+          onClick={onDeleteAmount}
+          className="hover:text-loss"
+        >
+          <Icon>{MINUS_CIRCLE}</Icon>
         </Button>
       )}
       {onAdd && (
@@ -137,14 +175,14 @@ function RowActions({ name, kind, onAdd, onAddTransaction, onRename, onDelete }:
   )
 }
 
-/** Period total of a row; renders nothing until the totals are loaded. */
-function RowTotal({ value }: { value: string | undefined }) {
-  if (value === undefined) {
+/** Monthly amount of a row (`$1,000.00 / month`); renders nothing when the row has none. */
+function RowAmount({ value }: { value: string | null }) {
+  if (value === null) {
     return null
   }
   return (
-    <span className="shrink-0 self-center py-1.5 pr-1 text-sm font-medium text-foreground tabular-nums">
-      {formatCurrency(value)}
+    <span className="shrink-0 self-center py-1.5 pr-1 text-sm font-medium whitespace-nowrap text-foreground tabular-nums">
+      {formatCurrency(value)} / month
     </span>
   )
 }
@@ -176,8 +214,8 @@ export function CategoryTree({
   onEditorChange,
   onSave,
   onConfirmDelete,
-  totals,
-  onAddTransaction,
+  amounts,
+  onEditAmount,
 }: CategoryTreeProps) {
   const idPrefix = useId()
   const [expanded, setExpanded] = useState<ReadonlySet<number>>(() => new Set())
@@ -219,44 +257,75 @@ export function CategoryTree({
   }
 
   /** Name, or the rename form in its place, plus the delete confirmation and row error. */
-  const editorsFor = (category: CategoryRead | CategoryTreeNode, subcategoryCount: number) => ({
-    renaming: isEditing('rename', category.id),
-    renameForm: (
-      <CategoryNameForm
-        label="Name"
-        defaultValue={category.name}
-        error={editorError(ownEditor)}
-        pending={pending}
-        onSave={onSave}
-        onCancel={close}
-      />
-    ),
-    below: (
-      <>
-        {isEditing('delete', category.id) && (
-          <DeleteConfirmation
-            message={deleteConfirmationText(category.name, subcategoryCount)}
-            pending={pending}
-            onConfirm={onConfirmDelete}
-            onCancel={close}
-          />
-        )}
-        {isEditing('failed', category.id) && <RowError message={editorError(ownEditor)} />}
-      </>
-    ),
-    actions: (onAdd?: () => void, onAddTransaction?: () => void) => (
-      <RowActions
-        name={category.name}
-        kind={kind}
-        onAdd={onAdd}
-        onAddTransaction={onAddTransaction}
-        onRename={() =>
-          onEditorChange({ type: 'rename', kind, id: category.id, name: category.name })
-        }
-        onDelete={() => onEditorChange({ type: 'delete', kind, id: category.id })}
-      />
-    ),
-  })
+  const editorsFor = (
+    category: CategoryRead | CategoryTreeNode,
+    subcategoryCount: number,
+    /** Where a monthly amount can be set on this row; `undefined` for a category with children. */
+    amountSlot?: { categoryId: number; subcategoryId: number | null; label: string },
+  ) => {
+    const amount = amountSlot
+      ? findAmount(amounts, amountSlot.categoryId, amountSlot.subcategoryId)
+      : null
+    const openAmount = () => amountSlot && onEditAmount({ kind, ...amountSlot, amount })
+    return {
+      renaming: isEditing('rename', category.id),
+      renameForm: (
+        <CategoryNameForm
+          label="Name"
+          defaultValue={category.name}
+          error={editorError(ownEditor)}
+          pending={pending}
+          onSave={onSave}
+          onCancel={close}
+        />
+      ),
+      below: (
+        <>
+          {isEditing('delete', category.id) && (
+            <DeleteConfirmation
+              message={deleteConfirmationText(category.name, subcategoryCount)}
+              pending={pending}
+              onConfirm={onConfirmDelete}
+              onCancel={close}
+            />
+          )}
+          {isEditing('delete-amount', category.id) && (
+            <DeleteConfirmation
+              message={`Remove the monthly amount of "${category.name}"?`}
+              pending={pending}
+              onConfirm={onConfirmDelete}
+              onCancel={close}
+            />
+          )}
+          {isEditing('failed', category.id) && <RowError message={editorError(ownEditor)} />}
+        </>
+      ),
+      actions: (onAdd?: () => void) => (
+        <RowActions
+          name={category.name}
+          amount={amount}
+          onAdd={onAdd}
+          onAddAmount={amountSlot && openAmount}
+          onEditAmount={amountSlot && openAmount}
+          onDeleteAmount={
+            amountSlot && amount
+              ? () =>
+                  onEditorChange({
+                    type: 'delete-amount',
+                    kind,
+                    id: category.id,
+                    amountId: amount.id,
+                  })
+              : undefined
+          }
+          onRename={() =>
+            onEditorChange({ type: 'rename', kind, id: category.id, name: category.name })
+          }
+          onDelete={() => onEditorChange({ type: 'delete', kind, id: category.id })}
+        />
+      ),
+    }
+  }
 
   const addingTopLevel = ownEditor?.type === 'add' && ownEditor.parentId === null
   // A request for a row that has since disappeared (404): show its message under the tree.
@@ -274,7 +343,13 @@ export function CategoryTree({
             const listId = `${idPrefix}-subcategories-${category.id}`
             const hasChildren = category.subcategories.length > 0
             const addingHere = ownEditor?.type === 'add' && ownEditor.parentId === category.id
-            const row = editorsFor(category, category.subcategories.length)
+            const row = editorsFor(
+              category,
+              category.subcategories.length,
+              hasChildren
+                ? undefined
+                : { categoryId: category.id, subcategoryId: null, label: category.name },
+            )
             return (
               <li key={category.id} className="py-1">
                 <div className="flex min-w-0 items-start gap-1">
@@ -298,19 +373,8 @@ export function CategoryTree({
                       <span className="min-w-0 break-words">{category.name}</span>
                     </p>
                   )}
-                  {!row.renaming && <RowTotal value={totals?.get(category.id)} />}
-                  {!row.renaming &&
-                    row.actions(
-                      () => openAddSubcategory(category),
-                      hasChildren
-                        ? undefined
-                        : () =>
-                            onAddTransaction({
-                              kind,
-                              categoryId: category.id,
-                              subcategoryId: null,
-                            }),
-                    )}
+                  {!row.renaming && <RowAmount value={categoryMonthlyTotal(category, amounts)} />}
+                  {!row.renaming && row.actions(() => openAddSubcategory(category))}
                 </div>
                 {row.below}
                 {(hasChildren || addingHere) && (
@@ -321,7 +385,11 @@ export function CategoryTree({
                     className="mb-1 ml-7 border-l border-border pl-3"
                   >
                     {category.subcategories.map((subcategory) => {
-                      const subRow = editorsFor(subcategory, 0)
+                      const subRow = editorsFor(subcategory, 0, {
+                        categoryId: category.id,
+                        subcategoryId: subcategory.id,
+                        label: `${category.name} / ${subcategory.name}`,
+                      })
                       return (
                         <li key={subcategory.id} className="min-w-0 text-sm text-muted">
                           <div className="flex min-w-0 items-start gap-1">
@@ -332,15 +400,14 @@ export function CategoryTree({
                                 {subcategory.name}
                               </span>
                             )}
-                            {!subRow.renaming && <RowTotal value={totals?.get(subcategory.id)} />}
-                            {!subRow.renaming &&
-                              subRow.actions(undefined, () =>
-                                onAddTransaction({
-                                  kind,
-                                  categoryId: category.id,
-                                  subcategoryId: subcategory.id,
-                                }),
-                              )}
+                            {!subRow.renaming && (
+                              <RowAmount
+                                value={
+                                  findAmount(amounts, category.id, subcategory.id)?.amount ?? null
+                                }
+                              />
+                            )}
+                            {!subRow.renaming && subRow.actions()}
                           </div>
                           {subRow.below}
                         </li>
