@@ -6,8 +6,8 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from app.models import CategoryAmount, User
-from tests.api.test_dashboard import add, dashboard, top
 from tests.conftest import JSON_HEADERS, AuthenticatedClient
+from tests.integration.test_dashboard import add, dashboard, top
 
 URL = "/api/category-amounts"
 

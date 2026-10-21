@@ -92,7 +92,7 @@ jobs:
       - run: uv sync --locked
       - run: uv run alembic upgrade head
       - run: uv run alembic check
-      - run: uv run pytest
+      - run: uv run pytest -m integration
 
   docker:
     runs-on: ubuntu-latest
