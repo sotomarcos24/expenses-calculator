@@ -33,7 +33,8 @@
 | 8 | Polish and deployment | Production-ready MVP online | 1–7 | ✅ Done |
 | 9 | Security | Semgrep scan, PR audit, agent security notes, AI/data policy, audit fixes | 8 | ✅ Done (human decisions pending in #69) |
 | 10 | Refinement | Pie colours, fixed monthly category amounts apart from transactions | 9 | ✅ Done |
-| 11 | Nice-to-haves | Recurring transactions, CSV export, i18n | 10 | ⬜ Optional |
+| 11 | DevOps and observability | Dev/prod environments, versioned images, manual promotion, OpenTelemetry, metrics, alert, on-call agent drill | 10 | ⬜ Draft (no issues yet) |
+| 12 | Nice-to-haves | Recurring transactions, CSV export, i18n | 10 | ⬜ Optional |
 
 ---
 
@@ -322,7 +323,48 @@
 
 ---
 
-## M11 — Nice-to-haves (optional, in this order, §5)
+## M11 — DevOps and observability
+
+**Goal:** separate dev and prod environments, deploy from immutable versioned images with a manual promotion, and add observability (OpenTelemetry, business metrics, dashboard, alert) plus an on-call agent drill. Everything uses free tiers.
+
+> Status: **draft**, no GitHub issues yet. Run `/plan-milestone` after the user approves the scope. Decisions to confirm first are listed below.
+
+#### Decisions to confirm before grooming
+
+- **Registry:** GHCR (GitHub Container Registry), not ECR.
+- **Dev database:** Neon free Postgres (Render allows only one free Postgres per workspace).
+- **Cloud observability backend:** Grafana Cloud free over OTLP. The self-hosted stack (Collector, Prometheus, Loki, Tempo, Grafana) runs only locally in `observability/`.
+- **New dependencies:** `opentelemetry-*` packages in the backend; needs explicit user approval and a `docs/tech-spec.md` update.
+- **Privacy:** telemetry never carries amounts, descriptions, emails or user ids; record it in `docs/security.md` / `docs/ai-data-policy.md`.
+- **Size:** more than the usual 2–3 issues; may be split into M11 (issues 1–2) and a follow-up milestone (issues 3–7).
+
+#### Scope
+
+1. **Versioned image, build/deploy split:** CI `build` job builds the root `Dockerfile` and pushes it to GHCR tagged `YYYYMMDD-HHMMSS-shortsha`; the `deploy` job pulls an existing tag and does not build. The deployed version is exposed at runtime (`APP_VERSION`, `/api/health`).
+2. **Dev environment and manual promotion:** second independent copy of the app (Render web service + Neon Postgres, `ENVIRONMENT=development`) as **dev**; the existing app stays as **prod**. A push to `main` deploys to dev only. A `workflow_dispatch` workflow promotes the image currently running in dev to prod without rebuilding. Separate secrets per environment (GitHub Environments).
+3. **OpenTelemetry instrumentation:** traces, metrics and logs over OTLP from the FastAPI backend, with `service.name`, `deployment.environment` and `service.version` on every signal. Telemetry is off when no OTLP endpoint is configured.
+4. **Business metrics:** `transactions_created_total`, `users_registered_total`, `investments_created_total`, `active_sessions` (gauge) and `transaction_creation_failures_total` (by error type), all with environment and version, low cardinality.
+5. **Local observability stack:** `observability/` with its own Docker Compose project (OpenTelemetry Collector, Prometheus, Loki, Tempo, Grafana), separate from the app stack, plus a provisioned Grafana dashboard with `environment` and `version` filters.
+6. **Cloud observability and alert:** dev and prod send telemetry to Grafana Cloud free. A versioned alert on repeated transaction-creation failures (threshold and duration justified by user impact) that includes service, environment, version, owner and dashboard URL.
+7. **On-call agent and bug drill:** `on-call-engineer/` with a script that polls the Grafana alert API every minute and passes alert details to a headless agent (`claude -p`) with an on-call prompt (find the root cause, reproduce, smallest fix, run backend tests, commit; change nothing on a false positive). Safeguards: works on a new branch, never on `main`, never pushes, alert text is untrusted input, restricted tool permissions. Drill: a deterministic, realistic bug in transaction creation introduced in a throwaway branch, with existing tests still passing.
+
+#### Acceptance criteria
+
+- [ ] The `build` job pushes a tagged image to GHCR only after all test jobs pass, and `deploy` never builds.
+- [ ] `/api/health` shows the deployed version (the image tag) and rollback to a previous tag is documented in `docs/operations/`.
+- [ ] A push to `main` updates only dev; the manual workflow promotes the exact dev image to prod and both show the same version afterwards.
+- [ ] Dev and prod use separate secrets and databases.
+- [ ] Every telemetry signal carries service name, environment and version; a test shows no amounts, descriptions, emails or user ids are exported.
+- [ ] Each business metric is emitted at the right place and covered by a unit test; the failure counter ignores 4xx validation errors.
+- [ ] `observability/` starts with `docker compose up` independently of the app stack and its dashboard filters by environment and version.
+- [ ] Both environments appear in Grafana Cloud, and the alert definition lives in the repo with its five required fields and a documented threshold.
+- [ ] The on-call script does not process the same alert twice, receives only alert fields (no secrets), and never pushes or touches `main`.
+- [ ] The drill shows bug → alert → agent investigation → fix committed on a branch; a false-positive case leaves the code unchanged; the bug never reaches `main`.
+- [ ] New dependencies and services are reflected in `docs/tech-spec.md`, `docs/backend.md` and `docs/security.md`; no credentials in the repo.
+
+---
+
+## M12 — Nice-to-haves (optional, in this order, §5)
 
 1. **Recurring transactions:** template with frequency and start/end dates; generated entries appear automatically (idempotent generation when the user opens the app or on a schedule).
 2. **CSV export:** download transactions for the selected filters.
