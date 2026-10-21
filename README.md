@@ -142,6 +142,6 @@ Where to find each criterion of the course rubric:
 | Containerization | [`Dockerfile`](Dockerfile), [`docker-compose.yml`](docker-compose.yml) | Done |
 | Deployment | [`docs/deployment.md`](docs/deployment.md), [`render.yaml`](render.yaml) | Done |
 | CI/CD | [`.github/workflows/ci.yml`](.github/workflows/ci.yml), [CI/CD and deployment](#cicd-and-deployment) | Done |
-| Observability | Not yet documented in the repo | **In progress** |
-| Alerting on User Impact | Not yet documented in the repo | **In progress** |
-| On-Call Agent | Not yet documented in the repo | **In progress** |
+| Observability | Not implemented (out of scope for this submission) | Not implemented |
+| Alerting on User Impact | Not implemented (out of scope for this submission) | Not implemented |
+| On-Call Agent | Not implemented (out of scope for this submission) | Not implemented |
