@@ -118,6 +118,7 @@ const PAGES = [
   ['/categories', 'Categories'],
   ['/investments', 'Investments'],
   ['/simulator', 'Simulator'],
+  ['/account', 'Account'],
 ] as const
 
 describe('landmarks, headings and titles', () => {
@@ -148,6 +149,20 @@ describe('landmarks, headings and titles', () => {
     expect(await screen.findByRole('heading', { level: 1, name: 'Log in' })).toBeInTheDocument()
     expect(screen.getByRole('main')).toBeInTheDocument()
     expect(document.title).toBe('Log in · PersonalDolar')
+    expect(unnamed(document.body)).toEqual([])
+  })
+
+  it('the landing has one h1, header, main and footer landmarks and a title', async () => {
+    mockMe(401)
+    renderApp('/')
+    expect(
+      await screen.findByRole('heading', { level: 1, name: 'PersonalDolar' }),
+    ).toBeInTheDocument()
+    expect(screen.getAllByRole('heading', { level: 1 })).toHaveLength(1)
+    expect(screen.getByRole('banner')).toBeInTheDocument()
+    expect(screen.getByRole('main')).toBeInTheDocument()
+    expect(screen.getByRole('contentinfo')).toBeInTheDocument()
+    expect(document.title).toBe('Personal finance tracker · PersonalDolar')
     expect(unnamed(document.body)).toEqual([])
   })
 
@@ -245,6 +260,29 @@ describe('every form control has a label', () => {
     const value = await screen.findByRole('dialog', { name: 'Update value' })
     expect(within(value).getByLabelText('New current value')).toBeInTheDocument()
     expect(unnamed(document.body)).toEqual([])
+  })
+
+  it('Account: the delete dialog is an alertdialog with a labelled field and a focus trap', async () => {
+    mockApi()
+    renderApp('/account')
+    await screen.findByRole('heading', { level: 1, name: 'Account' })
+    expect(unnamed(document.body)).toEqual([])
+    const opener = screen.getByRole('button', { name: 'Delete account' })
+    opener.focus()
+    fireEvent.click(opener)
+    const dialog = await screen.findByRole('alertdialog', { name: 'Delete account?' })
+    expect(dialog).toHaveAttribute('aria-modal', 'true')
+    expect(within(dialog).getByLabelText('Password')).toHaveFocus()
+    expect(unnamed(dialog)).toEqual([])
+
+    const buttons = within(dialog).getAllByRole('button')
+    const last = buttons[buttons.length - 1]
+    last.focus()
+    fireEvent.keyDown(last, { key: 'Tab' })
+    expect(within(dialog).getByLabelText('Password')).toHaveFocus()
+    fireEvent.keyDown(dialog, { key: 'Escape' })
+    await waitFor(() => expect(screen.queryByRole('alertdialog')).not.toBeInTheDocument())
+    expect(opener).toHaveFocus()
   })
 
   it('Dashboard: the period selector and its custom range', async () => {

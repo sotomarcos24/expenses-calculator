@@ -30,6 +30,10 @@ The production deployment is operated by the user. Agents work against the repos
 
 In general terms: the prompts and instructions given to it, the contents of files it reads, the output of commands and tools it runs, and the conversation history, so the model can answer. Anything an agent reads or prints can therefore leave the machine, which is why the rules above are about what agents may read and not only about what they may commit. The data handling terms are those of the user's Anthropic plan and are not restated here. MCP and documentation plugins may also send query text to their own services.
 
+## Right to erasure
+
+A user can delete their account and all stored data through `DELETE /api/auth/me`, which removes the user row and all their transactions, categories, investments and monthly amounts in one transaction. No personal data is sent to AI tools or third parties, so nothing else needs erasing there. Backups of the database, if any, are controlled by the operator (Render Postgres), and agents never see production data.
+
 ## Rules for sharing logs
 
 1. Mask IP addresses (`87.235.x.x` style) before pasting a log into an issue, a document or a chat.

@@ -77,3 +77,38 @@ textarea:not([aria-invalid='true']) {
   color: var(--color-muted);
   opacity: 1;
 }
+
+/* Landing page (M13). Colours come only from the tokens above. Everything below is the static,
+   complete composition; the reveal is added only when the user has no reduced-motion
+   preference, so with `prefers-reduced-motion: reduce` nothing moves and nothing stays hidden. */
+.landing-hero {
+  background-image: linear-gradient(
+    160deg,
+    var(--color-background) 0%,
+    var(--color-surface) 45%,
+    var(--color-accent) 100%
+  );
+  background-size: 100% 100%;
+}
+
+.landing-wordmark {
+  font-size: clamp(2.5rem, 11.5vw, 8.5rem);
+  line-height: 1;
+  letter-spacing: -0.045em;
+}
+
+/* Scroll reveal (see `useReveal`): `data-reveal` is only set by JS once IntersectionObserver
+   support is confirmed, and the hidden state exists only without a reduced-motion preference. */
+@media (prefers-reduced-motion: no-preference) {
+  .landing-reveal {
+    transition:
+      opacity 0.8s ease-out,
+      transform 0.8s ease-out;
+    transition-delay: var(--reveal-delay, 0s);
+  }
+
+  .landing-reveal[data-reveal='hidden'] {
+    opacity: 0;
+    transform: translateY(2.5rem);
+  }
+}

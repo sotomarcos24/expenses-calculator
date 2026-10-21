@@ -13,7 +13,14 @@ describe('AppLayout', () => {
 
     const nav = await screen.findByRole('navigation', { name: 'Main' })
     expect(screen.getByText('Dolar')).toBeInTheDocument()
-    for (const label of ['Dashboard', 'Transactions', 'Categories', 'Investments', 'Simulator']) {
+    for (const label of [
+      'Dashboard',
+      'Transactions',
+      'Categories',
+      'Investments',
+      'Simulator',
+      'Account',
+    ]) {
       expect(nav).toHaveTextContent(label)
     }
   })
@@ -40,7 +47,7 @@ describe('AppLayout user and logout', () => {
     expect(screen.getByRole('button', { name: 'Log out' })).toBeEnabled()
   })
 
-  it('logs out: posts JSON to /api/auth/logout, ends on /login and keeps routes locked', async () => {
+  it('logs out: posts JSON to /api/auth/logout, ends on / and keeps routes locked', async () => {
     const fetchMock = mockMe(200, (path) => {
       if (path === '/api/auth/logout') {
         return new Response(null, { status: 204 })
@@ -51,8 +58,10 @@ describe('AppLayout user and logout', () => {
 
     fireEvent.click(await screen.findByRole('button', { name: 'Log out' }))
 
-    expect(await screen.findByRole('heading', { name: 'Log in' })).toBeInTheDocument()
-    expect(router.state.location.pathname).toBe('/login')
+    expect(
+      await screen.findByRole('heading', { level: 1, name: 'PersonalDolar' }),
+    ).toBeInTheDocument()
+    expect(router.state.location.pathname).toBe('/')
     expect(queryClient.getQueryData(ME_QUERY_KEY)).toBeNull()
     const logoutCall = fetchMock.mock.calls.find(([input]) => input === '/api/auth/logout')
     expect(logoutCall).toBeDefined()
@@ -60,9 +69,9 @@ describe('AppLayout user and logout', () => {
     expect(init.method).toBe('POST')
     expect(new Headers(init.headers).get('Content-Type')).toBe('application/json')
 
-    await router.navigate('/')
-    await waitFor(() => expect(router.state.location.pathname).toBe('/login'))
     expect(screen.queryByRole('heading', { name: 'Dashboard' })).not.toBeInTheDocument()
+    await router.navigate('/transactions')
+    await waitFor(() => expect(router.state.location.pathname).toBe('/login'))
   })
 
   it('still logs out client side when the request fails with 500', async () => {
@@ -76,8 +85,10 @@ describe('AppLayout user and logout', () => {
 
     fireEvent.click(await screen.findByRole('button', { name: 'Log out' }))
 
-    expect(await screen.findByRole('heading', { name: 'Log in' })).toBeInTheDocument()
-    expect(router.state.location.pathname).toBe('/login')
+    expect(
+      await screen.findByRole('heading', { level: 1, name: 'PersonalDolar' }),
+    ).toBeInTheDocument()
+    expect(router.state.location.pathname).toBe('/')
     expect(queryClient.getQueryData(ME_QUERY_KEY)).toBeNull()
   })
 
@@ -92,8 +103,10 @@ describe('AppLayout user and logout', () => {
 
     fireEvent.click(await screen.findByRole('button', { name: 'Log out' }))
 
-    expect(await screen.findByRole('heading', { name: 'Log in' })).toBeInTheDocument()
-    expect(router.state.location.pathname).toBe('/login')
+    expect(
+      await screen.findByRole('heading', { level: 1, name: 'PersonalDolar' }),
+    ).toBeInTheDocument()
+    expect(router.state.location.pathname).toBe('/')
     expect(queryClient.getQueryData(ME_QUERY_KEY)).toBeNull()
   })
 
@@ -116,6 +129,8 @@ describe('AppLayout user and logout', () => {
     expect(router.state.location.pathname).toBe('/')
 
     resolveLogout(new Response(null, { status: 204 }))
-    expect(await screen.findByRole('heading', { name: 'Log in' })).toBeInTheDocument()
+    expect(
+      await screen.findByRole('heading', { level: 1, name: 'PersonalDolar' }),
+    ).toBeInTheDocument()
   })
 })

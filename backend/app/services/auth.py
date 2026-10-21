@@ -59,3 +59,13 @@ def authenticate_user(db: Session, email: str, password: str) -> User | None:
     if not verify_password(password, user.password_hash):
         return None
     return user
+
+
+def delete_user_account(db: Session, user: User) -> None:
+    """Delete the user and, through ``ON DELETE CASCADE``, all their data in one transaction."""
+    try:
+        db.delete(user)
+        db.commit()
+    except Exception:
+        db.rollback()
+        raise

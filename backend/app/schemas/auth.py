@@ -20,6 +20,11 @@ class LoginRequest(BaseModel):
     password: Annotated[str, Field(min_length=1, max_length=128)]
 
 
+class DeleteAccountRequest(BaseModel):
+    # Same bounds as the login password: the policy is not revealed, Argon2 is protected.
+    password: Annotated[str, Field(min_length=1, max_length=128)]
+
+
 class UserRead(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 

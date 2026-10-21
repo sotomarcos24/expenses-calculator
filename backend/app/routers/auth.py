@@ -6,14 +6,20 @@ from app.config import Settings, get_settings
 from app.db import DbSession
 from app.models import User
 from app.ratelimit import rate_limit
-from app.schemas.auth import LoginRequest, RegisterRequest, UserRead
+from app.schemas.auth import DeleteAccountRequest, LoginRequest, RegisterRequest, UserRead
 from app.security import (
     ACCESS_TOKEN_COOKIE,
     COOKIE_PATH,
     CurrentUser,
     create_access_token,
+    verify_password,
 )
-from app.services.auth import EmailAlreadyRegisteredError, authenticate_user, register_user
+from app.services.auth import (
+    EmailAlreadyRegisteredError,
+    authenticate_user,
+    delete_user_account,
+    register_user,
+)
 
 router = APIRouter(prefix="/auth", tags=["auth"])
 
@@ -25,6 +31,16 @@ def _set_auth_cookie(response: Response, user: User, settings: Settings) -> None
         key=ACCESS_TOKEN_COOKIE,
         value=create_access_token(user.id),
         max_age=settings.access_token_days * 86400,
+        path=COOKIE_PATH,
+        secure=settings.cookie_secure,
+        httponly=True,
+        samesite="lax",
+    )
+
+
+def _clear_auth_cookie(response: Response, settings: Settings) -> None:
+    response.delete_cookie(
+        key=ACCESS_TOKEN_COOKIE,
         path=COOKIE_PATH,
         secure=settings.cookie_secure,
         httponly=True,
@@ -70,15 +86,28 @@ def login(body: LoginRequest, db: DbSession, response: Response, settings: Setti
 
 @router.post("/logout", status_code=status.HTTP_204_NO_CONTENT)
 def logout(response: Response, settings: SettingsDep) -> None:
-    response.delete_cookie(
-        key=ACCESS_TOKEN_COOKIE,
-        path=COOKIE_PATH,
-        secure=settings.cookie_secure,
-        httponly=True,
-        samesite="lax",
-    )
+    _clear_auth_cookie(response, settings)
 
 
 @router.get("/me")
 def me(user: CurrentUser) -> UserRead:
     return UserRead.model_validate(user)
+
+
+@router.delete(
+    "/me",
+    status_code=status.HTTP_204_NO_CONTENT,
+    dependencies=[Depends(rate_limit("login"))],
+    responses=TOO_MANY,
+)
+def delete_me(
+    body: DeleteAccountRequest,
+    user: CurrentUser,
+    db: DbSession,
+    response: Response,
+    settings: SettingsDep,
+) -> None:
+    if not verify_password(body.password, user.password_hash):
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid password")
+    delete_user_account(db, user)
+    _clear_auth_cookie(response, settings)

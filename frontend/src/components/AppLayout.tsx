@@ -2,7 +2,6 @@ import type { MouseEvent } from 'react'
 import { NavLink, Outlet } from 'react-router'
 import { useLogout, useMe } from '../hooks/useAuth.ts'
 import { Logo } from './Logo.tsx'
-import { ToastProvider } from './ToastProvider.tsx'
 
 const NAV_ITEMS = [
   { to: '/', label: 'Dashboard', end: true },
@@ -10,6 +9,7 @@ const NAV_ITEMS = [
   { to: '/categories', label: 'Categories' },
   { to: '/investments', label: 'Investments' },
   { to: '/simulator', label: 'Simulator' },
+  { to: '/account', label: 'Account' },
 ]
 
 function navClass({ isActive }: { isActive: boolean }) {
@@ -64,7 +64,7 @@ function SkipLink() {
 
 export function AppLayout() {
   return (
-    <ToastProvider>
+    <>
       <SkipLink />
       <div className="min-h-dvh md:flex">
         <header className="flex flex-col border-b border-border bg-surface md:min-h-dvh md:w-60 md:shrink-0 md:border-r md:border-b-0">
@@ -95,6 +95,6 @@ export function AppLayout() {
           <Outlet />
         </main>
       </div>
-    </ToastProvider>
+    </>
   )
 }

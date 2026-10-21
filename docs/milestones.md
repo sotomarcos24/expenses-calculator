@@ -35,6 +35,7 @@
 | 10 | Refinement | Pie colours, fixed monthly category amounts apart from transactions | 9 | ✅ Done |
 | 11 | DevOps and observability | Dev/prod environments, versioned images, manual promotion, OpenTelemetry, metrics, alert, on-call agent drill | 10 | ⬜ Draft (no issues yet) |
 | 12 | Nice-to-haves | Recurring transactions, CSV export, i18n | 10 | ⬜ Optional |
+| 13 | Landing page | Public landing at `/` for guests, with CSS-only animations, and account deletion | 10 | ✅ Done |
 
 ---
 
@@ -371,3 +372,21 @@
 3. **Spanish translation / configurable currency:** UI strings moved to i18n files; currency becomes a user setting (still a single currency per user — multi-currency stays out of scope).
 
 Each item gets its own acceptance criteria before it starts.
+
+---
+
+## M13 — Landing page ✅
+
+**Goal:** a guest opening `/` sees a public landing page that presents PersonalDolar and leads to `/login` and `/register`; a logged-in user still gets the Dashboard. Also lets a user delete their own account. Issues #72, #73 (frontend: landing, logout fix, scroll reveal with count-up, hero chart removed) and #74 (backend + frontend: delete own account).
+
+#### Acceptance criteria
+
+- [x] `/` shows the landing to guests and the Dashboard (with the sidebar) to logged-in users; `/transactions`, `/categories`, `/investments` and `/simulator` still redirect guests to `/login`.
+- [x] Header and hero have "Log in" and "Create account" links; the logo on `/login` and `/register` links to `/`; logout (also when the request fails) lands on `/`.
+- [x] Hero with the large PersonalDolar name, tagline and subline; sections What it does, Why trust it and How it works; footer with a "Not financial advice" notice and the GitHub link.
+- [x] Only colour tokens from `index.css`, no new dependencies; scroll reveal (fade + slide) and count-up that are fully disabled (static, complete composition) with `prefers-reduced-motion: reduce` or without `IntersectionObserver`.
+- [x] No horizontal scroll at 375px and 1280px; `index.html` has the new title and meta description.
+- [x] Routing and accessibility tests pass; `docs/frontend.md` and `docs/tech-spec.md` §8 are updated.
+- [x] (#74) `DELETE /api/auth/me` with the correct password returns 204 and clears the cookie; the user's rows are gone from `users`, `categories`, `transactions`, `investments` and `category_amounts`, other users are untouched; a wrong password gives 401 and deletes nothing; no cookie gives 401, bad body 422, non-JSON 415; an old JWT gets 401; the login rate limit applies (429); the deletion is atomic; the suite passes on SQLite and Postgres; `openapi.json` and `schema.d.ts` regenerated.
+- [x] (#74) The nav has an "Account" link to `/account` (email and "Danger zone"); "Delete account" opens an `alertdialog` with a password field; a wrong password (401) keeps the dialog open with "Incorrect password." and the session alive; success lands on `/` (never `/login`) with the toast "Your account has been deleted."; double click sends one request; tests and a11y checks pass.
+- [x] (#74) `docs/tech-spec.md` (§5, §6, §8), `docs/plan.md` §6, `docs/ai-data-policy.md`, `docs/backend.md` and `docs/frontend.md` describe account deletion.
