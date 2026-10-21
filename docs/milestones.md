@@ -35,6 +35,7 @@
 | 10 | Refinement | Pie colours, fixed monthly category amounts apart from transactions | 9 | ✅ Done |
 | 11 | DevOps and observability | Dev/prod environments, versioned images, manual promotion, OpenTelemetry, metrics, alert, on-call agent drill | 10 | ⬜ Draft (no issues yet) |
 | 12 | Nice-to-haves | Recurring transactions, CSV export, i18n | 10 | ⬜ Optional |
+| 13 | Landing page | Public landing at `/` for guests, with CSS-only animations | 10 | 🟦 In progress (#72) |
 
 ---
 
@@ -371,3 +372,18 @@
 3. **Spanish translation / configurable currency:** UI strings moved to i18n files; currency becomes a user setting (still a single currency per user — multi-currency stays out of scope).
 
 Each item gets its own acceptance criteria before it starts.
+
+---
+
+## M13 — Landing page
+
+**Goal:** a guest opening `/` sees a public landing page that presents PersonalDolar and leads to `/login` and `/register`; a logged-in user still gets the Dashboard. Frontend only (issue #72).
+
+#### Acceptance criteria
+
+- [ ] `/` shows the landing to guests and the Dashboard (with the sidebar) to logged-in users; `/transactions`, `/categories`, `/investments` and `/simulator` still redirect guests to `/login`.
+- [ ] Header and hero have "Log in" and "Create account" links; the logo on `/login` and `/register` links to `/`; logout (also when the request fails) lands on `/`.
+- [ ] Hero with the large PersonalDolar name, tagline and subline; sections What it does, Why trust it and How it works; footer with a "Not financial advice" notice and the GitHub link.
+- [ ] Only colour tokens from `index.css`, no new dependencies; CSS-only animations that are fully disabled (static, complete composition) with `prefers-reduced-motion: reduce`.
+- [ ] No horizontal scroll at 375px and 1280px; `index.html` has the new title and meta description.
+- [ ] Routing and accessibility tests pass; `docs/frontend.md` and `docs/tech-spec.md` §8 are updated.

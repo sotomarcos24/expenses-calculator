@@ -5,6 +5,8 @@ import type { LoginRequest, RegisterRequest, UserRead } from '../api/types.ts'
 
 /** Cache key of the current user: `UserRead` when logged in, `null` when logged out. */
 export const ME_QUERY_KEY = ['me'] as const
+/** Set to `true` when a 401 ends the session (as opposed to a deliberate logout). */
+export const SESSION_EXPIRED_KEY = ['session-expired'] as const
 
 /** Mutation meta that opts out of the global 401 handler (see `src/lib/queryClient.ts`). */
 export const SKIP_GLOBAL_401 = { skipGlobal401: true }
@@ -68,10 +70,11 @@ export function useLogout() {
     // The user wants to leave: log out client side even if the request fails (500, 401,
     // network error). No error is shown.
     onSettled: async () => {
-      queryClient.setQueryData(ME_QUERY_KEY, null)
-      // Another user may log in next: drop every other cached query.
+      // Another user may log in next: drop every other cached query (also SESSION_EXPIRED_KEY,
+      // so a deliberate logout lands on the landing page, not on /login).
       queryClient.removeQueries({ predicate: (query) => query.queryKey[0] !== ME_QUERY_KEY[0] })
-      await navigate('/login', { replace: true })
+      queryClient.setQueryData(ME_QUERY_KEY, null)
+      await navigate('/', { replace: true })
     },
   })
 }

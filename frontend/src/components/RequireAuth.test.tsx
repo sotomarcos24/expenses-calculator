@@ -3,18 +3,18 @@ import { describe, expect, it } from 'vitest'
 import { jsonResponse, mockFetch, mockMe, renderApp, TEST_USER } from '../test/renderApp.tsx'
 
 describe('RequireAuth', () => {
-  it.each([
-    ['/', 'Dashboard'],
-    ['/transactions', 'Transactions'],
-  ])('redirects %s to the login page when logged out', async (path, heading) => {
-    mockMe(401)
-    const { router } = renderApp(path)
+  it.each([['/transactions', 'Transactions']])(
+    'redirects %s to the login page when logged out',
+    async (path, heading) => {
+      mockMe(401)
+      const { router } = renderApp(path)
 
-    expect(screen.queryByRole('heading', { name: heading })).not.toBeInTheDocument()
-    expect(await screen.findByRole('heading', { name: 'Log in' })).toBeInTheDocument()
-    expect(screen.queryByRole('heading', { name: heading })).not.toBeInTheDocument()
-    expect(router.state.location.pathname).toBe('/login')
-  })
+      expect(screen.queryByRole('heading', { name: heading })).not.toBeInTheDocument()
+      expect(await screen.findByRole('heading', { name: 'Log in' })).toBeInTheDocument()
+      expect(screen.queryByRole('heading', { name: heading })).not.toBeInTheDocument()
+      expect(router.state.location.pathname).toBe('/login')
+    },
+  )
 
   it('renders the layout and the page when logged in', async () => {
     mockMe(200)
@@ -54,7 +54,7 @@ describe('RequireAuth', () => {
 
   it('does not retry /auth/me on 401 (real createQueryClient defaults)', async () => {
     const fetchMock = mockMe(401)
-    renderApp('/')
+    renderApp('/transactions')
 
     await screen.findByRole('heading', { name: 'Log in' })
     // Let any pending retry timer (default delay 1s) fire if one had been scheduled.

@@ -77,3 +77,99 @@ textarea:not([aria-invalid='true']) {
   color: var(--color-muted);
   opacity: 1;
 }
+
+/* Landing page (M13). Colours come only from the tokens above. Everything below is the static,
+   complete composition; the animations are added only when the user has no reduced-motion
+   preference, so with `prefers-reduced-motion: reduce` nothing moves and nothing stays hidden. */
+.landing-hero {
+  background-image: linear-gradient(
+    160deg,
+    var(--color-background) 0%,
+    var(--color-surface) 45%,
+    var(--color-accent) 100%
+  );
+  background-size: 100% 100%;
+}
+
+.landing-wordmark {
+  font-size: clamp(2.5rem, 11.5vw, 8.5rem);
+  line-height: 1;
+  letter-spacing: -0.045em;
+}
+
+.landing-area {
+  opacity: 0.6;
+}
+
+.landing-figure {
+  opacity: 0.55;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .landing-hero {
+    background-size: 200% 200%;
+    animation: landing-drift 18s ease-in-out infinite alternate;
+  }
+
+  .landing-line {
+    stroke-dasharray: 1;
+    stroke-dashoffset: 1;
+    animation: landing-draw 3.2s cubic-bezier(0.4, 0, 0.2, 1) forwards;
+  }
+
+  .landing-line-2 {
+    animation-delay: 0.4s;
+  }
+
+  .landing-line-3 {
+    animation-delay: 0.8s;
+  }
+
+  .landing-area {
+    opacity: 0;
+    animation: landing-fade 2s ease-out 1.6s forwards;
+  }
+
+  .landing-figure {
+    opacity: 0;
+    animation: landing-rise 9s ease-in-out infinite;
+  }
+}
+
+@keyframes landing-draw {
+  to {
+    stroke-dashoffset: 0;
+  }
+}
+
+@keyframes landing-fade {
+  to {
+    opacity: 0.6;
+  }
+}
+
+@keyframes landing-drift {
+  from {
+    background-position: 0% 0%;
+  }
+  to {
+    background-position: 100% 100%;
+  }
+}
+
+@keyframes landing-rise {
+  0% {
+    opacity: 0;
+    transform: translateY(24px);
+  }
+  20% {
+    opacity: 0.7;
+  }
+  80% {
+    opacity: 0.7;
+  }
+  100% {
+    opacity: 0;
+    transform: translateY(-90px);
+  }
+}

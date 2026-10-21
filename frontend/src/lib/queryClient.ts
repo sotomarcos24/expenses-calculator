@@ -1,13 +1,16 @@
 import { MutationCache, QueryCache, QueryClient } from '@tanstack/react-query'
-import { isUnauthorized, ME_QUERY_KEY } from '../hooks/useAuth.ts'
+import { isUnauthorized, ME_QUERY_KEY, SESSION_EXPIRED_KEY } from '../hooks/useAuth.ts'
 
 /**
  * Creates the app's `QueryClient`. Any query or mutation failing with 401 clears the cached
- * user, which makes `RequireAuth` redirect to `/login`. Mutations with
+ * user, which makes `RequireAuth` (and `AuthShell` at `/`) redirect to `/login`. Mutations with
  * `meta: { skipGlobal401: true }` (login, register) are excluded.
  */
 export function createQueryClient() {
-  const clearUser = () => queryClient.setQueryData(ME_QUERY_KEY, null)
+  const clearUser = () => {
+    queryClient.setQueryData(SESSION_EXPIRED_KEY, true)
+    queryClient.setQueryData(ME_QUERY_KEY, null)
+  }
 
   const queryClient: QueryClient = new QueryClient({
     queryCache: new QueryCache({

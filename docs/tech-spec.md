@@ -372,13 +372,13 @@ Rates must be between −0.5 and 0.5 and horizons between 1 and 60 years. Withdr
 | Route | Page |
 | --- | --- |
 | `/login`, `/register` | public |
-| `/` | Dashboard: period selector, 4 KPI cards, expense pie with click-to-drill-down, investments block with a pie by type, button to the simulator |
+| `/` | public landing page for guests (hero, what it does, why trust it, how it works, footer); for a logged-in user: Dashboard: period selector, 4 KPI cards, expense pie with click-to-drill-down, investments block with a pie by type, button to the simulator |
 | `/transactions` | table with filters (period, type, category), create/edit dialog; the gross field appears for income |
 | `/categories` | income and expense trees (side by side from `md`, tabs on mobile; collapsed by default, in API order); inline add, rename, delete with an inline confirmation (shows the 409 message) |
 | `/investments` | table with gain/loss in $ and %, portfolio totals, quick "update value" action |
 | `/simulator` | tabs A / B / C; form pre-filled from `/simulator/defaults`; line chart with 3 lines (nominal/real toggle); results table; **visible disclaimer** ("Projections are estimates, not financial advice") |
 
-- Authenticated routes are wrapped in a guard that calls `/auth/me`. A `401` from any request clears the cached user and redirects to `/login`. The guard passes the requested location (path + search) to `/login` in router state (`state.from`), and after a successful login the user returns there if it is a safe internal path (single leading `/`, not `/login` or `/register`), otherwise to `/`; router state only, nothing survives a full reload. A logged-in user visiting `/login` or `/register` is redirected to `/`.
+- Authenticated routes are wrapped in a guard that calls `/auth/me`. A `401` from any request clears the cached user and redirects to `/login`. The guard passes the requested location (path + search) to `/login` in router state (`state.from`), and after a successful login the user returns there if it is a safe internal path (single leading `/`, not `/login` or `/register`), otherwise to `/`; router state only, nothing survives a full reload. A logged-in user visiting `/login` or `/register` is redirected to `/`. The exception is `/`: a guest there sees the public landing page instead of being redirected, except when a 401 just ended the session (then `/login`). Logout navigates to `/` (the landing).
 - Currency is formatted with `Intl.NumberFormat('en-US', {style: 'currency', currency: 'USD'})`. Money stays a string until it is displayed.
 - Responsive layout (mobile first) with a sidebar on desktop.
 

@@ -151,6 +151,20 @@ describe('landmarks, headings and titles', () => {
     expect(unnamed(document.body)).toEqual([])
   })
 
+  it('the landing has one h1, header, main and footer landmarks and a title', async () => {
+    mockMe(401)
+    renderApp('/')
+    expect(
+      await screen.findByRole('heading', { level: 1, name: 'PersonalDolar' }),
+    ).toBeInTheDocument()
+    expect(screen.getAllByRole('heading', { level: 1 })).toHaveLength(1)
+    expect(screen.getByRole('banner')).toBeInTheDocument()
+    expect(screen.getByRole('main')).toBeInTheDocument()
+    expect(screen.getByRole('contentinfo')).toBeInTheDocument()
+    expect(document.title).toBe('Personal finance tracker · PersonalDolar')
+    expect(unnamed(document.body)).toEqual([])
+  })
+
   it('register labels every control', async () => {
     mockMe(401)
     renderApp('/register')

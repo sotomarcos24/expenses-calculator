@@ -24,6 +24,8 @@ const TEXT_PAIRS: [string, string, number, string][] = [
   ['primary-foreground', 'primary', 4.5, 'primary buttons, active nav'],
   ['primary-foreground', 'primary-hover', 4.5, 'primary button hover'],
   ['primary-foreground', 'loss', 4.5, 'danger buttons'],
+  ['primary', 'accent', 4.5, 'landing hero text over the gradient end'],
+  ['foreground', 'accent', 4.5, 'landing hero text over the gradient end'],
   ['gain', 'background', 4.5, 'gains (also signed with +)'],
   ['gain', 'surface', 4.5, 'gains on surfaces'],
   ['loss', 'background', 4.5, 'losses and form errors'],
@@ -38,6 +40,8 @@ const UI_PAIRS: [string, string, number, string][] = [
   ['control-border', 'surface', 3, 'input borders on surfaces'],
   ['scenario-pessimistic', 'background', 3, 'simulator line'],
   ['scenario-base', 'background', 3, 'simulator line'],
+  ['scenario-base', 'surface', 3, 'landing chart line'],
+  ['scenario-optimistic', 'surface', 3, 'landing chart line'],
   ['scenario-optimistic', 'background', 3, 'simulator line'],
 ]
 

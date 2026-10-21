@@ -93,7 +93,7 @@ describe('global 401 handling', () => {
 })
 
 describe('useLogout', () => {
-  it('posts to /auth/logout, ends on /login and keeps protected routes locked', async () => {
+  it('posts to /auth/logout, ends on / and keeps protected routes locked', async () => {
     const { fetchMock } = mockBackend()
     const { queryClient, router } = renderApp('/', { probe: <LogoutProbe /> })
     await screen.findByRole('heading', { name: 'Dashboard' })
@@ -101,13 +101,15 @@ describe('useLogout', () => {
 
     fireEvent.click(screen.getByRole('button', { name: 'Probe logout' }))
 
-    expect(await screen.findByRole('heading', { name: 'Log in' })).toBeInTheDocument()
+    expect(
+      await screen.findByRole('heading', { level: 1, name: 'PersonalDolar' }),
+    ).toBeInTheDocument()
     const logoutCall = fetchMock.mock.calls.find(([input]) => input === '/api/auth/logout')
     expect(logoutCall).toBeDefined()
     const init = logoutCall![1] as RequestInit
     expect(init.method).toBe('POST')
     expect(new Headers(init.headers).get('Content-Type')).toBe('application/json')
-    expect(router.state.location.pathname).toBe('/login')
+    expect(router.state.location.pathname).toBe('/')
     expect(queryClient.getQueryData(ME_QUERY_KEY)).toBeNull()
     expect(queryClient.getQueryData(['other-user-data'])).toBeUndefined()
 
