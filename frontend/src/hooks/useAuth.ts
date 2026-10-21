@@ -8,6 +8,9 @@ export const ME_QUERY_KEY = ['me'] as const
 /** Set to `true` when a 401 ends the session (as opposed to a deliberate logout). */
 export const SESSION_EXPIRED_KEY = ['session-expired'] as const
 
+/** `true` while a deliberate logout is in progress: nothing may send the user to `/login`. */
+export const LOGGING_OUT_KEY = ['logging-out'] as const
+
 /** Mutation meta that opts out of the global 401 handler (see `src/lib/queryClient.ts`). */
 export const SKIP_GLOBAL_401 = { skipGlobal401: true }
 
@@ -45,6 +48,8 @@ export function useLogin() {
     // A 401 here means wrong credentials, not an expired session.
     meta: SKIP_GLOBAL_401,
     onSuccess: (user) => {
+      queryClient.removeQueries({ queryKey: SESSION_EXPIRED_KEY })
+      queryClient.removeQueries({ queryKey: LOGGING_OUT_KEY })
       queryClient.setQueryData(ME_QUERY_KEY, user)
     },
   })
@@ -57,6 +62,8 @@ export function useRegister() {
       apiFetch<UserRead>('/auth/register', { method: 'POST', body: data }),
     meta: SKIP_GLOBAL_401,
     onSuccess: (user) => {
+      queryClient.removeQueries({ queryKey: SESSION_EXPIRED_KEY })
+      queryClient.removeQueries({ queryKey: LOGGING_OUT_KEY })
       queryClient.setQueryData(ME_QUERY_KEY, user)
     },
   })
@@ -67,13 +74,20 @@ export function useLogout() {
   const navigate = useNavigate()
   return useMutation({
     mutationFn: () => apiFetch<void>('/auth/logout', { method: 'POST' }),
+    // A 401 here is not an expired session: the user is leaving anyway.
+    meta: SKIP_GLOBAL_401,
     // The user wants to leave: log out client side even if the request fails (500, 401,
     // network error). No error is shown.
     onSettled: async () => {
       // Another user may log in next: drop every other cached query (also SESSION_EXPIRED_KEY,
       // so a deliberate logout lands on the landing page, not on /login).
       queryClient.removeQueries({ predicate: (query) => query.queryKey[0] !== ME_QUERY_KEY[0] })
+      // While this flag is set, RequireAuth sends a logged-out user to / (not /login) and the
+      // global 401 handler ignores late answers of the old session.
+      queryClient.setQueryData(LOGGING_OUT_KEY, true)
       queryClient.setQueryData(ME_QUERY_KEY, null)
+      // The flag is cleared once the landing is shown (AuthShell) or the user logs in again:
+      // router updates are transitions, so the urgent `me = null` render can come first.
       await navigate('/', { replace: true })
     },
   })

@@ -1,6 +1,7 @@
 import { useQueryClient } from '@tanstack/react-query'
+import { useEffect } from 'react'
 import { Navigate, useLocation } from 'react-router'
-import { SESSION_EXPIRED_KEY, useMe } from '../hooks/useAuth.ts'
+import { LOGGING_OUT_KEY, SESSION_EXPIRED_KEY, useMe } from '../hooks/useAuth.ts'
 import { LandingPage } from '../pages/LandingPage.tsx'
 import { AppLayout } from './AppLayout.tsx'
 import { RequireAuth } from './RequireAuth.tsx'
@@ -13,7 +14,16 @@ export function AuthShell() {
   const { data: me } = useMe()
   const { pathname } = useLocation()
   const queryClient = useQueryClient()
-  if (me === null && pathname === '/') {
+  const showLanding = me === null && pathname === '/'
+
+  // The deliberate logout has reached the landing: it is over.
+  useEffect(() => {
+    if (showLanding) {
+      queryClient.removeQueries({ queryKey: LOGGING_OUT_KEY })
+    }
+  }, [showLanding, queryClient])
+
+  if (showLanding) {
     // A 401 in the middle of a session still sends the user to /login, as on any other page.
     if (queryClient.getQueryData(SESSION_EXPIRED_KEY) === true) {
       return <Navigate to="/login" replace state={{ from: '/' }} />

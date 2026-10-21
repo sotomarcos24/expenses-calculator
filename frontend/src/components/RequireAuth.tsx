@@ -1,17 +1,22 @@
 import type { ReactNode } from 'react'
+import { useQueryClient } from '@tanstack/react-query'
 import { Navigate, useLocation } from 'react-router'
-import { useMe } from '../hooks/useAuth.ts'
+import { LOGGING_OUT_KEY, useMe } from '../hooks/useAuth.ts'
 import { LoadingScreen } from './LoadingScreen.tsx'
 
 /** Renders its children only for a logged-in user; logged-out users go to `/login`, remembering the requested location in `state.from`. */
 export function RequireAuth({ children }: { children: ReactNode }) {
   const { data: me, isError, isFetching, refetch } = useMe()
   const location = useLocation()
+  const queryClient = useQueryClient()
 
   if (me) {
     return children
   }
   if (me === null) {
+    if (queryClient.getQueryData(LOGGING_OUT_KEY) === true) {
+      return <Navigate to="/" replace />
+    }
     return (
       <Navigate
         to="/login"

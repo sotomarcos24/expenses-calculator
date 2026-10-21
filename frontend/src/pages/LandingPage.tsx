@@ -1,6 +1,8 @@
+import type { CSSProperties, ElementType, HTMLAttributes, ReactNode } from 'react'
 import { Link } from 'react-router'
 import { Logo } from '../components/Logo.tsx'
 import { useDocumentTitle } from '../hooks/useDocumentTitle.ts'
+import { useCountUp, useReveal } from '../hooks/useReveal.ts'
 
 const REPO_URL = 'https://github.com/sotomarcos24/expenses-calculator'
 
@@ -46,58 +48,62 @@ const STEPS = [
   'See your dashboard and simulate your future.',
 ]
 
-/** Decorative chart: three scenario lines that draw themselves (CSS only, see `index.css`). */
-function HeroChart() {
+/** Fades and slides its content in the first time it scrolls into view (see `useReveal`). */
+function Reveal<T extends RevealTag>({
+  as,
+  index = 0,
+  className,
+  children,
+  ...props
+}: {
+  as: T
+  index?: number
+  className?: string
+  children: ReactNode
+} & HTMLAttributes<HTMLElement>) {
+  const ref = useReveal<HTMLElement>()
+  const Tag = as as ElementType
   return (
-    <svg
-      aria-hidden="true"
-      viewBox="0 0 800 320"
-      preserveAspectRatio="none"
-      className="landing-chart absolute inset-x-0 bottom-0 h-3/5 w-full"
+    <Tag
+      {...props}
+      ref={ref}
+      className={`landing-reveal ${className ?? ''}`}
+      style={{ '--reveal-delay': `${index * 0.12}s` } as CSSProperties}
     >
-      <path
-        className="landing-area fill-accent"
-        d="M0 300 C120 280 200 270 300 220 S520 130 640 90 S760 40 800 30 L800 320 L0 320 Z"
-      />
-      <path
-        className="landing-line stroke-scenario-pessimistic"
-        pathLength="1"
-        d="M0 300 C120 290 220 285 320 260 S540 215 660 190 S760 170 800 160"
-        fill="none"
-        strokeWidth="3"
-        strokeDasharray="1"
-        strokeLinecap="round"
-        vectorEffect="non-scaling-stroke"
-      />
-      <path
-        className="landing-line landing-line-2 stroke-scenario-base"
-        pathLength="1"
-        d="M0 300 C120 280 200 270 300 220 S520 130 640 90 S760 40 800 30"
-        fill="none"
-        strokeWidth="4"
-        strokeLinecap="round"
-        vectorEffect="non-scaling-stroke"
-      />
-      <path
-        className="landing-line landing-line-3 stroke-scenario-optimistic"
-        pathLength="1"
-        d="M0 300 C140 270 220 240 320 170 S520 60 660 40 S760 20 800 10"
-        fill="none"
-        strokeWidth="3"
-        strokeLinecap="round"
-        vectorEffect="non-scaling-stroke"
-      />
-    </svg>
+      {children}
+    </Tag>
   )
 }
 
-const FIGURES = [
-  { text: '+$1,250', className: 'left-[8%] top-[80%]', delay: '0s' },
-  { text: '$', className: 'left-[30%] top-[88%]', delay: '2.5s' },
-  { text: '+4.2%', className: 'left-[62%] top-[70%]', delay: '1.2s' },
-  { text: '$', className: 'left-[78%] top-[84%]', delay: '3.6s' },
-  { text: '+$320', className: 'left-[86%] top-[62%]', delay: '4.8s' },
+type RevealTag = 'div' | 'h1' | 'h2' | 'p' | 'li' | 'article'
+
+const STATS = [
+  { prefix: '+$', target: 1250, decimals: 0, suffix: '' },
+  { prefix: '+', target: 4.2, decimals: 1, suffix: '%' },
+  { prefix: '+$', target: 320, decimals: 0, suffix: '' },
 ]
+
+function formatStat(stat: (typeof STATS)[number], value: number) {
+  const number = value.toLocaleString('en-US', {
+    minimumFractionDigits: stat.decimals,
+    maximumFractionDigits: stat.decimals,
+  })
+  return `${stat.prefix}${number}${stat.suffix}`
+}
+
+/** A decorative figure that counts up from 0 once it is visible; the final text is in `data-final`. */
+function Stat({ stat }: { stat: (typeof STATS)[number] }) {
+  const [ref, value] = useCountUp<HTMLSpanElement>(stat.target)
+  return (
+    <span
+      ref={ref}
+      data-final={formatStat(stat, stat.target)}
+      className="text-3xl font-bold tracking-tight text-primary tabular-nums md:text-5xl"
+    >
+      {formatStat(stat, value)}
+    </span>
+  )
+}
 
 export function LandingPage() {
   useDocumentTitle('Personal finance tracker')
@@ -117,83 +123,92 @@ export function LandingPage() {
       </header>
 
       <main>
-        <section className="landing-hero relative overflow-hidden border-b border-border">
-          <HeroChart />
-          <div aria-hidden="true" className="pointer-events-none absolute inset-0">
-            {FIGURES.map((figure) => (
-              <span
-                key={figure.className}
-                className={`landing-figure absolute text-sm font-semibold text-primary md:text-lg ${figure.className}`}
-                style={{ animationDelay: figure.delay }}
-              >
-                {figure.text}
-              </span>
-            ))}
-          </div>
-          <div className="relative mx-auto max-w-6xl px-4 pt-12 pb-64 md:px-8 md:pt-20 md:pb-80">
-            <h1 className="landing-wordmark font-extrabold text-foreground">
+        <section className="landing-hero border-b border-border">
+          <div className="mx-auto max-w-6xl px-4 pt-12 pb-16 md:px-8 md:pt-20 md:pb-24">
+            <Reveal as="h1" className="landing-wordmark font-extrabold text-foreground">
               Personal<span className="text-primary">Dolar</span>
-            </h1>
-            <p className="mt-6 max-w-xl text-2xl font-semibold text-foreground md:text-3xl">
+            </Reveal>
+            <Reveal
+              as="p"
+              index={1}
+              className="mt-6 max-w-xl text-2xl font-semibold text-foreground md:text-3xl"
+            >
               Your personal finances, in one clear place
-            </p>
-            <p className="mt-3 max-w-xl text-base text-muted md:text-lg">
+            </Reveal>
+            <Reveal as="p" index={2} className="mt-3 max-w-xl text-base text-muted md:text-lg">
               Track what you earn and spend, follow your investments and see where your savings are
               heading. Everything stays in your hands.
-            </p>
-            <div className="mt-8 flex flex-wrap gap-3">
+            </Reveal>
+            <Reveal as="div" index={3} className="mt-8 flex flex-wrap gap-3">
               <Link to="/register" className={primaryLink}>
                 Create account
               </Link>
               <Link to="/login" className={secondaryLink}>
                 Log in
               </Link>
-            </div>
+            </Reveal>
+            <Reveal
+              as="div"
+              index={4}
+              aria-hidden="true"
+              className="mt-12 flex flex-wrap gap-x-12 gap-y-4 border-t border-border pt-6"
+            >
+              {STATS.map((stat) => (
+                <Stat key={stat.target} stat={stat} />
+              ))}
+            </Reveal>
           </div>
         </section>
 
         <section aria-labelledby="what-it-does" className="mx-auto max-w-6xl px-4 py-16 md:px-8">
-          <h2 id="what-it-does" className="text-3xl font-bold tracking-tight">
+          <Reveal as="h2" id="what-it-does" className="text-3xl font-bold tracking-tight">
             What it does
-          </h2>
+          </Reveal>
           <div className="mt-8 grid gap-px overflow-hidden rounded-xl border border-border bg-border sm:grid-cols-2 lg:grid-cols-3">
             {FEATURES.map((feature, index) => (
-              <article
+              <Reveal
+                as="article"
                 key={feature.title}
+                index={index}
                 className={`bg-background p-6 ${index === FEATURES.length - 1 ? 'lg:col-span-2' : ''}`}
               >
                 <h3 className="text-lg font-semibold">{feature.title}</h3>
                 <p className="mt-2 text-sm text-muted">{feature.text}</p>
-              </article>
+              </Reveal>
             ))}
           </div>
         </section>
 
         <section aria-labelledby="why-trust" className="bg-surface">
           <div className="mx-auto grid max-w-6xl gap-8 px-4 py-16 md:grid-cols-2 md:px-8">
-            <h2 id="why-trust" className="text-3xl font-bold tracking-tight">
+            <Reveal as="h2" id="why-trust" className="text-3xl font-bold tracking-tight">
               Why trust it
-            </h2>
+            </Reveal>
             <ul className="space-y-3">
-              {TRUST.map((item) => (
-                <li key={item} className="flex gap-3 border-b border-border pb-3">
+              {TRUST.map((item, index) => (
+                <Reveal
+                  as="li"
+                  key={item}
+                  index={index}
+                  className="flex gap-3 border-b border-border pb-3"
+                >
                   <span aria-hidden="true" className="font-bold text-gain">
                     +
                   </span>
                   <span>{item}</span>
-                </li>
+                </Reveal>
               ))}
             </ul>
           </div>
         </section>
 
         <section aria-labelledby="how-it-works" className="mx-auto max-w-6xl px-4 py-16 md:px-8">
-          <h2 id="how-it-works" className="text-3xl font-bold tracking-tight">
+          <Reveal as="h2" id="how-it-works" className="text-3xl font-bold tracking-tight">
             How it works
-          </h2>
+          </Reveal>
           <ol className="mt-8 grid gap-6 md:grid-cols-3">
             {STEPS.map((step, index) => (
-              <li key={step} className="flex items-start gap-4">
+              <Reveal as="li" key={step} index={index} className="flex items-start gap-4">
                 <span
                   aria-hidden="true"
                   className="grid size-10 shrink-0 place-items-center rounded-full bg-primary text-lg font-bold text-primary-foreground"
@@ -201,14 +216,14 @@ export function LandingPage() {
                   {index + 1}
                 </span>
                 <span className="pt-1.5 text-lg font-medium">{step}</span>
-              </li>
+              </Reveal>
             ))}
           </ol>
-          <div className="mt-10">
+          <Reveal as="div" className="mt-10">
             <Link to="/register" className={primaryLink}>
               Create account
             </Link>
-          </div>
+          </Reveal>
         </section>
       </main>
 
