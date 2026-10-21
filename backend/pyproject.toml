@@ -36,4 +36,8 @@ exclude = ["alembic/"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
-addopts = "-q"
+addopts = "-q --strict-markers"
+markers = [
+    "unit: pure logic and service tests (tests/unit)",
+    "integration: tests that use the real database through the API (tests/integration)",
+]

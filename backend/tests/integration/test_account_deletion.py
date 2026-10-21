@@ -9,9 +9,9 @@ from sqlalchemy.orm import Session
 
 from app.models import Category, CategoryAmount, Investment, Transaction, User
 from app.security import ACCESS_TOKEN_COOKIE
-from tests.api.test_dashboard import add, top
-from tests.api.test_rate_limit import LIMIT_BODY, _configure
 from tests.conftest import DEFAULT_PASSWORD, AuthenticatedClient, register_user
+from tests.integration.test_dashboard import add, top
+from tests.integration.test_rate_limit import LIMIT_BODY, _configure
 
 URL = "/api/auth/me"
 MODELS: tuple[Any, ...] = (User, Category, Transaction, Investment, CategoryAmount)

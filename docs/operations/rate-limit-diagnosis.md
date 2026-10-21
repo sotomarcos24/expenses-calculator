@@ -29,7 +29,7 @@ Observations over the 12 requests:
 
 ## Fix
 
-`TRUSTED_PROXY_COUNT=3` in `render.yaml` (and in the README and `docs/tech-spec.md`). The limiter now uses the 3rd entry from the right, which is the real client IP. No change to `client_ip` was needed. The temporary log was removed. Regression tests in `backend/tests/api/test_rate_limit.py` use the real 3-entry format with varying proxy addresses: the 11th attempt gets 429, a forged left prefix does not evade the limit, another client is not blocked, and `TRUSTED_PROXY_COUNT=1` is shown not to limit (the old bug).
+`TRUSTED_PROXY_COUNT=3` in `render.yaml` (and in the README and `docs/tech-spec.md`). The limiter now uses the 3rd entry from the right, which is the real client IP. No change to `client_ip` was needed. The temporary log was removed. Regression tests in `backend/tests/integration/test_rate_limit.py` use the real 3-entry format with varying proxy addresses: the 11th attempt gets 429, a forged left prefix does not evade the limit, another client is not blocked, and `TRUSTED_PROXY_COUNT=1` is shown not to limit (the old bug).
 
 ## Why counting from the right is safe
 

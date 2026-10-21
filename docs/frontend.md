@@ -31,7 +31,7 @@ The last line is the full check set: run it before saying a frontend task is don
 - Colours: use only the theme tokens defined in `src/index.css` (`bg-primary`, `text-muted`, `border-border`, `text-gain`, …). Never hard-code hex values in components. Palette: white and blue (tech-spec §8.1).
 - Format money and percentages with `formatCurrency` / `formatPercent` (`src/lib/format.ts`).
 - Imports use explicit `.ts` / `.tsx` extensions. Prettier style: no semicolons, single quotes, width 100.
-- Tests next to the code (`*.test.ts(x)`) with Vitest + Testing Library.
+- Tests next to the code (`*.test.ts(x)`) with Vitest + Testing Library. All test suites in one command: see [`testing.md`](testing.md).
 
 ## Environment
 

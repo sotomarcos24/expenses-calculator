@@ -7,8 +7,8 @@ import pytest
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
 
-from tests.api.test_categories import ids
 from tests.conftest import JSON_HEADERS, AuthenticatedClient
+from tests.integration.test_categories import ids
 
 URL = "/api/transactions"
 TX_NOT_FOUND = {"detail": "Transaction not found"}

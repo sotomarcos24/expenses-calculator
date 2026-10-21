@@ -143,3 +143,13 @@ def two_users(
 ) -> tuple[AuthenticatedClient, AuthenticatedClient]:
     """Two independent logged-in clients (user A, user B) for ownership (404) tests."""
     return make_auth_client("alice@example.com"), make_auth_client("bob@example.com")
+
+
+def pytest_collection_modifyitems(items: list[pytest.Item]) -> None:
+    """Mark every test by its directory: tests/unit -> unit, tests/integration -> integration."""
+    for item in items:
+        parts = item.path.parts
+        if "unit" in parts:
+            item.add_marker(pytest.mark.unit)
+        elif "integration" in parts:
+            item.add_marker(pytest.mark.integration)
