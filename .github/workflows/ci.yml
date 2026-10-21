@@ -173,7 +173,7 @@ jobs:
           RENDER_DEPLOY_HOOK: ${{ secrets.RENDER_DEPLOY_HOOK }}
         run: |
           if [ -z "$RENDER_DEPLOY_HOOK" ]; then
-            echo "::error::GitHub secret RENDER_DEPLOY_HOOK is not set. See README, Production > Continuous deployment."
+            echo "::error::GitHub secret RENDER_DEPLOY_HOOK is not set. See docs/deployment.md, Continuous deployment."
             exit 1
           fi
           curl --fail --silent --show-error --max-time 60 -X POST "$RENDER_DEPLOY_HOOK" -o /dev/null
@@ -188,7 +188,7 @@ jobs:
           HEALTH_INITIAL_WAIT_SECONDS: "30"
         run: |
           if [ -z "$RENDER_PUBLIC_URL" ]; then
-            echo "::error::GitHub variable RENDER_PUBLIC_URL is not set (e.g. https://<name>.onrender.com). See README, Production > Continuous deployment."
+            echo "::error::GitHub variable RENDER_PUBLIC_URL is not set (e.g. https://<name>.onrender.com). See docs/deployment.md, Continuous deployment."
             exit 1
           fi
           url="${RENDER_PUBLIC_URL%/}/api/health"
