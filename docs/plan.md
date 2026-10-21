@@ -159,4 +159,6 @@ The MVP is built in milestones, each with its own acceptance criteria — see [`
 | 8 | Polish and deployment | ✅ Done |
 | 9 | Security | ✅ Done (human decisions pending in #69) |
 | 10 | Refinement | ✅ Done |
-| 11 | Nice-to-haves (§5) | ⬜ Optional |
+| 11 | DevOps and observability | ⬜ Draft (no issues yet) |
+| 12 | Nice-to-haves (§5) | ⬜ Optional |
+| 13 | Landing page and account deletion | ✅ Done |
