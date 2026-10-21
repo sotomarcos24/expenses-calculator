@@ -83,7 +83,8 @@ export interface paths {
     get: operations['me_api_auth_me_get']
     put?: never
     post?: never
-    delete?: never
+    /** Delete Me */
+    delete: operations['delete_me_api_auth_me_delete']
     options?: never
     head?: never
     patch?: never
@@ -495,6 +496,11 @@ export interface components {
       gain_pct: string | null
       /** By Type */
       by_type: components['schemas']['TypeValue'][]
+    }
+    /** DeleteAccountRequest */
+    DeleteAccountRequest: {
+      /** Password */
+      password: string
     }
     /**
      * Frequency
@@ -1059,6 +1065,46 @@ export interface operations {
         content: {
           'application/json': components['schemas']['HTTPValidationError']
         }
+      }
+    }
+  }
+  delete_me_api_auth_me_delete: {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: {
+        access_token?: string | null
+      }
+    }
+    requestBody: {
+      content: {
+        'application/json': components['schemas']['DeleteAccountRequest']
+      }
+    }
+    responses: {
+      /** @description Successful Response */
+      204: {
+        headers: {
+          [name: string]: unknown
+        }
+        content?: never
+      }
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['HTTPValidationError']
+        }
+      }
+      /** @description Too many attempts; see the Retry-After header */
+      429: {
+        headers: {
+          [name: string]: unknown
+        }
+        content?: never
       }
     }
   }

@@ -1,7 +1,8 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useNavigate } from 'react-router'
 import { ApiError, apiFetch } from '../api/client.ts'
-import type { LoginRequest, RegisterRequest, UserRead } from '../api/types.ts'
+import type { DeleteAccountRequest, LoginRequest, RegisterRequest, UserRead } from '../api/types.ts'
+import { useToast } from './useToast.ts'
 
 /** Cache key of the current user: `UserRead` when logged in, `null` when logged out. */
 export const ME_QUERY_KEY = ['me'] as const
@@ -89,6 +90,30 @@ export function useLogout() {
       // The flag is cleared once the landing is shown (AuthShell) or the user logs in again:
       // router updates are transitions, so the urgent `me = null` render can come first.
       await navigate('/', { replace: true })
+    },
+  })
+}
+
+/**
+ * Deletes the account (`DELETE /auth/me`). On success it ends the session like a logout and
+ * lands on `/` with a confirmation toast. Needs a `ToastProvider` above (mounted in `AuthShell`,
+ * so it survives the switch from the app layout to the landing).
+ */
+export function useDeleteAccount() {
+  const queryClient = useQueryClient()
+  const navigate = useNavigate()
+  const toast = useToast()
+  return useMutation({
+    mutationFn: (data: DeleteAccountRequest) =>
+      apiFetch<void>('/auth/me', { method: 'DELETE', body: data }),
+    // A 401 here is a wrong password, not an expired session: it must not log the user out.
+    meta: SKIP_GLOBAL_401,
+    onSuccess: async () => {
+      queryClient.removeQueries({ predicate: (query) => query.queryKey[0] !== ME_QUERY_KEY[0] })
+      queryClient.setQueryData(LOGGING_OUT_KEY, true)
+      queryClient.setQueryData(ME_QUERY_KEY, null)
+      await navigate('/', { replace: true })
+      toast.success('Your account has been deleted.')
     },
   })
 }

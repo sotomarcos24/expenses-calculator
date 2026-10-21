@@ -175,6 +175,59 @@
             }
           }
         }
+      },
+      "delete": {
+        "tags": [
+          "auth"
+        ],
+        "summary": "Delete Me",
+        "operationId": "delete_me_api_auth_me_delete",
+        "parameters": [
+          {
+            "name": "access_token",
+            "in": "cookie",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Access Token"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/DeleteAccountRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "429": {
+            "description": "Too many attempts; see the Retry-After header"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
       }
     },
     "/api/categories": {
@@ -2157,6 +2210,21 @@
           "by_type"
         ],
         "title": "DashboardInvestments"
+      },
+      "DeleteAccountRequest": {
+        "properties": {
+          "password": {
+            "type": "string",
+            "maxLength": 128,
+            "minLength": 1,
+            "title": "Password"
+          }
+        },
+        "type": "object",
+        "required": [
+          "password"
+        ],
+        "title": "DeleteAccountRequest"
       },
       "Frequency": {
         "type": "string",

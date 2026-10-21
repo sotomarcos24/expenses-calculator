@@ -31,6 +31,7 @@ Acceptance criteria:
 - A user can only see, create, edit or delete their own data.
 - Unauthenticated requests to user data are rejected.
 - No password recovery in the MVP (it would require sending emails).
+- A user can delete their own account and all their data (`DELETE /api/auth/me`, asks for the password).
 
 ### 4.2 Categories and subcategories
 
@@ -128,7 +129,7 @@ Acceptance criteria:
 - Multi-currency.
 - Shared or family accounts.
 - Financial advice or recommendations.
-- Password recovery / reset by email.
+- Password recovery / reset by email (needs an external email service). Deleting your own account **is** supported (`DELETE /api/auth/me`).
 
 ## 7. Decisions (Module 2)
 
@@ -138,7 +139,7 @@ The open points of this spec are resolved; details in [`tech-spec.md`](tech-spec
 | --- | --- |
 | App name | **PersonalDolar** |
 | Stack | React + Vite + TypeScript frontend, FastAPI backend, SQLite in development → Postgres in production |
-| Auth | Email + password (Argon2), JWT in an httpOnly cookie; no password recovery |
+| Auth | Email + password (Argon2), JWT in an httpOnly cookie; no password recovery; the user can delete their account |
 | Simulator | Runs in the backend as a pure, unit-tested module exposed in the OpenAPI contract |
 | Look and feel | White and blue palette |
 

@@ -13,7 +13,14 @@ describe('AppLayout', () => {
 
     const nav = await screen.findByRole('navigation', { name: 'Main' })
     expect(screen.getByText('Dolar')).toBeInTheDocument()
-    for (const label of ['Dashboard', 'Transactions', 'Categories', 'Investments', 'Simulator']) {
+    for (const label of [
+      'Dashboard',
+      'Transactions',
+      'Categories',
+      'Investments',
+      'Simulator',
+      'Account',
+    ]) {
       expect(nav).toHaveTextContent(label)
     }
   })

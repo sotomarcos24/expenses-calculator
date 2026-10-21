@@ -1,6 +1,7 @@
 import type { RouteObject } from 'react-router'
 import { AuthShell } from './components/AuthShell.tsx'
 import { RedirectIfAuthenticated } from './components/RedirectIfAuthenticated.tsx'
+import { AccountPage } from './pages/AccountPage.tsx'
 import { CategoriesPage } from './pages/CategoriesPage.tsx'
 import { DashboardPage } from './pages/DashboardPage.tsx'
 import { InvestmentsPage } from './pages/InvestmentsPage.tsx'
@@ -35,6 +36,7 @@ export const routes: RouteObject[] = [
       { path: 'categories', element: <CategoriesPage /> },
       { path: 'investments', element: <InvestmentsPage /> },
       { path: 'simulator', element: <SimulatorPage /> },
+      { path: 'account', element: <AccountPage /> },
     ],
   },
   { path: '*', element: <NotFoundPage /> },
