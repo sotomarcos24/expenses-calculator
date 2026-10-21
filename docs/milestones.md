@@ -36,6 +36,7 @@
 | 11 | DevOps and observability | Dev/prod environments, versioned images, manual promotion, OpenTelemetry, metrics, alert, on-call agent drill | 10 | ⬜ Draft (no issues yet) |
 | 12 | Nice-to-haves | Recurring transactions, CSV export, i18n | 10 | ⬜ Optional |
 | 13 | Landing page | Public landing at `/` for guests, with CSS-only animations, and account deletion | 10 | ✅ Done |
+| 14 | Project rubric | Unit and integration tests separated and run with a single command (course rubric: Testing) | 13 | 🟦 In progress |
 
 ---
 
@@ -390,3 +391,21 @@ Each item gets its own acceptance criteria before it starts.
 - [x] (#74) `DELETE /api/auth/me` with the correct password returns 204 and clears the cookie; the user's rows are gone from `users`, `categories`, `transactions`, `investments` and `category_amounts`, other users are untouched; a wrong password gives 401 and deletes nothing; no cookie gives 401, bad body 422, non-JSON 415; an old JWT gets 401; the login rate limit applies (429); the deletion is atomic; the suite passes on SQLite and Postgres; `openapi.json` and `schema.d.ts` regenerated.
 - [x] (#74) The nav has an "Account" link to `/account` (email and "Danger zone"); "Delete account" opens an `alertdialog` with a password field; a wrong password (401) keeps the dialog open with "Incorrect password." and the session alive; success lands on `/` (never `/login`) with the toast "Your account has been deleted."; double click sends one request; tests and a11y checks pass.
 - [x] (#74) `docs/tech-spec.md` (§5, §6, §8), `docs/plan.md` §6, `docs/ai-data-policy.md`, `docs/backend.md` and `docs/frontend.md` describe account deletion.
+
+---
+
+## M14 — Project rubric
+
+**Goal:** meet the "Testing" criterion of the course project rubric (`DataTalksClub/ai-dev-tools-zoomcamp`, `project/README.md`, checked 2026-10-16): *"Both unit and integration tests exist, run with a single command, and pass"*. One issue; branch `m14-tests`. The README is edited by another session in parallel and is **not** touched here.
+
+#### Scope
+
+1. **Issue "Single command for unit and integration tests":** backend tests split into `backend/tests/unit/` and `backend/tests/integration/` (the `tests/api/` tests that use the real database move to integration), pytest markers `unit` and `integration`, `./scripts/test.sh` (plus a `Makefile` with `make test`) running backend unit, backend integration and frontend vitest with a summary per block, optional `--postgres` with a throwaway `postgres:17`, `docs/testing.md`, and `ci.yml` adjusted to the new paths without removing any job.
+
+#### Acceptance criteria
+
+- [ ] `backend/tests/unit/` and `backend/tests/integration/` exist; the former `tests/api/` tests are in `integration/`; `pytest -m unit` and `pytest -m integration` run each set separately and together they equal the full suite.
+- [ ] `./scripts/test.sh` runs backend unit, backend integration and frontend tests, prints a summary per block and exits non-zero if any block fails; `make test` does the same.
+- [ ] Integration tests run on SQLite by default and against Postgres when `DATABASE_URL` points to Postgres; `./scripts/test.sh --postgres` starts a temporary `postgres:17`, runs them against it and removes it.
+- [ ] `docs/testing.md` documents the test types, where each lives, the key integration flows (including rate limit and account deletion), how to run them (single command and each block) and what CI runs.
+- [ ] `ci.yml` uses the new paths, keeps every job, and all jobs stay green; the README is untouched.
