@@ -4,20 +4,16 @@ A single-user personal finance web app: track income, expenses and investments b
 
 **Live demo: <https://personaldolar.onrender.com>** (free Render instance: after 15 minutes idle the first request has a cold start of about 1 minute).
 
-<!-- TODO screenshots: add docs/images/landing.png and docs/images/dashboard.png, then uncomment.
-![Landing page](docs/images/landing.png)
-![Dashboard](docs/images/dashboard.png)
--->
-
-- [Problem](#problem)
-- [Features and expected behaviour](#features-and-expected-behaviour)
-- [Architecture](#architecture)
-- [Run locally](#run-locally)
-- [Tests](#tests)
-- [CI/CD and deployment](#cicd-and-deployment)
-- [How it was built with AI agents](#how-it-was-built-with-ai-agents)
-- [Security](#security)
-- [Evaluation criteria map](#evaluation-criteria-map)
+- [PersonalDolar](#personaldolar)
+  - [Problem](#problem)
+  - [Features and expected behaviour](#features-and-expected-behaviour)
+  - [Architecture](#architecture)
+  - [Run locally](#run-locally)
+  - [Tests](#tests)
+  - [CI/CD and deployment](#cicd-and-deployment)
+  - [How it was built with AI agents](#how-it-was-built-with-ai-agents)
+  - [Security](#security)
+  - [Evaluation criteria map](#evaluation-criteria-map)
 
 ## Problem
 
@@ -25,7 +21,6 @@ Most people do not know where their money goes each month, how their investments
 
 PersonalDolar is for anyone who wants to organise their finances and plan ahead **without connecting a bank or paying for anything**: everything is entered manually, there are no market-data APIs and no paid services. Language is English and the currency is USD. Full product spec: [`docs/plan.md`](docs/plan.md) §1–§3.
 
-<!-- TODO Marcos: rewrite this paragraph in your own words (draft, not final). -->
 Why I built it: I wanted one place where I could see my real monthly cash flow and what my savings could become, without handing my bank credentials to a third party. It also served as a realistic project to learn how to build a whole product with a team of AI agents.
 
 ## Features and expected behaviour
