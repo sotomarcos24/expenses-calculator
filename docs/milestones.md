@@ -36,7 +36,7 @@
 | 11 | DevOps and observability | Dev/prod environments, versioned images, manual promotion, OpenTelemetry, metrics, alert, on-call agent drill | 10 | ⬜ Draft (no issues yet) |
 | 12 | Nice-to-haves | Recurring transactions, CSV export, i18n | 10 | ⬜ Optional |
 | 13 | Landing page | Public landing at `/` for guests, with CSS-only animations, and account deletion | 10 | ✅ Done |
-| 14 | Project rubric | Unit and integration tests separated and run with a single command (course rubric: Testing) | 13 | 🟦 In progress |
+| 14 | Project rubric | Unit and integration tests separated and run with a single command (course rubric: Testing) | 13 | ✅ Done |
 
 ---
 
@@ -394,7 +394,7 @@ Each item gets its own acceptance criteria before it starts.
 
 ---
 
-## M14 — Project rubric
+## M14 — Project rubric ✅
 
 **Goal:** meet the "Testing" criterion of the course project rubric (`DataTalksClub/ai-dev-tools-zoomcamp`, `project/README.md`, checked 2026-10-16): *"Both unit and integration tests exist, run with a single command, and pass"*. One issue; branch `m14-tests`. The README is edited by another session in parallel and is **not** touched here.
 
@@ -404,8 +404,8 @@ Each item gets its own acceptance criteria before it starts.
 
 #### Acceptance criteria
 
-- [ ] `backend/tests/unit/` and `backend/tests/integration/` exist; the former `tests/api/` tests are in `integration/`; `pytest -m unit` and `pytest -m integration` run each set separately and together they equal the full suite.
-- [ ] `./scripts/test.sh` runs backend unit, backend integration and frontend tests, prints a summary per block and exits non-zero if any block fails; `make test` does the same.
-- [ ] Integration tests run on SQLite by default and against Postgres when `DATABASE_URL` points to Postgres; `./scripts/test.sh --postgres` starts a temporary `postgres:17`, runs them against it and removes it.
-- [ ] `docs/testing.md` documents the test types, where each lives, the key integration flows (including rate limit and account deletion), how to run them (single command and each block) and what CI runs.
-- [ ] `ci.yml` uses the new paths, keeps every job, and all jobs stay green; the README is untouched.
+- [x] `backend/tests/unit/` and `backend/tests/integration/` exist; the former `tests/api/` tests are in `integration/`; `pytest -m unit` and `pytest -m integration` run each set separately and together they equal the full suite.
+- [x] `./scripts/test.sh` runs backend unit, backend integration and frontend tests, prints a summary per block and exits non-zero if any block fails; `make test` does the same.
+- [x] Integration tests run on SQLite by default and against Postgres when `DATABASE_URL` points to Postgres; `./scripts/test.sh --postgres` starts a temporary `postgres:17`, runs them against it and removes it.
+- [x] `docs/testing.md` documents the test types, where each lives, the key integration flows (including rate limit and account deletion), how to run them (single command and each block) and what CI runs.
+- [x] `ci.yml` uses the new paths, keeps every job, and all jobs stay green; the README is untouched.
