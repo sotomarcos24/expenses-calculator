@@ -134,7 +134,7 @@ Where to find each criterion of the course rubric:
 | Criterion | Where | Status |
 | --- | --- | --- |
 | Problem Description | This README: [Problem](#problem), [Features](#features-and-expected-behaviour) | Done |
-| Product Specification | [`docs/plan.md`](docs/plan.md) (user stories, acceptance criteria, non-goals) | Done |
+| Product Specification | [`docs/plan.md`](docs/plan.md) (user stories, acceptance criteria, non-goals), [GitHub Issues](https://github.com/sotomarcos24/expenses-calculator/issues?q=is%3Aissue) (public tracker, one issue per task with acceptance criteria) | Done |
 | Agent Team Specification | [`docs/team/`](docs/team/), [`.claude/agents/`](.claude/agents/), [`docs/process.md`](docs/process.md) | Done |
 | Context Management | [`AGENTS.md`](AGENTS.md) and the modular docs in [`docs/`](docs/) | Done |
 | Application | [`backend/`](backend/), [`frontend/`](frontend/), live at <https://personaldolar.onrender.com> | Done |
