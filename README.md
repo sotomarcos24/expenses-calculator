@@ -1,145 +1,152 @@
 # PersonalDolar
 
-Personal finance tracker: record income, expenses and investments manually, see where your money goes, and simulate how your savings could grow.
+A single-user personal finance web app: track income, expenses and investments by hand, see where your money goes, and simulate how your savings could grow.
 
-- Product spec: [docs/plan.md](docs/plan.md)
-- Technical spec: [docs/tech-spec.md](docs/tech-spec.md)
-- Milestones and status: [docs/milestones.md](docs/milestones.md)
+**Live demo: <https://personaldolar.onrender.com>** (free Render instance: after 15 minutes idle the first request has a cold start of about 1 minute).
 
-## Requirements
+<!-- TODO screenshots: add docs/images/landing.png and docs/images/dashboard.png, then uncomment.
+![Landing page](docs/images/landing.png)
+![Dashboard](docs/images/dashboard.png)
+-->
 
-- Python 3.12 + [uv](https://docs.astral.sh/uv/)
-- Node.js 24+
+- [Problem](#problem)
+- [Features and expected behaviour](#features-and-expected-behaviour)
+- [Architecture](#architecture)
+- [Run locally](#run-locally)
+- [Tests](#tests)
+- [CI/CD and deployment](#cicd-and-deployment)
+- [How it was built with AI agents](#how-it-was-built-with-ai-agents)
+- [Security](#security)
+- [Evaluation criteria map](#evaluation-criteria-map)
 
-## Running locally
+## Problem
+
+Most people do not know where their money goes each month, how their investments are really performing, or whether their savings plan will reach a goal (a house deposit, early retirement) in time. Spreadsheets work but are tedious and give no forward-looking view, and the alternatives need a bank connection or a paid subscription.
+
+PersonalDolar is for anyone who wants to organise their finances and plan ahead **without connecting a bank or paying for anything**: everything is entered manually, there are no market-data APIs and no paid services. Language is English and the currency is USD. Full product spec: [`docs/plan.md`](docs/plan.md) §1–§3.
+
+<!-- TODO Marcos: rewrite this paragraph in your own words (draft, not final). -->
+Why I built it: I wanted one place where I could see my real monthly cash flow and what my savings could become, without handing my bank credentials to a third party. It also served as a realistic project to learn how to build a whole product with a team of AI agents.
+
+## Features and expected behaviour
+
+| Feature | Expected behaviour |
+| --- | --- |
+| Public landing | Guests see a landing page at `/` with links to log in or create an account; a logged-in user sees the dashboard at `/`. Every other page requires a session (guests go to `/login`). Logging out returns to `/`. |
+| Register and login | Email + password. Passwords are hashed with Argon2; the session is a JWT in an httpOnly cookie. Each user only ever sees their own data (another user's resource answers 404). |
+| Categories and subcategories | Two levels (e.g. Transport → Fuel). Every new user gets a default set of expense and income categories and can add, rename and delete their own. A category with transactions or monthly amounts cannot be deleted until they are reassigned or removed. A **fixed monthly amount** (net, optional note) can be set on a subcategory, or on a category without subcategories (e.g. Rent, Salary); it models a typical month, applies to every month, and is not a transaction. |
+| Transactions | Manual, one-off income and expenses with date, positive amount, category, subcategory and optional note; create, edit, delete, list, filter by period and category. An income can store **gross and net** salary (net cannot exceed gross) and the form shows the deduction rate `(gross − net) / gross`; totals and simulations use the net amount. |
+| Investments | Name, type (Stock, Fund, ETF, Crypto, Deposit, Real estate, Other), platform, amount invested and current value, updated by hand (no live prices). Gain/loss in $ and % per investment and for the whole portfolio. |
+| Dashboard | Period selector: current month (default), current year or a custom range. For the period: income, expenses, savings and savings rate. Pie chart of expenses by category (click a category to see its subcategories, with a Back button). Investments: total invested, current value, gain/loss and a pie chart by type. Monthly amounts count once per month in the period. |
+| Simulator | Three modes: **A Accumulation** (projected value year by year), **B Goal** (periodic contribution needed to reach a target amount by a date), **C Withdrawal** (accumulate until an age, then withdraw a % per year or a fixed monthly amount; shows whether the money lasts). Each mode runs three return scenarios (pessimistic, base, optimistic) as separate chart lines, with an inflation rate (default 2%) to show today's dollars. Results are deterministic (pure Python module with unit tests) and the page always shows "Projections are estimates, not financial advice." |
+| Account deletion | `/account` has a danger zone: deleting the account and all its data asks for the password (`DELETE /api/auth/me`); a wrong password deletes nothing. |
+| Login rate limit | Per client IP, in memory: 10 login and 5 register attempts per 60 s (the delete-account endpoint shares the login counter). Over the limit the API answers 429 with a `Retry-After` header, even for a correct password. |
+
+**Non-goals** (from [`docs/plan.md`](docs/plan.md) §6): bank connections or importing statements; live market prices or any external financial API; tax calculation from gross salary; multi-currency; shared or family accounts; financial advice or recommendations; password recovery/reset by email (it needs an external email service; deleting your own account is supported).
+
+## Architecture
+
+```mermaid
+flowchart LR
+    Browser["Browser (React SPA)"] -->|"HTTPS: static files + /api"| API["FastAPI app (one Docker container)"]
+    API -->|"SQLAlchemy"| DB[("Postgres")]
+    GH["GitHub Actions"] -->|"deploy hook"| Render["Render"]
+    Render -->|"builds and runs the image"| API
+    GH -.->|"polls /api/health for the commit"| API
+```
+
+The same container serves the built SPA and the `/api` routes, so there is one origin and no CORS. Full design: [`docs/tech-spec.md`](docs/tech-spec.md).
+
+| Layer | Technology | Why |
+| --- | --- | --- |
+| Frontend | React 19, Vite, TypeScript (strict), React Router, TanStack Query, Tailwind CSS 4, Recharts, React Hook Form + Zod | Typed SPA with server-state caching and the pie/line charts the dashboard and simulator need |
+| Backend | FastAPI, Pydantic v2, Python 3.12 | Typed API with OpenAPI generated for free; the frontend types are generated from it |
+| Database | SQLAlchemy 2.0 + Alembic; SQLite in development, Postgres 17 in production | Same models in both, versioned migrations; `NUMERIC` and `Decimal` for money, never `float` |
+| Auth | Argon2 password hashing, JWT in an httpOnly cookie | The token is not readable from JavaScript |
+| Simulator | Pure Python module in the backend | Deterministic, no I/O, unit-tested with known values |
+| Container | Multi-stage `Dockerfile`, `docker-compose.yml` for local runs | One image to build, test and ship |
+| Hosting | Render (free web service + free Postgres), `render.yaml` | Free, deploys from the Docker image |
+| CI/CD | GitHub Actions | Tests, static analysis and deploy on one pipeline |
+
+## Run locally
+
+Requirements: Docker, or Python 3.12 + [uv](https://docs.astral.sh/uv/) and Node.js 24+ for the dev servers.
+
+**Single command (app + Postgres 17, production-like image):**
 
 ```bash
-# Backend — http://localhost:8000 (API docs at /api/docs)
+docker compose up --build        # then open http://localhost:8000
+APP_PORT=8010 docker compose up --build   # another host port
+docker compose down -v           # stop and delete the database volume
+```
+
+Compose is for local use only (plain http, throwaway credentials, port bound to `127.0.0.1`); details in [`docs/deployment.md`](docs/deployment.md#local-production-like-run-docker-compose).
+
+**Dev servers (hot reload, SQLite):**
+
+```bash
+# Backend: http://localhost:8000 (API docs at /api/docs)
 cd backend
 cp .env.example .env
 uv sync
 uv run alembic upgrade head
 uv run fastapi dev app/main.py
 
-# Frontend — http://localhost:5173 (proxies /api to the backend)
+# Frontend: http://localhost:5173 (proxies /api to the backend)
 cd frontend
 npm install
 npm run dev
 ```
 
-## Checks
+`openapi.json` at the repo root is the API contract; after changing a backend route or schema, regenerate it and the frontend types (commands in [`docs/backend.md`](docs/backend.md), CI fails if either is stale). Per-side conventions: [`docs/backend.md`](docs/backend.md), [`docs/frontend.md`](docs/frontend.md).
+
+## Tests
+
+Run everything with one command:
 
 ```bash
-# Backend
-cd backend && uv run ruff format --check . && uv run ruff check . && uv run mypy app tests scripts && uv run pytest
-
-# Frontend
-cd frontend && npm run lint && npm run format:check && npm run typecheck && npm test && npm run build
+./scripts/test.sh     # or: make test
 ```
 
-## API contract
+Strategy, what each suite covers and the per-side commands: [`docs/testing.md`](docs/testing.md).
 
-`openapi.json` at the repo root is exported from the backend and the frontend API types (`frontend/src/api/schema.d.ts`) are generated from it. After changing a backend route or schema, regenerate both and commit them — CI fails if either is stale:
+## CI/CD and deployment
 
-```bash
-(cd backend && uv run python -m scripts.export_openapi)
-(cd frontend && npm run gen:api)
-```
+Flow: pull request → CI runs the backend, frontend, Postgres, Docker image, no-secrets and Semgrep jobs → merge to `main` → the `deploy` job calls the Render deploy hook → it polls `/api/health` until the service reports the pushed commit SHA, so green means that commit is live. Setup, environment variables, rollback, free-tier limits and the smoke test: [`docs/deployment.md`](docs/deployment.md). Pipeline: [`.github/workflows/ci.yml`](.github/workflows/ci.yml).
 
-### Run with Docker Compose (local)
+## How it was built with AI agents
 
-`docker-compose.yml` runs the production-like image (root `Dockerfile`) with Postgres 17, for local use only:
+The project was built by a small team of Claude Code agents coordinated by a main session (the orchestrator), following [`docs/process.md`](docs/process.md):
 
-```bash
-docker compose up --build        # then open http://localhost:8000
-APP_PORT=8010 docker compose up --build   # use another host port (http://localhost:8010)
-docker compose down              # stop, keep the data (named volume pgdata)
-docker compose down -v           # stop and delete the DB volume (full reset)
-```
+- **Agent team:** a project manager (breaks a milestone into groomed issues), a software engineer (implements one issue) and a QA engineer (verifies it against the acceptance criteria and never changes code). Role definitions: [`.claude/agents/`](.claude/agents/) and [`docs/team/`](docs/team/).
+- **Context management:** [`AGENTS.md`](AGENTS.md) holds the non-negotiable rules and links to modular docs (specs, backend, frontend, security, process) that agents read only when a task needs them.
+- **Slash commands:** `/plan-milestone`, `/next-issue`, `/run-milestone` and `/close-milestone` in [`.claude/commands/`](.claude/commands/) drive the loop.
+- **Tracker:** GitHub issues with acceptance criteria; the engineer implements, QA verifies, and only the orchestrator closes an issue after a QA PASS. Delivery plan and status: [`docs/milestones.md`](docs/milestones.md).
 
-The app waits for the `db` healthcheck, then the entrypoint applies migrations. The DB port is not published, and the app port is bound to `127.0.0.1` only (not reachable from other machines on the network, because the file uses a public dev `JWT_SECRET`). Compose serves plain `http://localhost`, so it sets `ENVIRONMENT=development` and `COOKIE_SECURE=false`: with `ENVIRONMENT=production` the app refuses to start without `COOKIE_SECURE=true` and a strong `JWT_SECRET`, and a `Secure` cookie would not be accepted over http, so login would not work. The credentials and the `dev-only` `JWT_SECRET` in the file are throwaway examples for local use only; this file is not the production deployment (see Production below).
+## Security
 
-## Production
+Index of audits and policies: [`docs/security.md`](docs/security.md). Key points:
 
-The app ships as one Docker image (root `Dockerfile`): FastAPI serves `/api` and the built frontend from the same origin, and the entrypoint runs `alembic upgrade head` before starting `uvicorn`, so migrations run on every deploy. The chosen host is [Render](https://render.com) (free web service + free Postgres), described by the `render.yaml` Blueprint. Public URL: <https://personaldolar.onrender.com>.
+1. Passwords are hashed with Argon2; the JWT lives only in an httpOnly cookie, never in localStorage or response bodies.
+2. Every query on user data is filtered by the current user; foreign keys in request bodies are checked, and other users' resources answer 404.
+3. Secrets come only from environment variables; the `no-secrets` CI job fails on tracked `.env`, database or key files, and production refuses to start with a weak `JWT_SECRET` or an insecure cookie.
+4. Login, register and account deletion are rate limited per client IP, and CI runs Semgrep static analysis on every push.
 
-### Environment variables
+## Evaluation criteria map
 
-Never commit values for these; set them in the provider's dashboard or secret store.
+Where to find each criterion of the course rubric:
 
-| Variable | Purpose | Example placeholder |
+| Criterion | Where | Status |
 | --- | --- | --- |
-| `ENVIRONMENT` | `production` makes startup fail on an insecure `JWT_SECRET` or `COOKIE_SECURE=false` | `production` |
-| `DATABASE_URL` | Managed Postgres. `postgres://` and `postgresql://` are accepted and rewritten to the `psycopg` driver | `postgresql://user:password@host:5432/db` |
-| `JWT_SECRET` | Signs the auth cookie; at least 32 characters, never the development default | output of `openssl rand -hex 32` |
-| `COOKIE_SECURE` | Must be `true` (cookie only over HTTPS) | `true` |
-| `TRUSTED_PROXY_COUNT` | Reverse proxies in front of the app, so the rate limiter sees the real client IP | `3` on Render (Cloudflare + Render load balancer, see [`docs/operations/rate-limit-diagnosis.md`](docs/operations/rate-limit-diagnosis.md)) |
-| `PORT` | Port the container listens on (Render sets it) | `8000` |
-
-Optional: `ACCESS_TOKEN_DAYS`, `RATE_LIMIT_LOGIN_ATTEMPTS`, `RATE_LIMIT_REGISTER_ATTEMPTS`, `RATE_LIMIT_WINDOW_SECONDS` (see `docs/tech-spec.md` §10). Generate a secret with `openssl rand -hex 32`.
-
-### Deploy on Render (from scratch)
-
-The steps that need your account are manual:
-
-1. Push the repository to GitHub (the Blueprint is `render.yaml` at the repo root).
-2. In Render: **New > Blueprint**, connect the GitHub repository and pick the branch to deploy (normally `main`).
-3. Render reads `render.yaml`, creates the `personaldolar-db` Postgres and the `personaldolar` web service, generates `JWT_SECRET` and wires `DATABASE_URL` from the database. Review the plan (both `free`) and click **Apply**.
-4. Wait for the first build (it builds the Dockerfile, a few minutes). Open the service URL (`https://<name>.onrender.com`); `GET /api/health` must return `{"status":"ok"}`.
-5. Record the URL in this README and run the smoke test below.
-
-Do not scale beyond one instance: the login rate limiter keeps its counters in process memory. `TRUSTED_PROXY_COUNT` is `3` on Render because the request arrives as `X-Forwarded-For: <client>, <Cloudflare>, <Render load balancer>`; if the number of hops changes, adjust it (see `docs/operations/rate-limit-diagnosis.md`).
-
-### Migrations, redeploy and rollback
-
-- Migrations: the container entrypoint runs `alembic upgrade head` on every start, so each deploy brings the schema to head before serving.
-- Redeploy: a push to `main` deploys automatically once all tests pass (see Continuous deployment below; auto-deploy is off in the Blueprint, the deploy hook is the only trigger). If CD fails or is not set up, use **Manual Deploy** in the Render dashboard, or restart the service.
-- Roll back code: in the Render dashboard open **Events/Deploys**, pick an earlier successful deploy and choose **Rollback**. Migrations are not reverted automatically; if a bad migration was applied, run `alembic downgrade <revision>` against the database (Render **Shell** on the service, or `psql` / a local `DATABASE_URL`) before or after rolling back.
-
-### Continuous deployment
-
-The `deploy` job of `.github/workflows/ci.yml` runs only on pushes to `main`, and only after `backend`, `frontend`, `backend-postgres`, `docker` and `no-secrets` are all green (it never runs on pull requests). Any test job added later must be added to its `needs` list. The job:
-
-1. calls the Render **deploy hook** (`curl --fail -X POST`), and
-2. polls `<RENDER_PUBLIC_URL>/api/health` (after a 30 s head start, every 15 s) until it returns HTTP 200 **and** its `commit` equals the pushed commit SHA (`github.sha`), failing after about 10 minutes.
-
-`/api/health` reports the commit the service is running (`{"status":"ok","database":"ok","commit":"<sha>"}`), read from Render's default environment variable `RENDER_GIT_COMMIT` ([Render docs](https://render.com/docs/environment-variables)); it is `unknown` when the variable is unset or blank (local runs). Render keeps serving the old version while the new one builds, so the job ignores 200 answers with another commit: green means the pushed commit is live. To see what is live, run `curl <RENDER_PUBLIC_URL>/api/health`. If the deploy fails the job times out red. Deploys are serialised (one at a time) and a running deploy is never cancelled. Rollback stays manual (see above).
-
-Setup (you, not the CI):
-
-1. Render dashboard: `personaldolar` service > **Settings > Deploy Hook**, copy the URL.
-2. GitHub: **Settings > Secrets and variables > Actions > Secrets** > new secret `RENDER_DEPLOY_HOOK` = that URL. The URL grants deploy rights: never put it in the repo, an issue or a chat.
-3. Same page, **Variables** tab > new variable `RENDER_PUBLIC_URL` = the service URL (`https://<name>.onrender.com`; a trailing slash is tolerated). It is not a secret.
-4. After the first push to `main`, check that the `deploy` job is green.
-5. Rotating the hook (e.g. if it leaked): regenerate it in Render and update the secret.
-
-Known limitation: two merges to `main` in quick succession can make the first `deploy` job fail by timeout. The jobs are serialised, and the first deploy hook may be superseded by the second, so Render never reports the first commit and the job waits in vain for its SHA. The second job still turns green once its own commit is live, so check that one (and `curl <RENDER_PUBLIC_URL>/api/health`) before re-running anything.
-
-If the secret or the variable is missing the job fails with an `::error::` message that does not print any secret.
-
-### Free-tier limits and backups
-
-Limits of Render's free plan, as listed at <https://render.com/docs/free> (checked on 2026-10-20; free tiers change, so re-check before relying on them):
-
-- **Spin-down:** the free web service spins down after 15 minutes without traffic; the next request has a cold start of about a minute.
-- **Instance hours:** 750 free instance hours per month per workspace.
-- **Single instance:** the free web service runs one instance only (no scaling).
-- **Free Postgres:** 1 GB, **no backups**, and it **expires 30 days after creation**; after that there are 14 days of grace before it is deleted with its data. `personaldolar-db` was created on 2026-10-19, so it expires around **2026-11-18** and would be deleted around **2026-12-02** unless it is upgraded or its data moved first. The fallback is a free [Neon](https://neon.tech) Postgres: create a project, copy its connection string into `DATABASE_URL` on the web service (and drop the `databases` block of `render.yaml`).
-- Back up by hand with `pg_dump "$DATABASE_URL" > backup.sql` (use the database's external connection string) and restore with `psql "$DATABASE_URL" < backup.sql`. Keep dumps out of the repository (they contain personal financial data).
-
-### Smoke test (run once against the public URL, with a throwaway account)
-
-- [ ] `GET /api/health` returns 200 over HTTPS; plain `http://` redirects to HTTPS.
-- [ ] Sign up a new user; the default categories are present.
-- [ ] Create a transaction (an income with gross and net salary).
-- [ ] Create an investment and update its current value.
-- [ ] The dashboard shows the figures.
-- [ ] The simulator runs Mode A, B and C and shows the "not financial advice" disclaimer.
-- [ ] Log out and log in again.
-- [ ] Reload on a deep link (`/investments`): the page loads.
-- [ ] In the browser dev tools the `access_token` cookie is `HttpOnly; Secure; SameSite=Lax`.
-- [ ] Repeated wrong logins eventually return 429 (rate limit works behind the proxy).
-
-### No secrets in the repo
-
-`.env` and `*.db` are git-ignored. `python3 backend/scripts/check_no_secrets.py` (run by the `no-secrets` CI job) fails if a tracked file is an `.env`/database/key file or contains a private key, a token or a database URL with real credentials.
+| Problem Description | This README: [Problem](#problem), [Features](#features-and-expected-behaviour) | Done |
+| Product Specification | [`docs/plan.md`](docs/plan.md) (user stories, acceptance criteria, non-goals) | Done |
+| Agent Team Specification | [`docs/team/`](docs/team/), [`.claude/agents/`](.claude/agents/), [`docs/process.md`](docs/process.md) | Done |
+| Context Management | [`AGENTS.md`](AGENTS.md) and the modular docs in [`docs/`](docs/) | Done |
+| Application | [`backend/`](backend/), [`frontend/`](frontend/), live at <https://personaldolar.onrender.com> | Done |
+| Testing | [Tests](#tests), [`docs/testing.md`](docs/testing.md), `backend/tests/`, `frontend/src/**/*.test.tsx` | Done |
+| Containerization | [`Dockerfile`](Dockerfile), [`docker-compose.yml`](docker-compose.yml) | Done |
+| Deployment | [`docs/deployment.md`](docs/deployment.md), [`render.yaml`](render.yaml) | Done |
+| CI/CD | [`.github/workflows/ci.yml`](.github/workflows/ci.yml), [CI/CD and deployment](#cicd-and-deployment) | Done |
+| Observability | Not yet documented in the repo | **In progress** |
+| Alerting on User Impact | Not yet documented in the repo | **In progress** |
+| On-Call Agent | Not yet documented in the repo | **In progress** |
